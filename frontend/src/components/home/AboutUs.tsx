@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 import React from "react";
 import {
@@ -73,10 +74,13 @@ const AboutRatanJewellers = () => {
             </div>
 
             {/* Button */}
-            <button className="inline-flex items-center gap-3 bg-[#3D0B13] hover:bg-[#2b0710] text-white px-8 py-4 rounded-md font-medium transition-all duration-300">
+            <Link
+              href="/about"
+              className="inline-flex items-center gap-3 bg-[#3D0B13] hover:bg-[#2b0710] text-white px-8 py-4 rounded-md font-medium transition-all duration-300"
+            >
               KNOW MORE ABOUT US
               <ArrowRight size={18} />
-            </button>
+            </Link>
           </div>
         </div>
       </div>
