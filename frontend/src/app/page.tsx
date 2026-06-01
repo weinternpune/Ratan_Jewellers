@@ -8,7 +8,6 @@ import LiveGoldRate from '@/components/home/LiveGoldRate'
 import Testimonials from '@/components/home/Testimonials'
 import AboutUs from '@/components/home/AboutUs'
 import WhyChooseUs from '@/components/home/WhyChooseUs'
-import NewsletterSection from '@/components/home/NewsletterSection'
 
 
 export default function HomePage() {
@@ -24,7 +23,6 @@ export default function HomePage() {
       <WhyChooseUs />
       <FeaturedProducts title="Trending Now" filter="trending" />
       <Testimonials />
-      <NewsletterSection />
       <Footer />
     </main>
   )
