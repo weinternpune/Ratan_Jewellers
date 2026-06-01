@@ -1,0 +1,34 @@
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+
+export interface User { id: string; email: string; name: string; role: string; avatar?: string }
+export interface CartItem { id: string; productId: string; name: string; sku: string; image: string; purity: string; weight: number; price: number; quantity: number }
+
+interface AuthState { user: User | null; accessToken: string | null; isAuthenticated: boolean; setAuth: (u: User, a: string, r: string) => void; clearAuth: () => void; updateUser: (u: Partial<User>) => void }
+export const useAuthStore = create<AuthState>()(persist((set) => ({
+  user: null, accessToken: null, isAuthenticated: false,
+  setAuth: (user, accessToken, refreshToken) => { if (typeof window !== 'undefined') { localStorage.setItem('accessToken', accessToken); localStorage.setItem('refreshToken', refreshToken) } set({ user, accessToken, isAuthenticated: true }) },
+  clearAuth: () => { if (typeof window !== 'undefined') { localStorage.removeItem('accessToken'); localStorage.removeItem('refreshToken') } set({ user: null, accessToken: null, isAuthenticated: false }) },
+  updateUser: (userData) => set((state) => ({ user: state.user ? { ...state.user, ...userData } : null })),
+}), { name: 'ratan-auth', partialize: (s) => ({ user: s.user, isAuthenticated: s.isAuthenticated }) }))
+
+interface CartState { items: CartItem[]; isOpen: boolean; addItem: (i: CartItem) => void; removeItem: (id: string) => void; updateQuantity: (id: string, q: number) => void; clearCart: () => void; toggleCart: () => void; closeCart: () => void; totalItems: () => number; totalPrice: () => number }
+export const useCartStore = create<CartState>()(persist((set, get) => ({
+  items: [], isOpen: false,
+  addItem: (item) => set((state) => { const e = state.items.find(i => i.productId === item.productId); return e ? { items: state.items.map(i => i.productId === item.productId ? { ...i, quantity: i.quantity + item.quantity } : i) } : { items: [...state.items, item] } }),
+  removeItem: (productId) => set((state) => ({ items: state.items.filter(i => i.productId !== productId) })),
+  updateQuantity: (productId, quantity) => set((state) => ({ items: quantity <= 0 ? state.items.filter(i => i.productId !== productId) : state.items.map(i => i.productId === productId ? { ...i, quantity } : i) })),
+  clearCart: () => set({ items: [] }),
+  toggleCart: () => set((s) => ({ isOpen: !s.isOpen })),
+  closeCart: () => set({ isOpen: false }),
+  totalItems: () => get().items.reduce((a, i) => a + i.quantity, 0),
+  totalPrice: () => get().items.reduce((a, i) => a + i.price * i.quantity, 0),
+}), { name: 'ratan-cart', partialize: (s) => ({ items: s.items }) }))
+
+interface UIState { isSearchOpen: boolean; isMobileMenuOpen: boolean; goldRate: number; goldRateUpdatedAt: string | null; toggleSearch: () => void; toggleMobileMenu: () => void; setGoldRate: (r: number) => void }
+export const useUIStore = create<UIState>((set) => ({
+  isSearchOpen: false, isMobileMenuOpen: false, goldRate: 6500, goldRateUpdatedAt: null,
+  toggleSearch: () => set((s) => ({ isSearchOpen: !s.isSearchOpen })),
+  toggleMobileMenu: () => set((s) => ({ isMobileMenuOpen: !s.isMobileMenuOpen })),
+  setGoldRate: (rate) => set({ goldRate: rate, goldRateUpdatedAt: new Date().toISOString() }),
+}))
