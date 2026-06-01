@@ -6,8 +6,11 @@ import FeaturedCategories from '@/components/home/FeaturedCategories'
 import FeaturedProducts from '@/components/home/FeaturedProducts'
 import LiveGoldRate from '@/components/home/LiveGoldRate'
 import Testimonials from '@/components/home/Testimonials'
+import AboutUs from '@/components/home/AboutUs'
 import WhyChooseUs from '@/components/home/WhyChooseUs'
 import NewsletterSection from '@/components/home/NewsletterSection'
+
+
 export default function HomePage() {
   return (
     <main>
@@ -17,6 +20,7 @@ export default function HomePage() {
       <LiveGoldRate />
       <FeaturedCategories />
       <FeaturedProducts title="New Arrivals" filter="newest" />
+      <AboutUs />
       <WhyChooseUs />
       <FeaturedProducts title="Trending Now" filter="trending" />
       <Testimonials />
