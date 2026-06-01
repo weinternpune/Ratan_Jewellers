@@ -115,7 +115,7 @@ export default function Testimonials() {
             {visibleTestimonials.map((testimonial) => (
             <motion.article
               key={testimonial.id}
-              className="group relative flex min-h-[220px] flex-col rounded-lg border border-[var(--gold)]/20 bg-white px-7 py-6 text-center shadow-[0_8px_26px_rgba(13,7,0,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--gold)]/40 hover:shadow-[0_14px_34px_rgba(13,7,0,0.1)]"
+              className="group relative flex h-[300px] flex-col  rounded-lg border border-[var(--gold)]/20 bg-white px-7 py-6 text-center shadow-[0_8px_26px_rgba(13,7,0,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--gold)]/40 hover:shadow-[0_14px_34px_rgba(13,7,0,0.1)]"
             >
               <Quote
                 size={36}
