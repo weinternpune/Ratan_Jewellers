@@ -1,47 +1,201 @@
 'use client'
+
 import Link from 'next/link'
-import { Gem, Share2, Globe, Video, Rss, MapPin, Phone, Mail, MessageCircle } from 'lucide-react'
+import {
+  ArrowUp,
+  BadgeCheck,
+  Camera,
+  CreditCard,
+  Crown,
+  Globe,
+  MessageCircle,
+  Play,
+  Send,
+  ShieldCheck,
+  Truck,
+} from 'lucide-react'
+
+const quickLinks = [
+  { label: 'Home', href: '/' },
+  { label: 'Collections', href: '/products' },
+  { label: 'Gold', href: '/products?category=gold' },
+  { label: 'Diamond', href: '/products?category=diamond' },
+  { label: 'Silver', href: '/products?category=silver' },
+  { label: 'Custom Jewellery', href: '/custom-jewellery' },
+  { label: 'About Us', href: '/about' },
+  { label: 'Contact Us', href: '/contact' },
+]
+
+const customerCare = [
+  { label: 'FAQs', href: '/faq' },
+  { label: 'Shipping & Delivery', href: '/shipping' },
+  { label: 'Returns & Exchange', href: '/returns' },
+  { label: 'Track Your Order', href: '/track-order' },
+  { label: 'Privacy Policy', href: '/privacy' },
+  { label: 'Terms & Conditions', href: '/terms' },
+]
+
+const information = [
+  { label: 'About Us', href: '/about' },
+  { label: 'Blog', href: '/blog' },
+  { label: 'Store Locator', href: '/store-locator' },
+  { label: 'Careers', href: '/careers' },
+  { label: 'Sitemap', href: '/sitemap' },
+]
+
+const socialLinks = [
+  { label: 'Facebook', href: '#', icon: Globe },
+  { label: 'Instagram', href: '#', icon: Camera },
+  { label: 'YouTube', href: '#', icon: Play },
+  { label: 'WhatsApp', href: 'https://wa.me/919876543210', icon: MessageCircle },
+]
+
 export default function Footer() {
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
+
   return (
-    <footer className="bg-obsidian text-gold-light/70">
-      <div className="gold-line" />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-          <div className="lg:col-span-1">
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold to-gold-dark flex items-center justify-center"><Gem size={18} className="text-obsidian" /></div>
-              <div><div className="font-display text-xl font-semibold text-gold-light">Ratan</div><div className="font-mono-code text-[9px] tracking-[0.2em] text-gold/60 uppercase">Jewellers</div></div>
+    <footer className="relative bg-[#340008] text-white">
+      <div className="mx-auto max-w-7xl px-4 py-9 sm:px-6 lg:px-8">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.45fr_1fr_1fr_1fr_1.35fr]">
+          <div>
+            <Link href="/" className="flex items-center gap-4">
+              <LogoMark />
+              <span className="font-display text-[1.8rem] font-semibold leading-none tracking-normal text-[#d6a84f]">
+                RATAN JEWELLERS
+              </span>
+            </Link>
+            <p className="mt-5 max-w-[230px] text-sm font-medium leading-6 text-white/85">
+              Timeless Elegance, Trusted Since Generations.
+            </p>
+            <div className="mt-5 flex gap-3">
+              {socialLinks.map(({ label, href, icon: Icon }) => (
+                <a
+                  key={label}
+                  href={href}
+                  aria-label={label}
+                  target={href.startsWith('http') ? '_blank' : undefined}
+                  rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[#d6a84f]/70 text-[#d6a84f] transition hover:bg-[#d6a84f] hover:text-[#340008]"
+                >
+                  <Icon size={17} strokeWidth={2.1} />
+                </a>
+              ))}
             </div>
-            <p className="text-sm leading-relaxed mb-6">Crafting timeless jewellery since 1985. Every piece tells a story of artistry, purity, and love.</p>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-start gap-2"><MapPin size={14} className="text-gold mt-0.5 flex-shrink-0" /><span>123 Jewellers Lane, Mumbai - 400001, Maharashtra</span></div>
-              <div className="flex items-center gap-2"><Phone size={14} className="text-gold flex-shrink-0" /><a href="tel:+919876543210" className="hover:text-gold transition-colors">+91 98765 43210</a></div>
-              <div className="flex items-center gap-2"><Mail size={14} className="text-gold flex-shrink-0" /><a href="mailto:info@ratanjewellers.com" className="hover:text-gold transition-colors">info@ratanjewellers.com</a></div>
-            </div>
-            <div className="mt-4 text-xs text-gold/60 font-mono-code">GSTIN: 27AABFR1234C1Z5</div>
           </div>
+
+          <FooterColumn title="Quick Links" links={quickLinks} />
+          <FooterColumn title="Customer Care" links={customerCare} />
+          <FooterColumn title="Information" links={information} />
+
           <div>
-            <h4 className="font-display text-base text-gold-light mb-4">Collections</h4>
-            <ul className="space-y-2 text-sm">{['Necklaces','Rings','Bangles','Earrings','Chains','Pendants','Bracelets','Mangalsutras'].map(item => <li key={item}><Link href={`/products?category=${item.toLowerCase()}`} className="hover:text-gold transition-colors animated-underline">{item}</Link></li>)}</ul>
+            <h3 className="text-sm font-bold uppercase tracking-normal text-white">Newsletter</h3>
+            <p className="mt-4 max-w-[260px] text-sm leading-6 text-white/78">
+              Stay updated with our latest collections and offers.
+            </p>
+            <form className="mt-5 flex max-w-[280px] overflow-hidden rounded-sm bg-white shadow-sm">
+              <input
+                type="email"
+                aria-label="Email address"
+                placeholder="Enter your email"
+                className="min-w-0 flex-1 px-4 py-3 text-sm text-[#340008] outline-none placeholder:text-zinc-400"
+              />
+              <button
+                type="submit"
+                aria-label="Subscribe"
+                className="flex w-12 items-center justify-center text-[#340008] transition hover:bg-[#f3e8d5]"
+              >
+                <Send size={18} />
+              </button>
+            </form>
           </div>
-          <div>
-            <h4 className="font-display text-base text-gold-light mb-4">Customer Care</h4>
-            <ul className="space-y-2 text-sm">{[{ label: 'Track Your Order', href: '/track-order' }, { label: 'Return & Exchange', href: '/returns' }, { label: 'Warranty Policy', href: '/warranty' }, { label: 'Size Guide', href: '/size-guide' }, { label: 'Store Locator', href: '/store-locator' }, { label: 'FAQs', href: '/faq' }].map(item => <li key={item.href}><Link href={item.href} className="hover:text-gold transition-colors animated-underline">{item.label}</Link></li>)}</ul>
-          </div>
-          <div>
-            <h4 className="font-display text-base text-gold-light mb-4">Information</h4>
-            <ul className="space-y-2 text-sm mb-6">{[{ label: 'About Us', href: '/about' }, { label: 'Blog', href: '/blog' }, { label: 'BIS Hallmark Info', href: '/hallmark' }, { label: 'Privacy Policy', href: '/privacy' }, { label: 'Terms of Service', href: '/terms' }].map(item => <li key={item.href}><Link href={item.href} className="hover:text-gold transition-colors animated-underline">{item.label}</Link></li>)}</ul>
-            <h4 className="font-display text-base text-gold-light mb-3">Follow Us</h4>
-            <div className="flex gap-3">{[{ icon: Share2, href: '#', label: 'Instagram' }, { icon: Globe, href: '#', label: 'Facebook' }, { icon: Video, href: '#', label: 'YouTube' }, { icon: Rss, href: '#', label: 'Twitter' }].map(({ icon: Icon, href, label }) => <a key={label} href={href} aria-label={label} className="w-9 h-9 rounded-full border border-gold/20 flex items-center justify-center hover:border-gold hover:text-gold hover:bg-gold/10 transition-all"><Icon size={15} /></a>)}</div>
-            <a href="https://wa.me/919876543210" target="_blank" rel="noopener noreferrer" className="mt-4 flex items-center gap-2 w-fit px-4 py-2 rounded-lg bg-[#25D366]/10 border border-[#25D366]/30 text-[#25D366] text-sm hover:bg-[#25D366]/20 transition-all"><MessageCircle size={15} />Chat on WhatsApp</a>
-          </div>
-        </div>
-        <div className="gold-line mt-10 mb-6" />
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-gold-light/40">
-          <p>© {new Date().getFullYear()} Ratan Jewellers. All rights reserved.</p>
-          <div className="flex items-center gap-4"><span>🔒 Secure SSL</span><span>✓ BIS Certified</span><span>📦 PAN India Delivery</span></div>
         </div>
       </div>
+
+      <div className="border-t border-white/15">
+        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-4 text-xs text-white/80 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+          <p>© {new Date().getFullYear()} Ratan Jewellers. All Rights Reserved.</p>
+          <div className="flex flex-wrap items-center gap-x-10 gap-y-3">
+            <TrustItem icon={CreditCard} label="Secure Payments" />
+            <TrustItem icon={ShieldCheck} label="100% Hallmarked" />
+            <TrustItem icon={Truck} label="Free Shipping" />
+          </div>
+          <div className="flex items-center gap-4 font-bold tracking-wide text-white">
+            <span>VISA</span>
+            <span className="inline-flex items-center gap-1">
+              <span className="h-3 w-3 rounded-full bg-[#eb001b]" />
+              <span className="-ml-2 h-3 w-3 rounded-full bg-[#f79e1b]" />
+            </span>
+            <span>RuPay</span>
+            <span>UPI</span>
+          </div>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        aria-label="Back to top"
+        onClick={scrollToTop}
+        className="absolute bottom-5 right-5 flex h-11 w-11 items-center justify-center rounded-full bg-[#d6a84f] text-[#340008] shadow-lg transition hover:-translate-y-1 hover:bg-[#e4bd6f]"
+      >
+        <ArrowUp size={20} strokeWidth={2.4} />
+      </button>
     </footer>
+  )
+}
+
+function LogoMark() {
+  return (
+    <span
+      aria-hidden="true"
+      className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full border-2 border-[#d6a84f] bg-[#340008] shadow-[0_0_22px_rgba(214,168,79,0.28)]"
+    >
+      <span className="absolute inset-1.5 rounded-full border border-[#d6a84f]/45" />
+      <Crown
+        size={19}
+        strokeWidth={2}
+        className="absolute -top-1.5 left-1/2 -translate-x-1/2 fill-[#d6a84f]/20 text-[#d6a84f]"
+      />
+      <span className="font-display text-[2.35rem] font-semibold leading-none text-[#d6a84f]">
+        R
+      </span>
+    </span>
+  )
+}
+
+function FooterColumn({
+  title,
+  links,
+}: {
+  title: string
+  links: Array<{ label: string; href: string }>
+}) {
+  return (
+    <div>
+      <h3 className="text-sm font-bold uppercase tracking-normal text-white">{title}</h3>
+      <ul className="mt-4 space-y-2.5 text-sm text-white/78">
+        {links.map((item) => (
+          <li key={item.href}>
+            <Link href={item.href} className="transition hover:text-[#d6a84f]">
+              {item.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function TrustItem({
+  icon: Icon,
+  label,
+}: {
+  icon: typeof BadgeCheck
+  label: string
+}) {
+  return (
+    <span className="inline-flex items-center gap-2 whitespace-nowrap">
+      <Icon size={16} className="text-[#d6a84f]" />
+      {label}
+    </span>
   )
 }
