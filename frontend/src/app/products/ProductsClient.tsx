@@ -1,16 +1,10 @@
 'use client'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { SlidersHorizontal } from 'lucide-react'
+import { SlidersHorizontal, ArrowRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ProductCard from '@/components/products/ProductCard'
-import type { Product } from '@/components/products/ProductCard'
 import { api } from '@/lib/api'
-
-interface ProductsResponse {
-  products: Product[]
-}
-
 const mockProducts = Array.from({ length: 24 }, (_, i) => ({ id: `p-${i}`, name: ['Antique Polki Necklace','Solitaire Diamond Ring','Temple Gold Bangles Set','Kundan Jhumka Earrings','22K Gold Chain','Emerald Pendant','Ruby Mangalsutra','Diamond Tennis Bracelet','Lakshmi Coin Pendant','Chand Bali Earrings','Meenakari Choker','Pave Diamond Band','South Indian Bridal Set','Cocktail Statement Ring','Gold Kada Bangle','Floral Diamond Earrings','Temple Necklace Set','Men Gold Chain','Pearl Drop Earrings','Ruby Finger Ring','Three Layer Necklace','Princess Cut Ring','Ghungroo Bangle','Bridal Maang Tikka'][i]||'Jewellery', slug: `product-${i}`, sku: `RJ${String(i+1).padStart(5,'0')}`, images: [], metal: ['Gold','Gold & Diamond','Gold & Emerald','Gold & Ruby'][i%4], purity: ['22K','18K','24K','14K'][i%4], netWeight: 4+(i*1.7)%20, currentPrice: 15000+(i*8700)%180000, goldRate: 6500, makingCharges: 1500+(i*200)%5000, stoneCharges: i%3===0?0:3000+(i*1200)%20000, avgRating: 3.8+(i%12)*0.1, reviewCount: 5+(i*7)%80, inStock: i%7!==0, isFeatured: i<3, isTrending: i%4===0, category: { name: ['Necklaces','Rings','Bangles','Earrings','Chains','Pendants','Bracelets','Mangalsutras'][i%8] } }))
 const METALS = ['Gold','Gold & Diamond','Silver','Platinum']
 const PURITIES = ['24K','22K','18K','14K']
@@ -21,8 +15,8 @@ export default function ProductsClient() {
   const [sortBy, setSortBy] = useState('createdAt')
   const toggle = (arr: string[], val: string, set: (v: string[]) => void) => set(arr.includes(val)?arr.filter(x=>x!==val):[...arr,val])
   const activeFilters = [...selectedMetal,...selectedPurity].length
-  const { data, isLoading } = useQuery({ queryKey: ['products', selectedMetal, selectedPurity, sortBy], queryFn: () => api.get<ProductsResponse>('/products', { metal: selectedMetal.join(',')||undefined, purity: selectedPurity.join(',')||undefined, sortBy }), retry: false })
-  const products = data?.products || mockProducts
+  const { data, isLoading } = useQuery({ queryKey: ['products', selectedMetal, selectedPurity, sortBy], queryFn: () => api.get<any>('/products', { metal: selectedMetal.join(',')||undefined, purity: selectedPurity.join(',')||undefined, sortBy }), retry: false })
+  const products = (data as any)?.products || mockProducts
   return (
     <div className="min-h-screen bg-cream">
       <div className="bg-white border-b border-gold/10 py-8"><div className="max-w-7xl mx-auto px-4 sm:px-6"><p className="font-mono-code text-xs text-gold tracking-wider uppercase mb-2">Explore</p><h1 className="font-display text-4xl sm:text-5xl text-charcoal">All Collections</h1><p className="text-warm-grey text-sm mt-2">{products.length} exquisite pieces</p></div></div>
@@ -48,7 +42,7 @@ export default function ProductsClient() {
             {isLoading ? (
               <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">{Array.from({length:12}).map((_,i)=><div key={i}><div className="skeleton aspect-square rounded-xl"/><div className="p-4 space-y-2"><div className="skeleton h-4 w-3/4"/><div className="skeleton h-3 w-1/2"/></div></div>)}</div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">{products.map((product, i) => <motion.div key={product.id} initial={{ opacity:0, y:15 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*0.04, duration:0.4 }}><ProductCard product={product} /></motion.div>)}</div>
+              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">{products.map((product: any, i: number) => <motion.div key={product.id} initial={{ opacity:0, y:15 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*0.04, duration:0.4 }}><ProductCard product={product} /></motion.div>)}</div>
             )}
           </div>
         </div>

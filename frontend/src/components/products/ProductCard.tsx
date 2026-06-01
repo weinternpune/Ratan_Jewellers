@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { Heart, ShoppingBag, Eye, Star } from 'lucide-react'
 import { useCartStore } from '@/store'
 import toast from 'react-hot-toast'
-export interface Product { id: string; name: string; slug: string; sku: string; images: string[]; metal: string; purity: string; netWeight: number; currentPrice: number; goldRate: number; makingCharges: number; stoneCharges: number; avgRating: number; reviewCount: number; inStock: boolean; isFeatured?: boolean; isTrending?: boolean; category?: { name: string } }
+interface Product { id: string; name: string; slug: string; sku: string; images: string[]; metal: string; purity: string; netWeight: number; currentPrice: number; goldRate: number; makingCharges: number; stoneCharges: number; avgRating: number; reviewCount: number; inStock: boolean; isFeatured?: boolean; isTrending?: boolean; category?: { name: string } }
 export default function ProductCard({ product }: { product: Product }) {
   const [isWishlisted, setIsWishlisted] = useState(false)
   const [imgIdx, setImgIdx] = useState(0)
