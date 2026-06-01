@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.npm/
+
+# Environment — NEVER commit
+.env
+.env.local
+.env.production
+.env*.local
+
+# Build outputs
+dist/
+.next/
+out/
+build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+
+# Uploads/Generated
+uploads/
+public/uploads/
+
+# Prisma generated (keep schema, ignore generated)
+backend/node_modules/
