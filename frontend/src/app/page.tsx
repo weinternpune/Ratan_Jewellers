@@ -4,10 +4,15 @@ import HeroSection from '@/components/home/HeroSection'
 import CartDrawer from '@/components/cart/CartDrawer'
 import FeaturedCategories from '@/components/home/FeaturedCategories'
 import FeaturedProducts from '@/components/home/FeaturedProducts'
+import TrendingProducts from '@/components/home/TrendingProduct'
 import LiveGoldRate from '@/components/home/LiveGoldRate'
 import Testimonials from '@/components/home/Testimonials'
 import AboutUs from '@/components/home/AboutUs'
 import WhyChooseUs from '@/components/home/WhyChooseUs'
+<<<<<<< HEAD
+=======
+import NewsletterSection from '@/components/home/NewsletterSection'
+>>>>>>> origin/sastri-arya-init-dev
 
 
 export default function HomePage() {
@@ -21,7 +26,7 @@ export default function HomePage() {
       <FeaturedProducts title="New Arrivals" filter="newest" />
       <AboutUs />
       <WhyChooseUs />
-      <FeaturedProducts title="Trending Now" filter="trending" />
+     <TrendingProducts title="Trending Now" />
       <Testimonials />
       <Footer />
     </main>

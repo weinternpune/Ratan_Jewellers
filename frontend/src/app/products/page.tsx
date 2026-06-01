@@ -5,11 +5,11 @@ import ProductsClient from './ProductsClient'
 export const metadata = { title: 'All Collections' }
 export default function ProductsPage() {
   return (
-    <main>
+    <div className="w-full overflow-x-hidden">
       <Navbar />
       <CartDrawer />
       <ProductsClient />
       <Footer />
-    </main>
+    </div>
   )
 }
