@@ -52,9 +52,11 @@ html {
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: var(--cream);
+  background-color: #ffffff;
   color: var(--charcoal);
   overflow-x: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 /* Scrollbar */

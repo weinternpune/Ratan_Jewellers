@@ -10,10 +10,9 @@ import Testimonials from '@/components/home/Testimonials'
 import AboutUs from '@/components/home/AboutUs'
 import WhyChooseUs from '@/components/home/WhyChooseUs'
 
-
 export default function HomePage() {
   return (
-    <main>
+    <main className="min-h-screen">
       <Navbar />
       <CartDrawer />
       <HeroSection />
