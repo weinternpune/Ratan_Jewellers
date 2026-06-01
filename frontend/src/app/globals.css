@@ -340,3 +340,13 @@ body {
 
   border-radius: 4px;
 }
+
+/* Hide scrollbar for auto-scroll elements */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}

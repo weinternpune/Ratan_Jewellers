@@ -15,10 +15,45 @@ export default function LiveGoldRate() {
   const change = goldRate - prevRate
   const changePercent = ((change / prevRate) * 100).toFixed(2)
   const refreshRate = async () => { setIsUpdating(true); try { const nr = goldRate + (Math.random() - 0.5) * 20; setPrevRate(goldRate); setGoldRate(Math.round(nr)); setLastUpdated(new Date()) } finally { setIsUpdating(false) } }
+  
+  // Auto-scroll for mobile only
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+    
+    // Check if mobile (screen width < 768px)
+    const isMobile = window.innerWidth < 768
+    if (!isMobile) return
+    
+    let scrollInterval: NodeJS.Timeout
+    let direction = 1 // 1 for right, -1 for left
+    
+    const autoScroll = () => {
+      if (!container) return
+      
+      const maxScroll = container.scrollWidth - container.clientWidth
+      const currentScroll = container.scrollLeft
+      
+      // Change direction at edges
+      if (currentScroll >= maxScroll) {
+        direction = -1
+      } else if (currentScroll <= 0) {
+        direction = 1
+      }
+      
+      // Smooth scroll
+      container.scrollLeft += direction * 1
+    }
+    
+    scrollInterval = setInterval(autoScroll, 30)
+    
+    return () => clearInterval(scrollInterval)
+  }, [])
+  
   return (
     <div className="bg-obsidian border-y border-gold/20 py-3 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center gap-4 overflow-x-auto">
+        <div ref={scrollContainerRef} className="flex items-center gap-4 overflow-x-auto scrollbar-hide">
           <div className="flex-shrink-0 flex items-center gap-2"><div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" /><span className="font-mono-code text-xs text-gold/70 uppercase tracking-wider whitespace-nowrap">Live Gold Rates</span></div>
           <div className="w-px h-4 bg-gold/20 flex-shrink-0" />
           <div className="flex items-center gap-6 flex-shrink-0">{purities.map(p => <div key={p.label} className="flex items-center gap-2 whitespace-nowrap"><span className="font-mono-code text-xs text-gold/50">{p.label}</span><span className="font-mono-code text-sm text-gold font-medium">₹{Math.round(goldRate * p.multiplier).toLocaleString('en-IN')}<span className="text-gold/50 text-[10px]">/g</span></span></div>)}</div>
