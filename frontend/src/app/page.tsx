@@ -8,9 +8,10 @@ import LiveGoldRate from '@/components/home/LiveGoldRate'
 import Testimonials from '@/components/home/Testimonials'
 import WhyChooseUs from '@/components/home/WhyChooseUs'
 import NewsletterSection from '@/components/home/NewsletterSection'
+
 export default function HomePage() {
   return (
-    <main>
+    <main className="min-h-screen">
       <Navbar />
       <CartDrawer />
       <HeroSection />
