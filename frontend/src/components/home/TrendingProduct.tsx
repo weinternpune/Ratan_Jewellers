@@ -187,7 +187,7 @@ export default function TrendingProducts({ title }: Props) {
             </div>
 
             <h2
-              className="text-[22px] sm:text-[26px] font-bold tracking-[0.18em] text-gray-900 uppercase"
+              className="text-[19px] sm:text-[26px] font-bold tracking-[0.18em] text-gray-900 uppercase"
               style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
             >
               {title}
