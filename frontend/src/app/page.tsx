@@ -4,10 +4,13 @@ import HeroSection from '@/components/home/HeroSection'
 import CartDrawer from '@/components/cart/CartDrawer'
 import FeaturedCategories from '@/components/home/FeaturedCategories'
 import FeaturedProducts from '@/components/home/FeaturedProducts'
+import TrendingProducts from '@/components/home/TrendingProduct'
 import LiveGoldRate from '@/components/home/LiveGoldRate'
 import Testimonials from '@/components/home/Testimonials'
 import WhyChooseUs from '@/components/home/WhyChooseUs'
 import NewsletterSection from '@/components/home/NewsletterSection'
+
+
 export default function HomePage() {
   return (
     <main>
@@ -18,7 +21,7 @@ export default function HomePage() {
       <FeaturedCategories />
       <FeaturedProducts title="New Arrivals" filter="newest" />
       <WhyChooseUs />
-      <FeaturedProducts title="Trending Now" filter="trending" />
+     <TrendingProducts title="Trending Now" />
       <Testimonials />
       <NewsletterSection />
       <Footer />
