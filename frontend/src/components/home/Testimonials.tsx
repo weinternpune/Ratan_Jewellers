@@ -19,7 +19,7 @@ export default function Testimonials() {
             <motion.div key={current} initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-20 }} transition={{ duration:0.4 }} className="luxury-card rounded-2xl p-8 sm:p-12 text-center">
               <Quote size={36} className="text-gold/20 mx-auto mb-6" />
               <div className="flex justify-center mb-4">{[...Array(testimonials[current].rating)].map((_,i) => <Star key={i} size={16} fill="#C9A84C" stroke="none" />)}</div>
-              <p className="font-display text-xl sm:text-2xl text-charcoal leading-relaxed mb-8 italic">"{testimonials[current].text}"</p>
+              <p className="font-display text-xl sm:text-2xl text-charcoal leading-relaxed mb-8 italic">&ldquo;{testimonials[current].text}&rdquo;</p>
               <div><p className="font-display text-base font-medium text-charcoal">{testimonials[current].name}</p><p className="text-sm text-warm-grey mt-0.5">{testimonials[current].location}</p><p className="text-xs text-gold mt-1 font-mono-code">{testimonials[current].product}</p></div>
             </motion.div>
           </AnimatePresence>
