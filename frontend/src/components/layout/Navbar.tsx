@@ -165,10 +165,20 @@ export default function Navbar() {
               <Link href="/custom-jewellery" className="px-1 xl:px-2 2xl:px-4 py-2 text-[9.5px] xl:text-[11px] 2xl:text-[13px] font-bold tracking-tight xl:tracking-normal 2xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap">
                 CUSTOM JEWELLERY
               </Link>
-              <Link href="/about" className="px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap">
+              <Link
+                href="/about"
+                className={`px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide transition-colors whitespace-nowrap ${
+                  pathname === '/about' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'
+                }`}
+              >
                 ABOUT US
               </Link>
-              <Link href="/contact" className="px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
+              <Link
+                href="/contact"
+                className={`px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide transition-colors ${
+                  pathname === '/contact' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'
+                }`}
+              >
                 CONTACT
               </Link>
             </div>
@@ -249,7 +259,9 @@ export default function Navbar() {
                     key={item.href} 
                     href={item.href} 
                     onClick={toggleMobileMenu} 
-                    className="block px-4 py-2.5 text-sm text-gray-700 hover:text-[#C9A84C] hover:bg-gray-50 rounded-lg transition-colors"
+                    className={`block px-4 py-2.5 text-sm hover:bg-gray-50 rounded-lg transition-colors ${
+                      pathname === item.href ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'
+                    }`}
                   >
                     {item.label}
                   </Link>
