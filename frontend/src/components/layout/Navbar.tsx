@@ -44,9 +44,11 @@ export default function Navbar() {
   
   return (
     <>
-      {/* Top Bar - Hidden on mobile, visible on tablet+ */}
-      <div className="hidden sm:block bg-white border-b border-gray-200 py-2.5">
-        <div className="w-full px-2 sm:px-4 md:px-6 lg:px-6 xl:px-12 flex justify-between items-center">
+      {/* Top Bar - Hidden on mobile, visible on tablet+ but hides on scroll */}
+      <div className={`hidden sm:block bg-white border-b border-gray-200 py-2.5 fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ${
+        scrolled ? '-translate-y-full' : 'translate-y-0'
+      }`}>
+        <div className="w-full px-2 sm:px-4 md:px-6 lg:px-6 xl:px-8 2xl:px-12 flex justify-between items-center">
           <div className="hidden lg:flex items-center gap-8 text-xs text-gray-700">
             <span className="flex items-center gap-2">
               <Shield size={14} className="text-gray-600" />
@@ -74,11 +76,12 @@ export default function Navbar() {
         </div>
       </div>
 
+      {/* Spacer for top bar on tablet+ when not scrolled - matches top bar height */}
+      <div className={`hidden sm:block transition-all duration-300 ${scrolled ? 'h-0' : 'h-[44px]'}`} aria-hidden="true" />
+
       {/* Main Navbar */}
-      <nav className={`bg-white border-b border-gray-200 transition-all duration-300 ${
-        scrolled ? 'shadow-sm' : ''
-      }`}>
-        <div className="w-full px-2 sm:px-4 md:px-6 lg:px-6 xl:px-12">
+      <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-md">
+        <div className="w-full px-2 sm:px-4 md:px-6 lg:px-6 xl:px-8 2xl:px-12">
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 md:gap-3 group flex-shrink-0">
@@ -109,10 +112,10 @@ export default function Navbar() {
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center gap-0 xl:gap-1">
+            <div className="hidden lg:flex items-center gap-0 xl:gap-0.5 2xl:gap-1">
               <Link 
                 href="/" 
-                className={`px-1.5 xl:px-4 py-2 text-[10.5px] xl:text-[13px] font-bold tracking-normal xl:tracking-wide transition-colors ${
+                className={`px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide transition-colors ${
                   pathname === '/' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'
                 }`}
               >
@@ -122,10 +125,10 @@ export default function Navbar() {
               <div className="relative" ref={dropdownRef}>
                 <button 
                   onClick={() => setCollectionsOpen(!collectionsOpen)} 
-                  className="flex items-center gap-0.5 px-1.5 xl:px-4 py-2 text-[10.5px] xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors"
+                  className="flex items-center gap-0.5 px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors"
                 >
                   COLLECTIONS
-                  <ChevronDown size={12} className={`xl:w-[14px] xl:h-[14px] transition-transform ${collectionsOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={12} className={`xl:w-[13px] xl:h-[13px] 2xl:w-[14px] 2xl:h-[14px] transition-transform ${collectionsOpen ? 'rotate-180' : ''}`} />
                 </button>
                 <AnimatePresence>
                   {collectionsOpen && (
@@ -150,50 +153,50 @@ export default function Navbar() {
                 </AnimatePresence>
               </div>
 
-              <Link href="/products?category=gold" className="px-1.5 xl:px-4 py-2 text-[10.5px] xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
+              <Link href="/products?category=gold" className="px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
                 GOLD
               </Link>
-              <Link href="/products?category=diamond" className="px-1.5 xl:px-4 py-2 text-[10.5px] xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
+              <Link href="/products?category=diamond" className="px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
                 DIAMOND
               </Link>
-              <Link href="/products?category=silver" className="px-1.5 xl:px-4 py-2 text-[10.5px] xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
+              <Link href="/products?category=silver" className="px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
                 SILVER
               </Link>
-              <Link href="/custom-jewellery" className="px-1 xl:px-4 py-2 text-[9.5px] xl:text-[13px] font-bold tracking-tight xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap">
+              <Link href="/custom-jewellery" className="px-1 xl:px-2 2xl:px-4 py-2 text-[9.5px] xl:text-[11px] 2xl:text-[13px] font-bold tracking-tight xl:tracking-normal 2xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap">
                 CUSTOM JEWELLERY
               </Link>
-              <Link href="/about" className="px-1.5 xl:px-4 py-2 text-[10.5px] xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap">
+              <Link href="/about" className="px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap">
                 ABOUT US
               </Link>
-              <Link href="/contact" className="px-1.5 xl:px-4 py-2 text-[10.5px] xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
+              <Link href="/contact" className="px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
                 CONTACT
               </Link>
             </div>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 xl:gap-1.5 2xl:gap-2">
               <button 
                 onClick={toggleSearch} 
-                className="p-2 text-gray-700 hover:text-[#C9A84C] transition-colors"
+                className="p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors"
                 aria-label="Search"
               >
-                <Search size={20} />
+                <Search size={18} className="xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
               </button>
               
               <Link 
                 href={isAuthenticated ? '/account' : '/login'} 
-                className="p-2 text-gray-700 hover:text-[#C9A84C] transition-colors hidden sm:block"
+                className="p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors hidden sm:block"
                 aria-label="Account"
               >
-                <User size={20} />
+                <User size={18} className="xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
               </Link>
               
               <Link 
                 href="/wishlist" 
-                className="p-2 text-gray-700 hover:text-[#C9A84C] transition-colors relative hidden sm:block"
+                className="p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors relative hidden sm:block"
                 aria-label="Wishlist"
               >
-                <Heart size={20} />
+                <Heart size={18} className="xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#C9A84C] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
                   0
                 </span>
@@ -201,10 +204,10 @@ export default function Navbar() {
               
               <button 
                 onClick={toggleCart} 
-                className="p-2 text-gray-700 hover:text-[#C9A84C] transition-colors relative"
+                className="p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors relative"
                 aria-label="Cart"
               >
-                <ShoppingBag size={20} />
+                <ShoppingBag size={18} className="xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
                 {totalItemsCount > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#C9A84C] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                     {totalItemsCount}
@@ -214,10 +217,10 @@ export default function Navbar() {
 
               <button 
                 onClick={toggleMobileMenu} 
-                className="p-2 text-gray-700 lg:hidden"
+                className="p-1.5 xl:p-2 text-gray-700 lg:hidden"
                 aria-label="Menu"
               >
-                {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
             </div>
           </div>

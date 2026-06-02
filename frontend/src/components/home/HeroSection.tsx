@@ -7,36 +7,60 @@ import { ChevronRight, ArrowRight, Phone } from 'lucide-react'
 export default function HeroSection() {
   const [currentSlide, setCurrentSlide] = useState(0)
 
+  // Array of hero images - Replace with your actual images
+  const heroImages = [
+    '/hero-couple.jpg',
+    'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=1920&h=1080&fit=crop', // Indian wedding jewelry
+    'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=1920&h=1080&fit=crop', // Gold jewelry
+    'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=1920&h=1080&fit=crop', // Diamond jewelry
+    'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=1920&h=1080&fit=crop', // Traditional jewelry
+    'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=1920&h=1080&fit=crop', // Bridal jewelry
+  ]
+
+  const totalSlides = heroImages.length
+
   useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % 6)
-    }, 5000)
+      setCurrentSlide((prev) => (prev + 1) % totalSlides)
+    }, 3000) // Auto-scroll every 3 seconds
     return () => clearInterval(timer)
-  }, [])
+  }, [totalSlides])
 
-  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % 6)
-  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + 6) % 6)
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % totalSlides)
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides)
+  const goToSlide = (index: number) => setCurrentSlide(index)
 
   return (
     <section className="relative h-[550px] sm:h-[650px] md:h-[calc(100vh-160px)] w-full overflow-hidden">
       {/* Mobile & Tablet Background Image - Shows both people properly */}
       <div className="block md:hidden absolute inset-0 z-0">
-        <img 
-          src="/hero-couple.jpg" 
-          alt="Couple in traditional attire"
-          className="w-full h-full object-cover object-center"
-        />
+        {heroImages.map((image, index) => (
+          <img 
+            key={index}
+            src={image} 
+            alt={`Couple in traditional attire - Slide ${index + 1}`}
+            className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ${
+              index === currentSlide ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        ))}
         {/* Overlay for better text readability on mobile/tablet */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/65" />
       </div>
 
       {/* Desktop Background Image - Original positioning */}
-      <div 
-        className="hidden md:block absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: "url('/hero-couple.jpg')",
-        }}
-      >
+      <div className="hidden md:block absolute inset-0 z-0">
+        {heroImages.map((image, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-700 ${
+              index === currentSlide ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{
+              backgroundImage: `url('${image}')`,
+            }}
+          />
+        ))}
         {/* Overlay for better text readability on desktop */}
         <div className="absolute inset-0 bg-gradient-to-r from-white/30 via-white/10 to-transparent" />
       </div>
@@ -88,10 +112,10 @@ export default function HeroSection() {
 
       {/* Slide Indicators */}
       <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
-        {[0, 1, 2, 3, 4, 5].map((index) => (
+        {heroImages.map((_, index) => (
           <button
             key={index}
-            onClick={() => setCurrentSlide(index)}
+            onClick={() => goToSlide(index)}
             className={`transition-all duration-300 rounded-full ${
               index === currentSlide
                 ? 'w-6 h-1.5 bg-white'
