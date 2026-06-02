@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ShoppingBag, Search, User, Heart, Menu, X, ChevronDown, Shield, Repeat, MapPin, Package as PackageIcon } from 'lucide-react'
-import { useCartStore, useAuthStore, useUIStore } from '@/store'
+import { useCartStore, useAuthStore, useUIStore, useWishlistStore } from '@/store'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const categories = [
@@ -23,10 +23,16 @@ export default function Navbar() {
   const [collectionsOpen, setCollectionsOpen] = useState(false)
   const pathname = usePathname()
   const totalItemsCount = useCartStore(s => s.items.reduce((a, i) => a + i.quantity, 0))
+  const wishlistCount = useWishlistStore(s => s.totalItems())
   const toggleCart = useCartStore(s => s.toggleCart)
   const { user, isAuthenticated } = useAuthStore()
   const { isMobileMenuOpen, toggleMobileMenu, toggleSearch } = useUIStore()
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
   
   useEffect(() => { 
     const h = () => setScrolled(window.scrollY > 20)
@@ -197,9 +203,11 @@ export default function Navbar() {
                 aria-label="Wishlist"
               >
                 <Heart size={18} className="xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#C9A84C] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                  0
-                </span>
+                {isMounted && wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#C9A84C] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {wishlistCount}
+                  </span>
+                )}
               </Link>
               
               <button 
@@ -208,7 +216,7 @@ export default function Navbar() {
                 aria-label="Cart"
               >
                 <ShoppingBag size={18} className="xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
-                {totalItemsCount > 0 && (
+                {isMounted && totalItemsCount > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#C9A84C] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                     {totalItemsCount}
                   </span>
