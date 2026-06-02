@@ -1,21 +1,77 @@
 'use client'
+
 import { motion } from 'framer-motion'
-import { Shield, Award, RefreshCw, Truck, Star, Headphones } from 'lucide-react'
-const features = [
-  { icon: Shield, title: 'BIS Hallmarked', desc: '100% certified purity. Every piece carries BIS hallmark for guaranteed authenticity.' },
-  { icon: Award, title: '40+ Years Trust', desc: 'Serving families since 1985 with legacy craftsmanship passed through generations.' },
-  { icon: RefreshCw, title: 'Easy Exchange', desc: 'Lifetime exchange policy. Upgrade your jewellery at current gold rates anytime.' },
-  { icon: Truck, title: 'Insured Delivery', desc: 'Free insured shipping across India. Delivered in premium packaging, safely.' },
-  { icon: Star, title: 'Master Craftsmen', desc: 'Each piece handcrafted by artisans with decades of experience in their craft.' },
-  { icon: Headphones, title: '24/7 Support', desc: 'Dedicated customer support via WhatsApp, phone, and email. Always here for you.' },
+import {
+  BadgeCheck,
+  CreditCard,
+  RotateCcw,
+  ShieldCheck,
+  Truck,
+  Undo2,
+} from 'lucide-react'
+
+const trustPoints = [
+  {
+    icon: ShieldCheck,
+    title: '100% Hallmarked Jewellery',
+  },
+  {
+    icon: BadgeCheck,
+    title: 'BIS Certified Diamonds',
+  },
+  {
+    icon: RotateCcw,
+    title: 'Lifetime Exchange & Buyback',
+  },
+  {
+    icon: Truck,
+    title: 'Free & Insured Shipping',
+  },
+  {
+    icon: Undo2,
+    title: 'Easy Returns',
+  },
+  {
+    icon: CreditCard,
+    title: 'Secure Payments',
+  },
 ]
+
 export default function WhyChooseUs() {
   return (
-    <section className="py-16 sm:py-24 bg-obsidian relative overflow-hidden">
-      <div className="absolute inset-0 opacity-5"><svg width="100%" height="100%"><defs><pattern id="dots" width="30" height="30" patternUnits="userSpaceOnUse"><circle cx="15" cy="15" r="1" fill="#C9A84C"/></pattern></defs><rect width="100%" height="100%" fill="url(#dots)" /></svg></div>
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="text-center mb-14"><p className="font-mono-code text-xs tracking-[0.25em] text-gold uppercase mb-3">The Ratan Promise</p><h2 className="font-display text-4xl sm:text-5xl text-white mb-4">Why Choose Us</h2><div className="gold-line w-24 mx-auto" /></div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">{features.map((feat, i) => <motion.div key={feat.title} initial={{ opacity:0, y:30 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ delay:i*0.1, duration:0.5 }} className="group p-6 rounded-2xl border border-gold/10 hover:border-gold/30 hover:bg-gold/5 transition-all duration-300"><div className="w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center mb-4 group-hover:bg-gold/20 transition-colors"><feat.icon size={22} className="text-gold" /></div><h3 className="font-display text-lg text-white mb-2">{feat.title}</h3><p className="text-sm text-gold-light/50 leading-relaxed">{feat.desc}</p></motion.div>)}</div>
+    <section className="relative overflow-hidden bg-[#2b0008] py-7 sm:py-8 md:py-10 lg:py-8">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent opacity-70" />
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--gold)] to-transparent opacity-50" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(201,168,76,0.1),transparent_42%)]" />
+
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="mb-6 flex w-full items-center justify-center gap-3 text-center">
+          <span className="h-px w-8 bg-[var(--gold)]/70 sm:w-12" />
+          <h2 className="font-display text-lg font-semibold uppercase tracking-[0.08em] text-white sm:text-xl md:text-2xl">
+            WHY CHOOSE RATAN JEWELLERS?
+          </h2>
+          <span className="h-px w-8 bg-[var(--gold)]/70 sm:w-12" />
+        </div>
+
+        <div className="grid w-full grid-cols-2 md:mx-auto md:max-w-[720px] md:grid-cols-3 lg:max-w-none lg:grid-cols-6 gap-x-5 gap-y-5 sm:gap-x-6 md:gap-x-6 md:gap-y-10 lg:gap-x-4 lg:gap-y-5">
+          {trustPoints.map((point, index) => (
+            <motion.div
+              key={point.title}
+              initial={{ opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ delay: index * 0.035, duration: 0.3 }}
+              className="group flex items-center justify-start gap-3 text-left sm:justify-center sm:text-center md:h-[104px] md:flex-col md:justify-center md:gap-3 md:text-center lg:h-auto lg:flex-row lg:justify-start lg:text-left"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--gold)]/35 bg-[var(--gold)]/10 text-[var(--gold)] transition-all duration-300 group-hover:border-[var(--gold)] group-hover:bg-[var(--gold)]/20 md:h-10 md:w-10 lg:h-9 lg:w-9">
+                <point.icon size={19} strokeWidth={1.7} />
+              </div>
+              <h3 className="max-w-[160px] text-[12px] font-semibold leading-snug text-[#FFF6DE] sm:text-[13px] md:min-h-[40px] md:text-sm lg:min-h-0 lg:max-w-[130px] lg:text-[13px]">
+                {point.title}
+              </h3>
+            </motion.div>
+          ))}
+        </div>
       </div>
     </section>
   )

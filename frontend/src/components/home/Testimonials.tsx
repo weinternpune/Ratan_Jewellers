@@ -1,35 +1,205 @@
-'use client'
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react'
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import { ChevronLeft, ChevronRight, Quote, Star } from "lucide-react";
+
 const testimonials = [
-  { id: 1, name: 'Priya Sharma', location: 'Mumbai', rating: 5, text: "Bought my wedding set from Ratan Jewellers and I couldn't be happier. The craftsmanship is exquisite and the gold quality is exceptional. Got BIS hallmark verified too!", product: 'Bridal Necklace Set' },
-  { id: 2, name: 'Anita Patel', location: 'Surat', rating: 5, text: "The diamond ring I ordered for my engagement is absolutely stunning. WhatsApp delivery updates were so convenient. Customer service is top-notch.", product: 'Diamond Solitaire Ring' },
-  { id: 3, name: 'Meera Krishnan', location: 'Chennai', rating: 5, text: "I've been buying from Ratan Jewellers for 15 years. Their exchange policy is fair, pricing is transparent, and quality never disappoints. Highly recommend!", product: 'Gold Bangles Set' },
-  { id: 4, name: 'Sunita Agarwal', location: 'Jaipur', rating: 5, text: "Ordered earrings online and received them beautifully packaged. The weight and purity matched exactly as described. Will definitely shop again!", product: 'Temple Jhumka Earrings' },
-]
+  {
+    id: 1,
+    name: "Priya Sharma",
+    location: "Mumbai",
+    rating: 5,
+    text: "Bought my wedding set from Ratan Jewellers and I couldn't be happier. The craftsmanship is exquisite and the gold quality is exceptional. Got BIS hallmark verified too!",
+    product: "Bridal Necklace Set",
+  },
+  {
+    id: 2,
+    name: "Anita Patel",
+    location: "Surat",
+    rating: 5,
+    text: "The diamond ring I ordered for my engagement is absolutely stunning. WhatsApp delivery updates were so convenient. Customer service is top-notch.",
+    product: "Diamond Solitaire Ring",
+  },
+  {
+    id: 3,
+    name: "Meera Krishnan",
+    location: "Chennai",
+    rating: 5,
+    text: "I've been buying from Ratan Jewellers for 15 years. Their exchange policy is fair, pricing is transparent, and quality never disappoints. Highly recommend!",
+    product: "Gold Bangles Set",
+  },
+  {
+    id: 4,
+    name: "Sunita Agarwal",
+    location: "Jaipur",
+    rating: 5,
+    text: "Ordered earrings online and received them beautifully packaged. The weight and purity matched exactly as described. Will definitely shop again!",
+    product: "Temple Jhumka Earrings",
+  },
+];
+
+const getInitials = (name: string) =>
+  name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2);
+
 export default function Testimonials() {
-  const [current, setCurrent] = useState(0)
+  const [current, setCurrent] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(1);
+
+  useEffect(() => {
+    const updateVisibleCount = () => {
+      if (window.innerWidth >= 1024) {
+        setVisibleCount(3);
+      } else if (window.innerWidth >= 768) {
+        setVisibleCount(2);
+      } else {
+        setVisibleCount(1);
+      }
+    };
+
+    updateVisibleCount();
+    window.addEventListener("resize", updateVisibleCount);
+
+    return () => window.removeEventListener("resize", updateVisibleCount);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCurrent((value) => (value + 1) % testimonials.length);
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const visibleTestimonials = useMemo(
+    () =>
+      Array.from({ length: visibleCount }, (_, index) => {
+        return testimonials[(current + index) % testimonials.length];
+      }),
+    [current, visibleCount],
+  );
+
+  const goToPrevious = () => {
+    setCurrent(
+      (value) => (value - 1 + testimonials.length) % testimonials.length,
+    );
+  };
+
+  const goToNext = () => {
+    setCurrent((value) => (value + 1) % testimonials.length);
+  };
+
   return (
-    <section className="py-16 sm:py-20 bg-ivory">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6">
-        <div className="text-center mb-12"><p className="font-mono-code text-xs tracking-[0.25em] text-gold uppercase mb-3">Customer Love</p><h2 className="font-display text-4xl sm:text-5xl text-charcoal mb-4">What They Say</h2><div className="gold-line w-24 mx-auto" /></div>
+    <section className="bg-[var(--ivory)] py-11 sm:py-14">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="mb-8 text-center">
+          <div className="mb-2 flex w-full items-center justify-center gap-3">
+            <span className="h-px w-8 bg-[var(--gold)]/70 sm:w-12" />
+            <p className="font-display text-[0.994rem] font-semibold uppercase tracking-[0.08em] text-[var(--charcoal)] sm:text-xl">
+              WHAT OUR CUSTOMERS SAY
+            </p>
+            <span className="h-px w-8 bg-[var(--gold)]/70 sm:w-12" />
+          </div>
+        </div>
+
         <div className="relative">
-          <AnimatePresence mode="wait">
-            <motion.div key={current} initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-20 }} transition={{ duration:0.4 }} className="luxury-card rounded-2xl p-8 sm:p-12 text-center">
-              <Quote size={36} className="text-gold/20 mx-auto mb-6" />
-              <div className="flex justify-center mb-4">{[...Array(testimonials[current].rating)].map((_,i) => <Star key={i} size={16} fill="#C9A84C" stroke="none" />)}</div>
-              <p className="font-display text-xl sm:text-2xl text-charcoal leading-relaxed mb-8 italic">"{testimonials[current].text}"</p>
-              <div><p className="font-display text-base font-medium text-charcoal">{testimonials[current].name}</p><p className="text-sm text-warm-grey mt-0.5">{testimonials[current].location}</p><p className="text-xs text-gold mt-1 font-mono-code">{testimonials[current].product}</p></div>
-            </motion.div>
-          </AnimatePresence>
-          <div className="flex items-center justify-center gap-4 mt-8">
-            <button onClick={() => setCurrent(c => (c-1+testimonials.length)%testimonials.length)} className="w-10 h-10 rounded-full border border-gold/30 flex items-center justify-center text-warm-grey hover:border-gold hover:text-gold transition-all"><ChevronLeft size={16} /></button>
-            <div className="flex gap-2">{testimonials.map((_,i) => <button key={i} onClick={() => setCurrent(i)} className={`rounded-full transition-all duration-300 ${i===current?'w-6 h-2 bg-gold':'w-2 h-2 bg-gold/25'}`} />)}</div>
-            <button onClick={() => setCurrent(c => (c+1)%testimonials.length)} className="w-10 h-10 rounded-full border border-gold/30 flex items-center justify-center text-warm-grey hover:border-gold hover:text-gold transition-all"><ChevronRight size={16} /></button>
+          <motion.div
+            key={`${current}-${visibleCount}`}
+            initial={{ opacity: 0, x: 18 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3"
+          >
+            {visibleTestimonials.map((testimonial) => (
+              <motion.article
+                key={testimonial.id}
+                className="group relative flex h-[300px] flex-col  rounded-lg border border-[var(--gold)]/20 bg-white px-7 py-6 text-center shadow-[0_8px_26px_rgba(13,7,0,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--gold)]/40 hover:shadow-[0_14px_34px_rgba(13,7,0,0.1)]"
+              >
+                <Quote
+                  size={36}
+                  strokeWidth={1.2}
+                  className="absolute right-5 top-5 text-[rgba(201,168,76,0.1)] transition-colors duration-300 group-hover:text-[rgba(201,168,76,0.18)]"
+                />
+
+                <div className="mb-3 flex justify-center gap-1">
+                  {Array.from({ length: testimonial.rating }).map(
+                    (_, starIndex) => (
+                      <Star
+                        key={starIndex}
+                        size={14}
+                        fill="var(--gold)"
+                        stroke="var(--gold)"
+                        strokeWidth={1.5}
+                      />
+                    ),
+                  )}
+                </div>
+
+                <p className="mx-auto flex-1 text-sm leading-6 text-[var(--charcoal)]/75">
+                  &ldquo;{testimonial.text}&rdquo;
+                </p>
+
+                <div className="mt-5 flex items-center justify-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--gold)]/35 bg-gradient-to-br from-[var(--gold-100)] to-white font-display text-base font-semibold text-[var(--gold-dark)] shadow-inner">
+                    {getInitials(testimonial.name)}
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-sm font-medium leading-tight text-[var(--charcoal)]">
+                      {testimonial.name}
+                    </h3>
+                    <p className="mt-0.5 text-[11px] uppercase tracking-[0.12em] text-[var(--warm-grey)]">
+                      {testimonial.location}
+                    </p>
+                    <p className="mt-1 font-mono-code text-[10px] uppercase tracking-[0.12em] text-[var(--gold-dark)]">
+                      {testimonial.product}
+                    </p>
+                  </div>
+                </div>
+              </motion.article>
+            ))}
+          </motion.div>
+
+          <div className="mt-7 flex items-center justify-center gap-4">
+            <button
+              type="button"
+              onClick={goToPrevious}
+              aria-label="Show previous testimonials"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--gold)]/35 bg-white text-[var(--gold-dark)] transition-all duration-300 hover:border-[var(--gold)] hover:bg-[var(--gold-50)]"
+            >
+              <ChevronLeft size={16} />
+            </button>
+
+            <div className="flex items-center gap-2">
+              {testimonials.map((testimonial, index) => (
+                <button
+                  key={testimonial.id}
+                  type="button"
+                  onClick={() => setCurrent(index)}
+                  aria-label={`Show testimonial ${index + 1}`}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    index === current
+                      ? "w-6 bg-[var(--gold)]"
+                      : "w-2 bg-[var(--gold)]/30 hover:bg-[var(--gold)]/60"
+                  }`}
+                />
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={goToNext}
+              aria-label="Show next testimonials"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--gold)]/35 bg-white text-[var(--gold-dark)] transition-all duration-300 hover:border-[var(--gold)] hover:bg-[var(--gold-50)]"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
         </div>
       </div>
     </section>
-  )
+  );
 }

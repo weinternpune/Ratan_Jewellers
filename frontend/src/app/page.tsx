@@ -4,10 +4,11 @@ import HeroSection from '@/components/home/HeroSection'
 import CartDrawer from '@/components/cart/CartDrawer'
 import FeaturedCategories from '@/components/home/FeaturedCategories'
 import FeaturedProducts from '@/components/home/FeaturedProducts'
+import TrendingProducts from '@/components/home/TrendingProduct'
 import LiveGoldRate from '@/components/home/LiveGoldRate'
 import Testimonials from '@/components/home/Testimonials'
+import AboutUs from '@/components/home/AboutUs'
 import WhyChooseUs from '@/components/home/WhyChooseUs'
-import NewsletterSection from '@/components/home/NewsletterSection'
 
 export default function HomePage() {
   return (
@@ -18,10 +19,10 @@ export default function HomePage() {
       <LiveGoldRate />
       <FeaturedCategories />
       <FeaturedProducts title="New Arrivals" filter="newest" />
+      <AboutUs />
       <WhyChooseUs />
-      <FeaturedProducts title="Trending Now" filter="trending" />
+     <TrendingProducts title="Trending Now" />
       <Testimonials />
-      <NewsletterSection />
       <Footer />
     </main>
   )
