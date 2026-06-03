@@ -24,6 +24,7 @@ import wishlistRoutes  from './routes/wishlist';
 import waRoutes        from './routes/whatsapp';
 import supplierRoutes  from './routes/suppliers';
 import uploadRoutes    from './routes/upload';
+import customJewelleryRoutes from './routes/customJewellery';
 
 dotenv.config();
 const app = express();
@@ -57,6 +58,7 @@ app.use('/api/wishlist',   wishlistRoutes);
 app.use('/api/whatsapp',   waRoutes);
 app.use('/api/suppliers',  supplierRoutes);
 app.use('/api/upload',     uploadRoutes);
+app.use('/api/custom-jewellery', customJewelleryRoutes);
 
 app.use('*', (_req, res) => res.status(404).json({ success: false, message: 'Route not found' }));
 app.use(errorHandler);
