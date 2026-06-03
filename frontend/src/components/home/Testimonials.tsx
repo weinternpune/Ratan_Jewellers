@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Quote, Star } from "lucide-react";
@@ -9,6 +10,7 @@ const testimonials = [
     id: 1,
     name: "Priya Sharma",
     location: "Mumbai",
+    image: "/images/testimonials/priya.jpeg",
     rating: 5,
     text: "Bought my wedding set from Ratan Jewellers and I couldn't be happier. The craftsmanship is exquisite and the gold quality is exceptional. ",
     product: "Bridal Necklace Set",
@@ -17,6 +19,7 @@ const testimonials = [
     id: 2,
     name: "Anita Patel",
     location: "Surat",
+    image: "/images/testimonials/anita.jpeg",
     rating: 5,
     text: "The diamond ring I ordered for my engagement is absolutely stunning. WhatsApp delivery updates were so convenient. Customer service is top-notch.",
     product: "Diamond Solitaire Ring",
@@ -25,6 +28,7 @@ const testimonials = [
     id: 3,
     name: "Meera Krishnan",
     location: "Chennai",
+    image: "/images/testimonials/meera.jpeg",
     rating: 5,
     text: "I've been buying from Ratan Jewellers for 15 years. Their exchange policy is fair, pricing is transparent, and quality never disappoints. Highly recommend!",
     product: "Gold Bangles Set",
@@ -33,18 +37,12 @@ const testimonials = [
     id: 4,
     name: "Sunita Agarwal",
     location: "Jaipur",
+    image: "/images/testimonials/sunita.jpeg",
     rating: 5,
     text: "Ordered earrings online and received them beautifully packaged. The weight and purity matched exactly as described. Will definitely shop again!",
     product: "Temple Jhumka Earrings",
   },
 ];
-
-const getInitials = (name: string) =>
-  name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2);
 
 export default function Testimonials() {
   const [current, setCurrent] = useState(0);
@@ -146,8 +144,13 @@ export default function Testimonials() {
                 </p>
 
                 <div className="mt-1 flex items-center justify-center gap-3">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--gold)]/35 bg-gradient-to-br from-[var(--gold-100)] to-white font-display text-lg font-semibold text-[var(--gold-dark)] shadow-inner">
-                    {getInitials(testimonial.name)}
+                  <div className="relative h-[56px] w-[56px] flex-shrink-0 rounded-full border border-[var(--gold)]/35 overflow-hidden shadow-inner">
+                    <Image
+                      src={testimonial.image}
+                      alt={testimonial.name}
+                      fill
+                      className="object-cover"
+                    />
                   </div>
                   <div className="text-left">
                     <h3 className="text-sm font-medium leading-tight text-[var(--charcoal)]">
