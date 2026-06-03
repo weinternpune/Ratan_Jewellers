@@ -15,9 +15,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "i.pinimg.com",
+        hostname: "images.unsplash.com",
       },
     ],
+    unoptimized: true, // Disable image optimization for external images to avoid 403 errors
   },
 };
 

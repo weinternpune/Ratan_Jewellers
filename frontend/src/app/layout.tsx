@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { Providers } from './providers'
 import { Toaster } from 'react-hot-toast'
-import Script from 'next/script'
+import SearchModal from '@/components/search/SearchModal'
 
 export const metadata: Metadata = {
   title: { default: 'Ratan Jewellers - Timeless Luxury Since 1985', template: '%s | Ratan Jewellers' },
@@ -14,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body>
         <Providers>
+          <SearchModal />
           {children}
           <Toaster
             position="top-right"
