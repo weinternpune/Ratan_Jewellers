@@ -1,5 +1,4 @@
 
-
 import Image from "next/image";
 
 export default function AboutPage() {
@@ -49,25 +48,18 @@ export default function AboutPage() {
 
       {/* TIMELINE */}
       <section className="max-w-6xl mx-auto px-6 py-20">
-
         <h2 className="text-center text-4xl font-serif mb-20">
           Our Journey Through Time
         </h2>
 
-        {/* Timeline wrapper — vertical line runs through the center */}
         <div className="relative">
-
-          {/* Vertical center line */}
           <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-[#b48a45] -translate-x-1/2" />
 
           <div className="space-y-24">
 
-            {/* 1975 — text left, image right */}
+            {/* 1975 */}
             <div className="relative grid md:grid-cols-2 gap-10 items-center">
-
-              {/* Gold dot on the line */}
               <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-[#b48a45] rotate-45 z-10" />
-
               <div className="md:text-right md:pr-16">
                 <p className="text-[#b48a45] font-semibold">1975</p>
                 <h3 className="text-3xl font-serif my-4">The Beginning</h3>
@@ -75,7 +67,6 @@ export default function AboutPage() {
                   Ratan Jewellers began with a dream of creating timeless jewellery.
                 </p>
               </div>
-
               <div className="md:pl-16">
                 <Image
                   src="/images/journey1.png"
@@ -87,11 +78,9 @@ export default function AboutPage() {
               </div>
             </div>
 
-            {/* 1995 — image left, text right */}
+            {/* 1995 */}
             <div className="relative grid md:grid-cols-2 gap-10 items-center">
-
               <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-[#b48a45] rotate-45 z-10" />
-
               <div className="md:pr-16 order-2 md:order-1">
                 <Image
                   src="/images/journey2.png"
@@ -101,7 +90,6 @@ export default function AboutPage() {
                   className="rounded-lg w-full"
                 />
               </div>
-
               <div className="md:pl-16 order-1 md:order-2">
                 <p className="text-[#b48a45] font-semibold">1995</p>
                 <h3 className="text-3xl font-serif my-4">Growing Legacy</h3>
@@ -111,11 +99,9 @@ export default function AboutPage() {
               </div>
             </div>
 
-            {/* 2025 — text left, image right */}
+            {/* 2025 */}
             <div className="relative grid md:grid-cols-2 gap-10 items-center">
-
               <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-[#b48a45] rotate-45 z-10" />
-
               <div className="md:text-right md:pr-16">
                 <p className="text-[#b48a45] font-semibold">2025</p>
                 <h3 className="text-3xl font-serif my-4">Modern Luxury</h3>
@@ -123,7 +109,6 @@ export default function AboutPage() {
                   Combining traditional artistry with modern elegance.
                 </p>
               </div>
-
               <div className="md:pl-16">
                 <Image
                   src="/images/journey3.png"
@@ -157,7 +142,7 @@ export default function AboutPage() {
             </div>
             <div>
               <Image
-                src="/images/director.jpg"
+                src="/images/director.png"
                 alt="Director"
                 width={500}
                 height={600}
@@ -182,7 +167,7 @@ export default function AboutPage() {
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <h4 className="text-[#b48a45] mb-2">Gold Purity</h4>
-                  <p>22K & 24K Hallmarked</p>
+                  <p>22K &amp; 24K Hallmarked</p>
                 </div>
                 <div>
                   <h4 className="text-[#b48a45] mb-2">Diamonds</h4>
@@ -202,11 +187,129 @@ export default function AboutPage() {
               <Image src="/images/craft1.jpg" alt="" width={250} height={150} className="w-full" />
               <Image src="/images/craft2.jpg" alt="" width={250} height={150} className="w-full" />
               <Image src="/images/craft3.jpg" alt="" width={250} height={150} className="w-full" />
-              <Image src="/images/craft4.jpg" alt="" width={250} height={150} className="w-full" />
+              <Image src="/images/journey3.png" alt="" width={250} height={150} className="w-full" />
             </div>
           </div>
         </div>
       </section>
+
+      {/* ── FOOTER ───────────────────────────────────────────────── */}
+      <footer className="bg-[#0f0d0b] text-[#7a6a5a]">
+
+        {/* Top divider line */}
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="border-t border-[#b48a45]/20" />
+        </div>
+
+        {/* Main footer grid */}
+        <div className="max-w-7xl mx-auto px-6 py-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+
+            {/* Brand */}
+            <div>
+              <p className="font-serif text-xl text-[#f0e6d3] tracking-widest mb-4">
+                Ratan <span className="text-[#b48a45]">Jewellers</span>
+              </p>
+              <p className="text-sm leading-relaxed max-w-[220px]">
+                Crafting timeless heirlooms and spreading pure love since 1975.
+                Where purity meets trust, crafted with love.
+              </p>
+              <p className="mt-6 text-[#b48a45] text-xl tracking-[6px]">❧</p>
+            </div>
+
+            {/* Navigation */}
+            <div>
+              <p className="text-[9px] tracking-[0.22em] uppercase text-[#b48a45] font-semibold mb-5">
+                Navigation
+              </p>
+              <ul className="space-y-3 text-sm">
+                {["Collections", "New Arrivals", "Shop Jewellery", "Why Ratan", "Our Journey"].map(
+                  (item) => (
+                    <li key={item}>
+                      <a
+                        href="#"
+                        className="hover:text-[#b48a45] transition-colors duration-200"
+                      >
+                        {item}
+                      </a>
+                    </li>
+                  )
+                )}
+              </ul>
+            </div>
+
+            {/* Customer Care */}
+            <div>
+              <p className="text-[9px] tracking-[0.22em] uppercase text-[#b48a45] font-semibold mb-5">
+                Customer Care
+              </p>
+              <ul className="space-y-3 text-sm">
+                {["Contact Us", "FAQs", "Exchange & Returns", "Shipping Info", "Track Order"].map(
+                  (item) => (
+                    <li key={item}>
+                      <a
+                        href="#"
+                        className="hover:text-[#b48a45] transition-colors duration-200"
+                      >
+                        {item}
+                      </a>
+                    </li>
+                  )
+                )}
+              </ul>
+            </div>
+
+            {/* Newsletter */}
+            <div>
+              <p className="text-[9px] tracking-[0.22em] uppercase text-[#b48a45] font-semibold mb-5">
+                Newsletter
+              </p>
+              <p className="text-sm leading-relaxed mb-5">
+                Subscribe to get updates on new collections and exclusive offers.
+              </p>
+              <div className="flex items-center border-b border-[#b48a45]/40 pb-1">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="flex-1 bg-transparent outline-none text-sm text-[#c8b89a] placeholder-[#b48a45]/35 py-2"
+                />
+                <button
+                  type="button"
+                  aria-label="Subscribe"
+                  className="text-[#b48a45] text-lg px-1 hover:translate-x-1 transition-transform duration-200"
+                >
+                  →
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="border-t border-[#b48a45]/10 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-xs tracking-wider text-[#4a3f35]">
+              © 2025 Ratan Jewellers. All Rights Reserved.
+            </p>
+
+            {/* Social icons */}
+            <div className="flex items-center gap-4">
+              {["f", "in", "w"].map((icon) => (
+                <a
+                  key={icon}
+                  href="#"
+                  className="w-8 h-8 rounded-full border border-[#b48a45]/25 flex items-center justify-center text-xs text-[#7a6a5a] hover:border-[#b48a45] hover:text-[#b48a45] transition-all duration-200"
+                >
+                  {icon}
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+
+      </footer>
+      {/* ── END FOOTER ───────────────────────────────────────────── */}
 
     </main>
   );

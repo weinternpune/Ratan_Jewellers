@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ShoppingBag, Search, User, Heart, Menu, X, ChevronDown, Shield, Repeat, MapPin, Package as PackageIcon } from 'lucide-react'
-import { useCartStore, useAuthStore, useUIStore } from '@/store'
+import { useCartStore, useAuthStore, useUIStore, useWishlistStore } from '@/store'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const categories = [
@@ -23,10 +23,16 @@ export default function Navbar() {
   const [collectionsOpen, setCollectionsOpen] = useState(false)
   const pathname = usePathname()
   const totalItemsCount = useCartStore(s => s.items.reduce((a, i) => a + i.quantity, 0))
+  const wishlistCount = useWishlistStore(s => s.totalItems())
   const toggleCart = useCartStore(s => s.toggleCart)
   const { user, isAuthenticated } = useAuthStore()
   const { isMobileMenuOpen, toggleMobileMenu, toggleSearch } = useUIStore()
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
   
   useEffect(() => { 
     const h = () => setScrolled(window.scrollY > 20)
@@ -165,10 +171,20 @@ export default function Navbar() {
               <Link href="/custom-jewellery" className="px-1 xl:px-2 2xl:px-4 py-2 text-[9.5px] xl:text-[11px] 2xl:text-[13px] font-bold tracking-tight xl:tracking-normal 2xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap">
                 CUSTOM JEWELLERY
               </Link>
-              <Link href="/about" className="px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap">
+              <Link
+                href="/about"
+                className={`px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide transition-colors whitespace-nowrap ${
+                  pathname === '/about' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'
+                }`}
+              >
                 ABOUT US
               </Link>
-              <Link href="/contact" className="px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
+              <Link
+                href="/contact"
+                className={`px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide transition-colors ${
+                  pathname === '/contact' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'
+                }`}
+              >
                 CONTACT
               </Link>
             </div>
@@ -197,9 +213,11 @@ export default function Navbar() {
                 aria-label="Wishlist"
               >
                 <Heart size={18} className="xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#C9A84C] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                  0
-                </span>
+                {isMounted && wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#C9A84C] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {wishlistCount}
+                  </span>
+                )}
               </Link>
               
               <button 
@@ -208,7 +226,7 @@ export default function Navbar() {
                 aria-label="Cart"
               >
                 <ShoppingBag size={18} className="xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
-                {totalItemsCount > 0 && (
+                {isMounted && totalItemsCount > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#C9A84C] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                     {totalItemsCount}
                   </span>
@@ -249,7 +267,9 @@ export default function Navbar() {
                     key={item.href} 
                     href={item.href} 
                     onClick={toggleMobileMenu} 
-                    className="block px-4 py-2.5 text-sm text-gray-700 hover:text-[#C9A84C] hover:bg-gray-50 rounded-lg transition-colors"
+                    className={`block px-4 py-2.5 text-sm hover:bg-gray-50 rounded-lg transition-colors ${
+                      pathname === item.href ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'
+                    }`}
                   >
                     {item.label}
                   </Link>
