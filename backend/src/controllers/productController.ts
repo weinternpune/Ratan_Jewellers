@@ -1,9 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
+import { Types } from 'mongoose';
 import { Product } from '../models/Product';
-import { GoldRate, Inventory } from '../models/index';
+import { Category, GoldRate, Inventory } from '../models/index';
 import { Review } from '../models/Invoice';
 import { AppError } from '../middleware/errorHandler';
 import { AuthRequest } from '../middleware/auth';
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export const getProducts = async (
   req: Request,
@@ -32,7 +35,28 @@ export const getProducts = async (
     };
 
     if (category) {
-      filter.categoryId = category;
+      const categoryValues = (category as string)
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+
+      const categoryIds = categoryValues.filter((value) => Types.ObjectId.isValid(value));
+      const categorySlugs = categoryValues.map((value) => value.toLowerCase());
+
+      const matchedCategories = await Category.find({
+        isActive: true,
+        $or: [
+          { slug: { $in: categorySlugs } },
+          { name: { $in: categoryValues.map((value) => new RegExp(`^${escapeRegExp(value)}$`, 'i')) } },
+        ],
+      }).select('_id').lean();
+
+      filter.categoryId = {
+        $in: [
+          ...categoryIds,
+          ...matchedCategories.map((matchedCategory: any) => matchedCategory._id),
+        ],
+      };
     }
 
     if (metal) {

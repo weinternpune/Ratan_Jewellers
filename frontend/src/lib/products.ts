@@ -19,6 +19,7 @@ export interface Product {
   isTrending?: boolean;
   createdAt?: string;
   category: string | { name: string };
+  categoryId?: string | { name?: string; slug?: string };
 }
 
 export const PRODUCTS: Product[] = [
@@ -192,14 +193,14 @@ export const PRODUCTS: Product[] = [
   },
   {
     id: "p-8",
-    name: "Diamond Tennis Bracelet",
+    name: "Diamond Tennis Necklaces",
     image:
       "https://d25g9z9s77rn4i.cloudfront.net/uploads/product/923/1779455699_aabe91f5b170208f7270.webp",
     images: [
       "https://d25g9z9s77rn4i.cloudfront.net/uploads/product/923/1779455699_aabe91f5b170208f7270.webp",
     ],
     metal: "Diamond",
-    category: "Bracelets",
+    category: "Necklaces",
     purity: "18K",
     currentPrice: 78000,
     slug: "diamond-tennis-bracelet",

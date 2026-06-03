@@ -28,7 +28,7 @@ const mockProducts = Array.from({ length: 6 }, (_, i) => ({
     'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1318/1779442888_0ac1f452c046c8b762b9.webp',
     'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/163/1779964423_381a85a123b25b6c31f9.jpg',
     'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1861/1773828632_55ca5de31b3813b0bd63.png',
-    'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/262/1633616341_88273e27e4efdf6614fd.jpg',
+    'https://i.pinimg.com/736x/ec/5b/76/ec5b76caa55569cdefa5fd005241a665.jpg',
     'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/764/1780054045_2efbce9def7e01b07340.webp',
     'https://tiimg.tistatic.com/fp/1/006/590/fine-finished-brass-pooja-thali-023.jpg',
   ].slice(i, i + 1),
