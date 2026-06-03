@@ -50,7 +50,6 @@ const mockProducts = Array.from({ length: 6 }, (_, i) => ({
 }))
 
 export default function FeaturedProducts({ title, filter }: Props) {
-  // ── React Query unchanged ──────────────────────────────────────────────
   const { data, isLoading } = useQuery({
     queryKey: ['products', filter],
     queryFn: () =>
@@ -66,9 +65,9 @@ export default function FeaturedProducts({ title, filter }: Props) {
     retry: false,
   })
 
-const products = (data as any)?.products?.length
-  ? (data as any).products
-  : mockProducts
+  const products = (data as any)?.products?.length
+    ? (data as any).products
+    : mockProducts
 
   return (
     <section className="py-16 sm:py-20 bg-white">
@@ -91,7 +90,6 @@ const products = (data as any)?.products?.length
 
           {/* Centered luxury heading with gold dividers */}
           <div className="flex items-center gap-4">
-            {/* Left divider */}
             <div className="flex items-center gap-1.5">
               <div className="w-8 h-px bg-[#C8A45D]" />
               <div className="w-1.5 h-1.5 rotate-45 border border-[#C8A45D]" />
@@ -104,7 +102,6 @@ const products = (data as any)?.products?.length
               {title}
             </h2>
 
-            {/* Right divider */}
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rotate-45 border border-[#C8A45D]" />
               <div className="w-8 h-px bg-[#C8A45D]" />
@@ -117,7 +114,8 @@ const products = (data as any)?.products?.length
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="rounded-xl overflow-hidden border border-gray-100">
-                <div className="aspect-square bg-gray-100 animate-pulse" />
+                {/* Square image placeholder */}
+                <div className="aspect-square w-full bg-gray-100 animate-pulse" />
                 <div className="p-3 space-y-2">
                   <div className="h-3 bg-gray-100 rounded animate-pulse w-3/4" />
                   <div className="h-3 bg-gray-100 rounded animate-pulse w-1/2" />
@@ -131,6 +129,8 @@ const products = (data as any)?.products?.length
             {products.map((product: any, i: number) => (
               <motion.div
                 key={product.id}
+                // ── Square card wrapper ──────────────────────────────────
+                className="flex flex-col w-full"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -142,7 +142,7 @@ const products = (data as any)?.products?.length
           </div>
         )}
 
-        {/* Mobile "View All" CTA — unchanged */}
+        {/* Mobile "View All" CTA */}
         <div className="mt-8 text-center sm:hidden">
           <Link
             href="/products"
