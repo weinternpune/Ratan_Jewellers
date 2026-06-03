@@ -3,6 +3,7 @@ import './globals.css'
 import { Providers } from './providers'
 import { Toaster } from 'react-hot-toast'
 import SearchModal from '@/components/search/SearchModal'
+import Script from "next/script";
 
 export const metadata: Metadata = {
   title: { default: 'Ratan Jewellers - Timeless Luxury Since 1985', template: '%s | Ratan Jewellers' },
