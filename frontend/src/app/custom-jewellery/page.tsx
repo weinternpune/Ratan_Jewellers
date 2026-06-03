@@ -19,7 +19,7 @@ const categories = [
   {
     id: 2,
     name: 'Wedding Bands',
-    image: '/categories/weding -band.jpg.png',
+    image: '/categories/weding-band.jpg.png',
     description: 'Unique bands for your special day',
     items: '40+ Designs',
   },
@@ -40,7 +40,7 @@ const categories = [
   {
     id: 5,
     name: 'Bracelets',
-    image: '/categories/bracelts.jpg.png',
+    image: '/categories/bracelets.jpg.png',
     description: 'Elegant custom bracelets',
     items: '35+ Designs',
   },
@@ -59,7 +59,7 @@ const galleryImages = [
   { id: 3, image: '/gallery/earring-1.jpg.png', title: 'Pearl Earrings', category: 'Earrings' },
   { id: 4, image: '/gallery/bracelet-1.jpg.jpg', title: 'Emerald Bracelet', category: 'Bracelet' },
   { id: 5, image: '/categories/pendants.jpg.png', title: 'Ruby Pendant', category: 'Pendant' },
-  { id: 6, image: '/categories/weding -band.jpg.png', title: 'Wedding Band Set', category: 'Ring' },
+  { id: 6, image: '/categories/weding-band.jpg.png', title: 'Wedding Band Set', category: 'Ring' },
   { id: 7, image: '/gallery/ring-2.jpg.png', title: 'Sapphire Ring', category: 'Ring' },
   { id: 8, image: '/gallery/necklace-2.jpg.png', title: 'Gold Chain', category: 'Necklace' },
 ]
