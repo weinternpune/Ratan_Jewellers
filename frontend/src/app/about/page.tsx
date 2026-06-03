@@ -1,10 +1,12 @@
 
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 import Image from "next/image";
 
 export default function AboutPage() {
   return (
     <main className="bg-[#f8f4ed] text-[#2d241f]">
-
+      <Navbar />
       {/* HERO */}
       <section className="relative h-[500px] md:h-[650px]">
         <Image
@@ -193,123 +195,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ── FOOTER ───────────────────────────────────────────────── */}
-      <footer className="bg-[#0f0d0b] text-[#7a6a5a]">
-
-        {/* Top divider line */}
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="border-t border-[#b48a45]/20" />
-        </div>
-
-        {/* Main footer grid */}
-        <div className="max-w-7xl mx-auto px-6 py-16">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-
-            {/* Brand */}
-            <div>
-              <p className="font-serif text-xl text-[#f0e6d3] tracking-widest mb-4">
-                Ratan <span className="text-[#b48a45]">Jewellers</span>
-              </p>
-              <p className="text-sm leading-relaxed max-w-[220px]">
-                Crafting timeless heirlooms and spreading pure love since 1975.
-                Where purity meets trust, crafted with love.
-              </p>
-              <p className="mt-6 text-[#b48a45] text-xl tracking-[6px]">❧</p>
-            </div>
-
-            {/* Navigation */}
-            <div>
-              <p className="text-[9px] tracking-[0.22em] uppercase text-[#b48a45] font-semibold mb-5">
-                Navigation
-              </p>
-              <ul className="space-y-3 text-sm">
-                {["Collections", "New Arrivals", "Shop Jewellery", "Why Ratan", "Our Journey"].map(
-                  (item) => (
-                    <li key={item}>
-                      <a
-                        href="#"
-                        className="hover:text-[#b48a45] transition-colors duration-200"
-                      >
-                        {item}
-                      </a>
-                    </li>
-                  )
-                )}
-              </ul>
-            </div>
-
-            {/* Customer Care */}
-            <div>
-              <p className="text-[9px] tracking-[0.22em] uppercase text-[#b48a45] font-semibold mb-5">
-                Customer Care
-              </p>
-              <ul className="space-y-3 text-sm">
-                {["Contact Us", "FAQs", "Exchange & Returns", "Shipping Info", "Track Order"].map(
-                  (item) => (
-                    <li key={item}>
-                      <a
-                        href="#"
-                        className="hover:text-[#b48a45] transition-colors duration-200"
-                      >
-                        {item}
-                      </a>
-                    </li>
-                  )
-                )}
-              </ul>
-            </div>
-
-            {/* Newsletter */}
-            <div>
-              <p className="text-[9px] tracking-[0.22em] uppercase text-[#b48a45] font-semibold mb-5">
-                Newsletter
-              </p>
-              <p className="text-sm leading-relaxed mb-5">
-                Subscribe to get updates on new collections and exclusive offers.
-              </p>
-              <div className="flex items-center border-b border-[#b48a45]/40 pb-1">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="flex-1 bg-transparent outline-none text-sm text-[#c8b89a] placeholder-[#b48a45]/35 py-2"
-                />
-                <button
-                  type="button"
-                  aria-label="Subscribe"
-                  className="text-[#b48a45] text-lg px-1 hover:translate-x-1 transition-transform duration-200"
-                >
-                  →
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Bottom bar */}
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="border-t border-[#b48a45]/10 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-xs tracking-wider text-[#4a3f35]">
-              © 2025 Ratan Jewellers. All Rights Reserved.
-            </p>
-
-            {/* Social icons */}
-            <div className="flex items-center gap-4">
-              {["f", "in", "w"].map((icon) => (
-                <a
-                  key={icon}
-                  href="#"
-                  className="w-8 h-8 rounded-full border border-[#b48a45]/25 flex items-center justify-center text-xs text-[#7a6a5a] hover:border-[#b48a45] hover:text-[#b48a45] transition-all duration-200"
-                >
-                  {icon}
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
-
-      </footer>
-      {/* ── END FOOTER ───────────────────────────────────────────── */}
+      <Footer/>
 
     </main>
   );
