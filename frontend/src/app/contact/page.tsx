@@ -1,5 +1,10 @@
+"use client"
+
+import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { toast } from 'react-hot-toast'
+import { api } from '@/lib/api'
 import {
   CalendarDays,
   Clock,
@@ -16,8 +21,7 @@ import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
 import CartDrawer from '@/components/cart/CartDrawer'
 
-export const metadata = { title: 'Contact Us' }
-
+// Metadata moved to layout.tsx
 const contactMethods = [
   {
     label: 'Call Our Store',
@@ -47,6 +51,31 @@ const services = [
 ]
 
 export default function ContactPage() {
+  const [form, setForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    interest: '',
+    consultationType: 'Store Visit',
+    message: '',
+  })
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    
+    try {
+      await api.post('/contact', form)
+      toast.success('Your consultation request has been sent successfully!')
+      setForm({ name: '', phone: '', email: '', interest: '', consultationType: 'Store Visit', message: '' })
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err.message || 'Failed to submit request')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#FAF6EE] text-[#2C2C2C]">
       <Navbar />
@@ -109,7 +138,7 @@ export default function ContactPage() {
               </p>
             </div>
 
-            <form className="grid gap-4 p-6 sm:p-8">
+            <form onSubmit={handleSubmit} className="grid gap-4 p-6 sm:p-8">
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-[#71531A]">
@@ -118,6 +147,9 @@ export default function ContactPage() {
                   <input
                     type="text"
                     name="name"
+                    required
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
                     className="w-full border border-[#E0C883] bg-white px-4 py-3 text-sm text-[#2C2C2C] outline-none transition placeholder:text-[#8a7c70] focus:border-[#9D7A2E] focus:ring-2 focus:ring-[#C9A84C]/30"
                     placeholder="Your full name"
                   />
@@ -129,6 +161,9 @@ export default function ContactPage() {
                   <input
                     type="tel"
                     name="phone"
+                    required
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     className="w-full border border-[#E0C883] bg-white px-4 py-3 text-sm text-[#2C2C2C] outline-none transition placeholder:text-[#8a7c70] focus:border-[#9D7A2E] focus:ring-2 focus:ring-[#C9A84C]/30"
                     placeholder="+91"
                   />
@@ -137,12 +172,28 @@ export default function ContactPage() {
 
               <label className="block">
                 <span className="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-[#71531A]">
+                  Email Address (Optional)
+                </span>
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="w-full border border-[#E0C883] bg-white px-4 py-3 text-sm text-[#2C2C2C] outline-none transition placeholder:text-[#8a7c70] focus:border-[#9D7A2E] focus:ring-2 focus:ring-[#C9A84C]/30"
+                  placeholder="you@example.com"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-[#71531A]">
                   Interest
                 </span>
                 <select
                   name="interest"
+                  required
+                  value={form.interest}
+                  onChange={(e) => setForm({ ...form, interest: e.target.value })}
                   className="w-full border border-[#E0C883] bg-white px-4 py-3 text-sm text-[#2C2C2C] outline-none transition focus:border-[#9D7A2E] focus:ring-2 focus:ring-[#C9A84C]/30"
-                  defaultValue=""
                 >
                   <option value="" disabled>
                     Select enquiry type
@@ -176,6 +227,8 @@ export default function ContactPage() {
                         type="radio"
                         name="consultationType"
                         value={type}
+                        checked={form.consultationType === type}
+                        onChange={(e) => setForm({ ...form, consultationType: e.target.value })}
                         className="accent-[#C9A84C]"
                       />
                       {type}
@@ -191,6 +244,8 @@ export default function ContactPage() {
                 <textarea
                   name="message"
                   rows={4}
+                  value={form.message}
+                  onChange={(e) => setForm({ ...form, message: e.target.value })}
                   className="w-full resize-none border border-[#E0C883] bg-white px-4 py-3 text-sm text-[#2C2C2C] outline-none transition placeholder:text-[#8a7c70] focus:border-[#9D7A2E] focus:ring-2 focus:ring-[#C9A84C]/30"
                   placeholder="Tell us about the occasion, budget, preferred metal, or design idea."
                 />
@@ -198,10 +253,11 @@ export default function ContactPage() {
 
               <button
                 type="submit"
-                className="btn-gold mt-1 inline-flex items-center justify-center gap-2 px-6 py-3 text-sm uppercase shadow-[0_10px_24px_rgba(201,168,76,0.28)]"
+                disabled={loading}
+                className="btn-gold mt-1 inline-flex items-center justify-center gap-2 px-6 py-3 text-sm uppercase shadow-[0_10px_24px_rgba(201,168,76,0.28)] disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 <Send size={17} />
-                Send Enquiry
+                {loading ? 'Sending...' : 'Send Enquiry'}
               </button>
             </form>
           </div>
