@@ -17,6 +17,13 @@ const CATEGORIES = [
   'Necklaces', 'Rings', 'Bangles', 'Earrings',
   'Chains', 'Pendants', 'Bracelets', 'Mangalsutras',
 ]
+const toFilterSlug = (value: string) => value.toLowerCase().trim().replace(/\s+/g, '-')
+const getProductCategory = (product: Product) => {
+  if (typeof product.category === 'string') return product.category
+  if (product.category?.name) return product.category.name
+  if (typeof product.categoryId === 'object' && product.categoryId?.name) return product.categoryId.name
+  return ''
+}
 const PRICE_RANGES = [
   { label: 'All', min: 0, max: Infinity },
   { label: 'Under ₹25K', min: 0, max: 25000 },
@@ -47,7 +54,7 @@ function ProductCard({ product, onWishlistToggle }: {
       image: product.image || product.images?.[0] || '',
       metal: product.metal,
       purity: product.purity,
-      category: typeof product.category === 'string' ? product.category : product.category?.name || '',
+      category: getProductCategory(product),
       currentPrice: product.currentPrice,
       addedAt: new Date().toISOString(),
     })
@@ -73,7 +80,7 @@ function ProductCard({ product, onWishlistToggle }: {
     })
   }
 
-  const categoryName = typeof product.category === 'string' ? product.category : product.category?.name || ''
+  const categoryName = getProductCategory(product)
   const subtitle = `${product.purity} ${product.metal}${product.stoneCharges > 0 ? ` · ${categoryName}` : ''}`
 
   return (
@@ -201,6 +208,7 @@ export default function ProductsClient() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [toasts, setToasts] = useState<{ id: number; message: string; type: 'add' | 'remove' }[]>([])
   const searchParams = useSearchParams()
+  const queryString = searchParams?.toString() ?? ''
 
   const showToast = useCallback((message: string, type: 'add' | 'remove') => {
     const id = Date.now()
@@ -209,8 +217,8 @@ export default function ProductsClient() {
   }, [])
 
   const normalizeFilterValue = (value: string, options: string[]) => {
-    const normalized = value?.toLowerCase().trim()
-    return options.find(option => option.toLowerCase() === normalized) ?? ''
+    const normalized = toFilterSlug(value || '')
+    return options.find(option => toFilterSlug(option) === normalized) ?? ''
   }
 
   useEffect(() => {
@@ -222,19 +230,10 @@ export default function ProductsClient() {
     const categoryFilter = normalizeFilterValue(categoryParam, CATEGORIES)
     const purityFilter = normalizeFilterValue(purityParam, PURITIES)
 
-    setSelectedMetal(prev => {
-      const normalizedPrev = prev.join(',').toLowerCase()
-      return metalFilter && normalizedPrev !== metalFilter ? [metalFilter] : prev
-    })
-    setSelectedCategory(prev => {
-      const normalizedPrev = prev.join(',').toLowerCase()
-      return categoryFilter && normalizedPrev !== categoryFilter ? [categoryFilter] : prev
-    })
-    setSelectedPurity(prev => {
-      const normalizedPrev = prev.join(',').toLowerCase()
-      return purityFilter && normalizedPrev !== purityFilter ? [purityFilter] : prev
-    })
-  }, [searchParams])
+    setSelectedMetal(metalFilter ? [metalFilter] : [])
+    setSelectedCategory(categoryFilter ? [categoryFilter] : [])
+    setSelectedPurity(purityFilter ? [purityFilter] : [])
+  }, [queryString])
 
   const toggle = (arr: string[], val: string, set: (v: string[]) => void) =>
     set(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val])
@@ -261,8 +260,7 @@ export default function ProductsClient() {
 
   const filteredProducts = useMemo(() => {
     const filtered = products.filter((product: Product) => {
-      const productCategory =
-        typeof product.category === 'string' ? product.category : product.category?.name || ''
+      const productCategory = getProductCategory(product)
       const metalMatch = selectedMetal.length === 0 || selectedMetal.includes(product.metal)
       const categoryMatch = selectedCategory.length === 0 || selectedCategory.includes(productCategory)
       const purityMatch = selectedPurity.length === 0 || selectedPurity.includes(product.purity)
