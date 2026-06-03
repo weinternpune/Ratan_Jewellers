@@ -1,0 +1,22 @@
+[
+  {
+    "id": "1780433348486",
+    "name": "Test User",
+    "email": "test@example.com",
+    "phone": "+91 9876543210",
+    "category": "ring",
+    "message": "Test message",
+    "status": "contacted",
+    "createdAt": "2026-06-02T20:49:08.486Z"
+  },
+  {
+    "id": "1780433766330",
+    "name": "Nitish kumar Barik",
+    "email": "nitishkumarbarik574@gmail.com",
+    "phone": "8260722905",
+    "category": "ring",
+    "message": "werthyjk",
+    "status": "pending",
+    "createdAt": "2026-06-02T20:56:06.330Z"
+  }
+]
