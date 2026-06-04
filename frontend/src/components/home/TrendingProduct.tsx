@@ -147,11 +147,9 @@ const trendingMockProducts = [
 ]
 
 export default function TrendingProducts({ title }: Props) {
-  // ── React Query ────────────────────────────────────────────────────────
   const { data, isLoading } = useQuery({
     queryKey: ['products', 'trending'],
-    queryFn: () =>
-      api.get<any>('/products?trending=true&limit=6'),
+    queryFn: () => api.get<any>('/products?trending=true&limit=6'),
     retry: false,
   })
 
@@ -166,21 +164,15 @@ export default function TrendingProducts({ title }: Props) {
         {/* ── Section header ─────────────────────────────────────────────── */}
         <div className="relative flex items-center justify-center mb-10">
 
-          {/* "View All Products →" — top right, absolute */}
           <Link
             href="/products?trending=true"
             className="absolute right-0 hidden sm:flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-[#C8A45D] transition-colors group font-medium"
           >
             View All Products
-            <ArrowRight
-              size={14}
-              className="group-hover:translate-x-0.5 transition-transform"
-            />
+            <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
           </Link>
 
-          {/* Centered luxury heading with gold dividers */}
           <div className="flex items-center gap-4">
-            {/* Left divider */}
             <div className="flex items-center gap-1.5">
               <div className="w-8 h-px bg-[#C8A45D]" />
               <div className="w-1.5 h-1.5 rotate-45 border border-[#C8A45D]" />
@@ -193,7 +185,6 @@ export default function TrendingProducts({ title }: Props) {
               {title}
             </h2>
 
-            {/* Right divider */}
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rotate-45 border border-[#C8A45D]" />
               <div className="w-8 h-px bg-[#C8A45D]" />
@@ -206,7 +197,7 @@ export default function TrendingProducts({ title }: Props) {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="rounded-xl overflow-hidden border border-gray-100">
-                <div className="aspect-square bg-gray-100 animate-pulse" />
+                <div className="aspect-square w-full bg-gray-100 animate-pulse" />
                 <div className="p-3 space-y-2">
                   <div className="h-3 bg-gray-100 rounded animate-pulse w-3/4" />
                   <div className="h-3 bg-gray-100 rounded animate-pulse w-1/2" />
@@ -220,6 +211,7 @@ export default function TrendingProducts({ title }: Props) {
             {products.map((product: any, i: number) => (
               <motion.div
                 key={product.id}
+                className="flex flex-col w-full h-full"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}

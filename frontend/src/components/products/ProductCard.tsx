@@ -51,25 +51,26 @@ export default function ProductCard({ product }: { product: Product }) {
     toggleCart()
   }
 
-const handleWishlist = () => {
-  toggleItem({
-    id: product.id,
-    productId: product.id,
-    name: product.name,
-    sku: product.sku,
-    image: product.image || (product.images && product.images[0]) || '',
-    metal: product.metal,
-    purity: product.purity,
-    category: typeof product.category === 'string' ? product.category : product.category?.name || '',
-    currentPrice: product.currentPrice,
-    addedAt: new Date().toISOString(),
-  })
-}
+  const handleWishlist = () => {
+    toggleItem({
+      id: product.id,
+      productId: product.id,
+      name: product.name,
+      sku: product.sku,
+      image: (product as any).image || (product.images && product.images[0]) || '',
+      metal: product.metal,
+      purity: product.purity,
+      category: typeof product.category === 'string' ? product.category : product.category?.name || '',
+      currentPrice: product.currentPrice,
+      addedAt: new Date().toISOString(),
+    })
+  }
+
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-[32px] border border-gray-100 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
 
-      {/* ── Image area ───────────────────────────────────────────────────── */}
-      <Link href={`/products/${product.slug}`} className="relative block aspect-[4/5] overflow-hidden bg-[#120f0b]">
+      {/* ── Image area — square ───────────────────────────────────────────── */}
+      <Link href={`/products/${product.slug}`} className="relative block aspect-square overflow-hidden bg-[#120f0b]">
 
         {product.images.length > 0 ? (
           <Image
@@ -101,7 +102,7 @@ const handleWishlist = () => {
 
         {/* Wishlist heart — top right, always visible */}
         <button
-          onClick={handleWishlist}
+          onClick={e => { e.preventDefault(); handleWishlist() }}
           aria-label="Toggle wishlist"
           className="absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
         >
@@ -131,7 +132,7 @@ const handleWishlist = () => {
       </Link>
 
       {/* ── Content area ─────────────────────────────────────────────────── */}
-      <div className="flex flex-1 flex-col gap-3 px-3 pb-3 pt-4">
+      <div className="flex flex-1 flex-col gap-2 px-3 pb-3 pt-3">
 
         {/* Name */}
         <Link href={`/products/${product.slug}`}>
@@ -141,12 +142,12 @@ const handleWishlist = () => {
         </Link>
 
         {/* Purity */}
-        <p className="text-[10px] text-gray-400 mb-1 tracking-wide">
+        <p className="text-[10px] text-gray-400 tracking-wide">
           {product.purity} {product.metal}
         </p>
 
         {/* Price + Rating row */}
-        <div className="flex items-center justify-between gap-2 mb-1">
+        <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-semibold text-gray-900 tracking-tight">
             ₹{product.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
           </span>
@@ -157,7 +158,7 @@ const handleWishlist = () => {
               <span className="text-[11px] text-gray-500 font-medium">
                 {product.avgRating.toFixed(1)}
               </span>
-              <span className="text-[11px] text-gray-400">
+              <span className="text-[10px] text-gray-400">
                 ({product.reviewCount})
               </span>
             </div>
@@ -165,7 +166,7 @@ const handleWishlist = () => {
         </div>
 
         {/* Divider */}
-        <div className="border-t border-gray-100 mb-2" />
+        <div className="border-t border-gray-100" />
 
         {/* Weight + Add to cart */}
         <div className="flex items-center justify-between">

@@ -16,8 +16,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>
           <SearchModal />
           {children}
-          <Toaster position="top-right" toastOptions={{ style: { fontFamily: 'Inter, sans-serif', fontSize: '14px', background: '#1A0E00', color: '#E8D5A3', border: '1px solid rgba(201, 168, 76, 0.3)' }, success: { iconTheme: { primary: '#C9A84C', secondary: '#1A0E00' } } }} />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: { fontFamily: 'Inter, sans-serif', fontSize: '14px', background: '#1A0E00', color: '#E8D5A3', border: '1px solid rgba(201, 168, 76, 0.3)' },
+              success: { iconTheme: { primary: '#C9A84C', secondary: '#1A0E00' } }
+            }}
+          />
         </Providers>
+        <Script 
+          src="https://code.iconify.design/3/3.1.1/iconify.min.js"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   )
