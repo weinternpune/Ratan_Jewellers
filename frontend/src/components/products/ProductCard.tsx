@@ -3,7 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Heart, ShoppingBag, Star } from 'lucide-react'
-import { useCartStore } from '@/store'
+import { useCartStore, useWishlistStore } from '@/store'
 import toast from 'react-hot-toast'
 
 interface Product {
@@ -24,16 +24,16 @@ interface Product {
   inStock: boolean
   isFeatured?: boolean
   isTrending?: boolean
-  category?: { name: string }
+  category?: string | { name: string }
 }
 
 export default function ProductCard({ product }: { product: Product }) {
-  const [isWishlisted, setIsWishlisted] = useState(false)
   const [imgIdx, setImgIdx] = useState(0)
+  const { toggleItem, isInWishlist } = useWishlistStore()
   const addItem = useCartStore(s => s.addItem)
   const toggleCart = useCartStore(s => s.toggleCart)
+  const isWishlisted = isInWishlist(product.id)
 
-  // ── All handlers unchanged ──────────────────────────────────────────────
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
     addItem({
@@ -51,19 +51,26 @@ export default function ProductCard({ product }: { product: Product }) {
     toggleCart()
   }
 
-  const handleWishlist = (e: React.MouseEvent) => {
-    e.preventDefault()
-    setIsWishlisted(!isWishlisted)
-    toast.success(isWishlisted ? 'Removed from wishlist' : 'Added to wishlist')
+  const handleWishlist = () => {
+    toggleItem({
+      id: product.id,
+      productId: product.id,
+      name: product.name,
+      sku: product.sku,
+      image: (product as any).image || (product.images && product.images[0]) || '',
+      metal: product.metal,
+      purity: product.purity,
+      category: typeof product.category === 'string' ? product.category : product.category?.name || '',
+      currentPrice: product.currentPrice,
+      addedAt: new Date().toISOString(),
+    })
   }
 
-  const filledStars = Math.round(product.avgRating)
-
   return (
-    <div className="group relative flex flex-col bg-white border border-gray-100 rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] transition-shadow duration-300">
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-[32px] border border-gray-100 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)] transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
 
-      {/* ── Image area ───────────────────────────────────────────────────── */}
-      <Link href={`/products/${product.slug}`} className="relative block aspect-square overflow-hidden bg-[#1a1a1a]">
+      {/* ── Image area — square ───────────────────────────────────────────── */}
+      <Link href={`/products/${product.slug}`} className="relative block aspect-square overflow-hidden bg-[#120f0b]">
 
         {product.images.length > 0 ? (
           <Image
@@ -95,7 +102,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
         {/* Wishlist heart — top right, always visible */}
         <button
-          onClick={handleWishlist}
+          onClick={e => { e.preventDefault(); handleWishlist() }}
           aria-label="Toggle wishlist"
           className="absolute top-2.5 right-2.5 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-colors shadow-sm"
         >
@@ -125,23 +132,23 @@ export default function ProductCard({ product }: { product: Product }) {
       </Link>
 
       {/* ── Content area ─────────────────────────────────────────────────── */}
-      <div className="flex flex-col flex-1 px-3 pt-3 pb-3">
+      <div className="flex flex-1 flex-col gap-2 px-3 pb-3 pt-3">
 
         {/* Name */}
         <Link href={`/products/${product.slug}`}>
-          <h3 className="text-[13px] font-semibold text-gray-900 leading-snug line-clamp-1 hover:text-[#C8A45D] transition-colors mb-0.5">
+          <h3 className="text-xs font-semibold text-gray-900 leading-snug line-clamp-2 hover:text-[#C8A45D] transition-colors">
             {product.name}
           </h3>
         </Link>
 
         {/* Purity */}
-        <p className="text-[11px] text-gray-400 mb-2 tracking-wide">
+        <p className="text-[10px] text-gray-400 tracking-wide">
           {product.purity} {product.metal}
         </p>
 
         {/* Price + Rating row */}
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[15px] font-bold text-gray-900 tracking-tight">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold text-gray-900 tracking-tight">
             ₹{product.currentPrice.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
           </span>
 
@@ -151,7 +158,7 @@ export default function ProductCard({ product }: { product: Product }) {
               <span className="text-[11px] text-gray-500 font-medium">
                 {product.avgRating.toFixed(1)}
               </span>
-              <span className="text-[11px] text-gray-400">
+              <span className="text-[10px] text-gray-400">
                 ({product.reviewCount})
               </span>
             </div>
@@ -159,7 +166,7 @@ export default function ProductCard({ product }: { product: Product }) {
         </div>
 
         {/* Divider */}
-        <div className="border-t border-gray-100 mb-2" />
+        <div className="border-t border-gray-100" />
 
         {/* Weight + Add to cart */}
         <div className="flex items-center justify-between">
@@ -170,14 +177,14 @@ export default function ProductCard({ product }: { product: Product }) {
           <button
             onClick={handleAddToCart}
             disabled={!product.inStock}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[11px] font-semibold tracking-wide transition-all duration-200 ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold tracking-wide transition-all duration-200 ${
               product.inStock
-                ? 'bg-[#C8A45D] text-white hover:bg-[#b8944d] active:scale-95'
+                ? 'bg-[#C8A45D] text-white shadow-lg shadow-[#c8a45d33] hover:bg-[#b8944d] active:scale-[0.98]'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >
-            <ShoppingBag size={11} />
-            <span>{product.inStock ? 'Add' : 'Sold Out'}</span>
+            <ShoppingBag size={12} />
+            <span>{product.inStock ? 'Add to cart' : 'Sold Out'}</span>
           </button>
         </div>
       </div>

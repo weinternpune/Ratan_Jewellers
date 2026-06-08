@@ -350,3 +350,21 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Chrome, Safari and Opera */
 }
+
+/* Auto-scroll animation for mobile gold rates */
+@keyframes goldRatesScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-33.333%);
+  }
+}
+
+.gold-rates-scroll {
+  animation: goldRatesScroll 20s linear infinite;
+}
+
+.gold-rates-scroll:hover {
+  animation-play-state: paused;
+}

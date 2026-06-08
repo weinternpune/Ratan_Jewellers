@@ -3,8 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, ShoppingBag, Minus, Plus, Trash2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { useCartStore } from '@/store'
 export default function CartDrawer() {
+  const router = useRouter()
   const { items, isOpen, closeCart, removeItem, updateQuantity, totalPrice } = useCartStore()
   const total = totalPrice(); const gst = total * 0.03; const grandTotal = total + gst
   return (
@@ -23,7 +25,15 @@ export default function CartDrawer() {
                   <div className="w-20 h-20 rounded-full bg-gold/10 flex items-center justify-center mb-4"><ShoppingBag size={32} className="text-gold/50" /></div>
                   <h3 className="font-display text-xl text-charcoal mb-2">Your bag is empty</h3>
                   <p className="text-sm text-warm-grey mb-6">Add some beautiful pieces to your collection</p>
-                  <button onClick={closeCart} className="btn-gold px-6 py-2.5 rounded text-sm">Continue Shopping</button>
+                  <button
+  onClick={() => {
+    closeCart()
+    router.push('/products')
+  }}
+  className="w-full text-center text-sm text-warm-grey hover:text-gold transition-colors py-1"
+>
+  Continue Shopping
+</button>
                 </div>
               ) : (
                 <div className="space-y-4">

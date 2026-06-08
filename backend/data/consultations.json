@@ -1,0 +1,52 @@
+[
+  {
+    "id": "1780433348486",
+    "name": "Test User",
+    "email": "test@example.com",
+    "phone": "+91 9876543210",
+    "category": "ring",
+    "message": "Test message",
+    "status": "contacted",
+    "createdAt": "2026-06-02T20:49:08.486Z"
+  },
+  {
+    "id": "1780433766330",
+    "name": "Nitish kumar Barik",
+    "email": "nitishkumarbarik574@gmail.com",
+    "phone": "8260722905",
+    "category": "ring",
+    "message": "werthyjk",
+    "status": "pending",
+    "createdAt": "2026-06-02T20:56:06.330Z"
+  },
+  {
+    "id": "1780694698139",
+    "name": "Uttam Kumar",
+    "email": "uttamkumar86830@gmail.com",
+    "phone": "07644980593",
+    "category": "ring",
+    "message": "hdsvb jhfbjhbvjfbv",
+    "status": "pending",
+    "createdAt": "2026-06-05T21:24:58.139Z"
+  },
+  {
+    "id": "1780711768494",
+    "name": "Uttam Kumar",
+    "email": "uttamkumar86830@gmail.com",
+    "phone": "+917644980593",
+    "category": "ring",
+    "message": "i want ot make this ring very beautiful wife ",
+    "status": "pending",
+    "createdAt": "2026-06-06T02:09:28.494Z"
+  },
+  {
+    "id": "1780713054955",
+    "name": "Uttam Kumar",
+    "email": "uttamkumar86830@gmail.com",
+    "phone": "+917644980593",
+    "category": "ring",
+    "message": "jk vljkadbf khjbdfkjh",
+    "status": "pending",
+    "createdAt": "2026-06-06T02:30:54.955Z"
+  }
+]
