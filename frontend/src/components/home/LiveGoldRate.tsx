@@ -85,39 +85,42 @@ export default function LiveGoldRate() {
   }, [])
 
   return (
-    <div className="bg-obsidian border-y border-gold/20 py-3 overflow-hidden">
+    <div className="bg-[#4A0404] border-y border-yellow-500/20 py-3 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div
           ref={scrollContainerRef}
           className="flex items-center gap-4 overflow-x-auto scrollbar-hide"
         >
+          {/* Live Gold Rates */}
           <div className="flex-shrink-0 flex items-center gap-2">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
 
-            <span className="font-mono-code text-xs text-gold/70 uppercase tracking-wider whitespace-nowrap">
+            <span className="font-mono-code text-xs text-yellow-200 uppercase tracking-wider whitespace-nowrap">
               Live Gold Rates
             </span>
           </div>
 
-          <div className="w-px h-4 bg-gold/20 flex-shrink-0" />
+          {/* Divider */}
+          <div className="w-px h-4 bg-yellow-300/30 flex-shrink-0" />
 
+          {/* Gold Prices */}
           <div className="flex items-center gap-6 flex-shrink-0">
             {purities.map((p) => (
               <div
                 key={p.label}
                 className="flex items-center gap-2 whitespace-nowrap"
               >
-                <span className="font-mono-code text-xs text-gold/50">
+                <span className="font-mono-code text-xs text-yellow-100">
                   {p.label}
                 </span>
 
-                <span className="font-mono-code text-sm text-gold font-medium">
+                <span className="font-mono-code text-sm text-yellow-300 font-medium">
                   ₹
                   {Math.round(
                     goldRate * p.multiplier
                   ).toLocaleString('en-IN')}
 
-                  <span className="text-gold/50 text-[10px]">
+                  <span className="text-yellow-200 text-[10px]">
                     /g
                   </span>
                 </span>
@@ -125,13 +128,15 @@ export default function LiveGoldRate() {
             ))}
           </div>
 
-          <div className="w-px h-4 bg-gold/20 flex-shrink-0" />
+          {/* Divider */}
+          <div className="w-px h-4 bg-yellow-300/30 flex-shrink-0" />
 
+          {/* Trend */}
           <div
             className={`flex items-center gap-1 flex-shrink-0 ${
               trend === 'up'
-                ? 'text-green-400'
-                : 'text-red-400'
+                ? 'text-green-300'
+                : 'text-red-300'
             }`}
           >
             {trend === 'up' ? (
@@ -140,14 +145,15 @@ export default function LiveGoldRate() {
               <TrendingDown size={13} />
             )}
 
-            <span className="font-mono-code text-xs">
+            <span className="font-mono-code text-xs font-medium">
               {change >= 0 ? '+' : ''}
               {change.toFixed(0)} ({changePercent}%)
             </span>
           </div>
 
+          {/* Updated Time + Refresh */}
           <div className="ml-auto flex-shrink-0 flex items-center gap-2">
-            <span className="text-[10px] text-gold/30 font-mono-code hidden sm:block">
+            <span className="text-[10px] text-yellow-100 font-mono-code hidden sm:block">
               Updated{' '}
               {lastUpdated
                 ? lastUpdated.toLocaleTimeString('en-IN', {
@@ -160,7 +166,7 @@ export default function LiveGoldRate() {
             <button
               onClick={refreshRate}
               disabled={isUpdating}
-              className="text-gold/40 hover:text-gold transition-colors"
+              className="text-yellow-200 hover:text-white transition-colors"
             >
               <RefreshCw
                 size={12}

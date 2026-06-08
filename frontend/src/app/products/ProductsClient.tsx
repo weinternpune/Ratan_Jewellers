@@ -4,153 +4,13 @@ import { useWishlistStore, useCartStore } from '@/store'
 import { useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import { api } from '@/lib/api'
+import { PRODUCTS } from '@/lib/products'   // ← FIX: import fallback data
+import { useProductCatalog } from '@/store/productCatalog'
 
-interface Product {
-  id: string
-  name: string
-  slug: string
-  sku: string
-  image?: string
-  images: string[]
-  metal: string
-  purity: string
-  netWeight: number
-  currentPrice: number
-  goldRate: number
-  makingCharges: number
-  stoneCharges: number
-  avgRating: number
-  reviewCount: number
-  inStock: boolean
-  isFeatured?: boolean
-  isTrending?: boolean
-  createdAt?: string
-  category: string | { name: string }
-}
+import type { Product } from '@/lib/products' // ← FIX: single source-of-truth type
 
-const PRODUCTS: Product[] = [
-  {
-    id: 'p-1',
-    name: 'Antique Polki Necklace',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1318/1779442888_0ac1f452c046c8b762b9.webp',
-    images: ['https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1318/1779442888_0ac1f452c046c8b762b9.webp'],
-    metal: 'Gold', category: 'Necklaces', purity: '22K', currentPrice: 25000,
-    slug: 'antique-polki-necklace', sku: 'RJ00001', netWeight: 12,
-    goldRate: 6500, makingCharges: 2500, stoneCharges: 4000,
-    avgRating: 4.5, reviewCount: 12, inStock: true, isFeatured: true, isTrending: false,
-  },
-  {
-    id: 'p-2',
-    name: 'Solitaire Diamond Ring',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/163/1779964423_381a85a123b25b6c31f9.jpg',
-    images: ['https://d25g9z9s77rn4i.cloudfront.net/uploads/product/163/1779964423_381a85a123b25b6c31f9.jpg'],
-    metal: 'Diamond', category: 'Rings', purity: '18K', currentPrice: 45000,
-    slug: 'solitaire-diamond-ring', sku: 'RJ00002', netWeight: 8,
-    goldRate: 6500, makingCharges: 3000, stoneCharges: 12000,
-    avgRating: 4.8, reviewCount: 20, inStock: true, isFeatured: true, isTrending: true,
-  },
-  {
-    id: 'p-3',
-    name: 'Temple Gold Bangles Set',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1861/1773828632_55ca5de31b3813b0bd63.png',
-    images: ['https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1861/1773828632_55ca5de31b3813b0bd63.png'],
-    metal: 'Gold', category: 'Bangles', purity: '22K', currentPrice: 62000,
-    slug: 'temple-gold-bangles', sku: 'RJ00003', netWeight: 18,
-    goldRate: 6500, makingCharges: 5000, stoneCharges: 3000,
-    avgRating: 4.6, reviewCount: 18, inStock: true, isFeatured: false, isTrending: true,
-  },
-  {
-    id: 'p-4',
-    name: 'Kundan Jhumka Earrings',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/262/1633616341_88273e27e4efdf6614fd.jpg',
-    images: ['https://d25g9z9s77rn4i.cloudfront.net/uploads/product/262/1633616341_88273e27e4efdf6614fd.jpg'],
-    metal: 'Gold', category: 'Earrings', purity: '22K', currentPrice: 18000,
-    slug: 'kundan-jhumka-earrings', sku: 'RJ00004', netWeight: 6,
-    goldRate: 6500, makingCharges: 1800, stoneCharges: 2000,
-    avgRating: 4.4, reviewCount: 10, inStock: true, isFeatured: false, isTrending: false,
-  },
-  {
-    id: 'p-5',
-    name: '22K Gold Chain',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/764/1780054045_2efbce9def7e01b07340.webp',
-    images: ['https://d25g9z9s77rn4i.cloudfront.net/uploads/product/764/1780054045_2efbce9def7e01b07340.webp'],
-    metal: 'Gold', category: 'Chains', purity: '22K', currentPrice: 35000,
-    slug: '22k-gold-chain', sku: 'RJ00005', netWeight: 10,
-    goldRate: 6500, makingCharges: 2200, stoneCharges: 0,
-    avgRating: 4.3, reviewCount: 14, inStock: true, isFeatured: false, isTrending: true,
-  },
-  {
-    id: 'p-6',
-    name: 'Silver Pendant',
-    image: 'https://tiimg.tistatic.com/fp/1/006/590/fine-finished-brass-pooja-thali-023.jpg',
-    images: ['https://tiimg.tistatic.com/fp/1/006/590/fine-finished-brass-pooja-thali-023.jpg'],
-    metal: 'Silver', category: 'Pendants', purity: '24K', currentPrice: 12000,
-    slug: 'silver-pendant', sku: 'RJ00006', netWeight: 5,
-    goldRate: 6500, makingCharges: 1000, stoneCharges: 0,
-    avgRating: 4.1, reviewCount: 8, inStock: true, isFeatured: false, isTrending: false,
-  },
-  {
-    id: 'p-7',
-    name: 'Ruby Mangalsutra',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1164/1662631757_9cbff375c83181ab33e4.png',
-    images: ['https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1164/1662631757_9cbff375c83181ab33e4.png'],
-    metal: 'Gold', category: 'Mangalsutras', purity: '22K', currentPrice: 42000,
-    slug: 'ruby-mangalsutra', sku: 'RJ00007', netWeight: 11,
-    goldRate: 6500, makingCharges: 3000, stoneCharges: 5000,
-    avgRating: 4.7, reviewCount: 22, inStock: true, isFeatured: true, isTrending: true,
-  },
-  {
-    id: 'p-8',
-    name: 'Diamond Tennis Bracelet',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/923/1779455699_aabe91f5b170208f7270.webp',
-    images: ['https://d25g9z9s77rn4i.cloudfront.net/uploads/product/923/1779455699_aabe91f5b170208f7270.webp'],
-    metal: 'Diamond', category: 'Bracelets', purity: '18K', currentPrice: 78000,
-    slug: 'diamond-tennis-bracelet', sku: 'RJ00008', netWeight: 9,
-    goldRate: 6500, makingCharges: 4000, stoneCharges: 20000,
-    avgRating: 4.9, reviewCount: 35, inStock: false, isFeatured: true, isTrending: true,
-  },
-  {
-    id: 'p-9',
-    name: 'Open Cuff Gold Bracelet',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1704/1780137941_828a35a21f49303c9344.webp',
-    images: ['https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1704/1780137941_828a35a21f49303c9344.webp'],
-    metal: 'Gold', category: 'Bracelets', purity: '22K', currentPrice: 39000,
-    slug: 'open-cuff-gold-bracelet', sku: 'RJ00009', netWeight: 9,
-    goldRate: 6500, makingCharges: 2600, stoneCharges: 0,
-    avgRating: 4.2, reviewCount: 11, inStock: true, isFeatured: false, isTrending: false,
-  },
-  {
-    id: 'p-10',
-    name: 'Mangalsutra Pendant Chain',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1404/1780053072_2e61ea8ef659a5e4db1f.webp',
-    images: ['https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1404/1780053072_2e61ea8ef659a5e4db1f.webp'],
-    metal: 'Gold', category: 'Chains', purity: '22K', currentPrice: 31000,
-    slug: 'mangalsutra-pendant-chain', sku: 'RJ00010', netWeight: 8,
-    goldRate: 6500, makingCharges: 2400, stoneCharges: 3000,
-    avgRating: 4.4, reviewCount: 15, inStock: true, isFeatured: false, isTrending: true,
-  },
-  {
-    id: 'p-11',
-    name: 'Minimal Diamond Ring',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1757/1771847373_3c37a3448b16a50f89c1.jpg',
-    images: ['https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1757/1771847373_3c37a3448b16a50f89c1.jpg'],
-    metal: 'Diamond', category: 'Rings', purity: '18K', currentPrice: 28000,
-    slug: 'minimal-diamond-ring', sku: 'RJ00011', netWeight: 5,
-    goldRate: 6500, makingCharges: 2000, stoneCharges: 9000,
-    avgRating: 4.5, reviewCount: 16, inStock: true, isFeatured: false, isTrending: true,
-  },
-  {
-    id: 'p-12',
-    name: 'American Diamond Necklace Set',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1983/1768634238_4b1b4642e14350311882.jpg',
-    images: ['https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1983/1768634238_4b1b4642e14350311882.jpg'],
-    metal: 'Diamond', category: 'Necklaces', purity: '18K', currentPrice: 54000,
-    slug: 'american-diamond-necklace-set', sku: 'RJ00012', netWeight: 14,
-    goldRate: 6500, makingCharges: 4500, stoneCharges: 15000,
-    avgRating: 4.8, reviewCount: 28, inStock: true, isFeatured: true, isTrending: true,
-  },
-]
 
 const METALS = ['Gold', 'Diamond', 'Silver']
 const PURITIES = ['24K', '22K', '18K', '14K']
@@ -176,14 +36,16 @@ function ProductCard({ product, onWishlistToggle }: {
 
   const wishlisted = items.some(i => i.productId === product.id)
 
-  const handleWishlist = () => {
+  const handleWishlist = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     const isWishlisted = items.some(i => i.productId === product.id)
     toggleItem({
       id: product.id,
       productId: product.id,
       name: product.name,
       sku: product.sku,
-      image: product.image || (product.images && product.images[0]) || '',
+      image: product.image || product.images?.[0] || '',
       metal: product.metal,
       purity: product.purity,
       category: typeof product.category === 'string' ? product.category : product.category?.name || '',
@@ -196,31 +58,42 @@ function ProductCard({ product, onWishlistToggle }: {
     )
   }
 
-  const categoryName =
-    typeof product.category === 'string' ? product.category : product.category?.name || ''
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    addToCart({
+      id: `cart-${product.id}`,
+      productId: product.id,
+      name: product.name,
+      sku: product.sku,
+      image: product.image || product.images?.[0] || '',
+      purity: product.purity,
+      weight: product.netWeight,
+      price: product.currentPrice,
+      quantity: 1,
+    })
+  }
 
-  const subtitle = `${product.purity} ${product.metal}${
-    product.stoneCharges > 0 ? ` & ${categoryName}` : ''
-  }`
-
-  const formattedPrice = `₹${product.currentPrice.toLocaleString('en-IN')}`
-  const weight = `${product.netWeight}.000 gm`
+  const categoryName = typeof product.category === 'string' ? product.category : product.category?.name || ''
+  const subtitle = `${product.purity} ${product.metal}${product.stoneCharges > 0 ? ` · ${categoryName}` : ''}`
 
   return (
-    <div className="group relative flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 h-full">
-      {/* Image wrapper — square aspect */}
+    <Link
+      href={`/products/${product.slug}`}
+      className="group relative flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-300 h-full"
+    >
+      {/* Image */}
       <div className="relative w-full aspect-square overflow-hidden bg-[#f5f0eb]">
         <img
           src={product.image || product.images?.[0]}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           onError={(e) => {
-            (e.target as HTMLImageElement).src =
-              'https://placehold.co/400x400/f5f0eb/c9a96e?text=Jewellery'
+            (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/f5f0eb/c9a96e?text=Jewellery'
           }}
         />
 
-        {/* Badges top-left */}
+        {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
           {product.isTrending && (
             <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-gray-800 text-white">
@@ -234,15 +107,20 @@ function ProductCard({ product, onWishlistToggle }: {
           )}
         </div>
 
-        {/* Wishlist button top-right */}
+        {/* Wishlist button */}
         <button
           type="button"
-          aria-label="Add to wishlist"
+          aria-label="Toggle wishlist"
           onClick={handleWishlist}
           className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm border border-gray-200 flex items-center justify-center shadow-sm hover:bg-white hover:scale-110 transition-all duration-200"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill={wishlisted ? "#ef4444" : "none"}
-            stroke={wishlisted ? "#ef4444" : "currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
+          <svg
+            width="14" height="14" viewBox="0 0 24 24"
+            fill={wishlisted ? '#ef4444' : 'none'}
+            stroke={wishlisted ? '#ef4444' : 'currentColor'}
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            className="text-gray-500"
+          >
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
         </button>
@@ -250,17 +128,15 @@ function ProductCard({ product, onWishlistToggle }: {
 
       {/* Card body */}
       <div className="flex flex-col flex-1 px-4 pt-3 pb-4 gap-2">
-        {/* Name */}
-        <h3 className="text-[15px] font-semibold text-gray-900 leading-snug line-clamp-1">
+        <h3 className="text-[15px] font-semibold text-gray-900 leading-snug line-clamp-1 group-hover:text-amber-700 transition-colors">
           {product.name}
         </h3>
-
-        {/* Subtitle: purity + metal */}
         <p className="text-[12px] text-gray-400 leading-none">{subtitle}</p>
 
-        {/* Price + Rating */}
         <div className="flex items-center justify-between mt-0.5">
-          <span className="text-[16px] font-bold text-gray-900">{formattedPrice}</span>
+          <span className="text-[16px] font-bold text-gray-900">
+            ₹{product.currentPrice.toLocaleString('en-IN')}
+          </span>
           <span className="flex items-center gap-1 text-[12px] text-gray-500">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b" stroke="none">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
@@ -270,24 +146,12 @@ function ProductCard({ product, onWishlistToggle }: {
           </span>
         </div>
 
-        {/* Weight + Add / Sold Out button */}
         <div className="flex items-center justify-between mt-1">
-          <span className="text-[12px] text-gray-400">{weight}</span>
-
+          <span className="text-[12px] text-gray-400">{product.netWeight}.000 gm</span>
           {product.inStock ? (
             <button
               type="button"
-              onClick={() => addToCart({
-                id: `cart-${product.id}`,
-                productId: product.id,
-                name: product.name,
-                sku: product.sku,
-                image: product.image || (product.images && product.images[0]) || '',
-                purity: product.purity,
-                weight: product.netWeight,
-                price: product.currentPrice,
-                quantity: 1,
-              })}
+              onClick={handleAddToCart}
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#f5ede0] hover:bg-[#edd9bf] text-[#8b5e2f] text-[12px] font-semibold transition-colors duration-200"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -297,21 +161,17 @@ function ProductCard({ product, onWishlistToggle }: {
               Add
             </button>
           ) : (
-            <button
-              type="button"
-              disabled
-              className="px-4 py-2 rounded-lg bg-gray-100 text-gray-400 text-[12px] font-semibold cursor-not-allowed"
-            >
+            <span className="px-4 py-2 rounded-lg bg-gray-100 text-gray-400 text-[12px] font-semibold cursor-not-allowed">
               Sold Out
-            </button>
+            </span>
           )}
         </div>
       </div>
-    </div>
+    </Link>
   )
 }
 
-// ─── Skeleton Card ─────────────────────────────────────────────────────────────
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
     <div className="flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm animate-pulse">
@@ -341,7 +201,31 @@ export default function ProductsClient() {
   const [sortBy, setSortBy] = useState('createdAt')
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [toasts, setToasts] = useState<{ id: number; message: string; type: 'add' | 'remove' }[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const searchParams = useSearchParams()
+  const { products: storeProducts } = useProductCatalog()
+  const [catalogProducts, setCatalogProducts] = useState<any[]>(() => {
+    if (typeof window === 'undefined') return storeProducts
+    try {
+      const raw = localStorage.getItem('ratan-product-catalog')
+      const ls = raw ? (JSON.parse(raw)?.state?.products ?? []) : []
+      return ls.length >= storeProducts.length ? ls : storeProducts
+    } catch { return storeProducts }
+  })
+  useEffect(() => {
+    const sync = () => {
+      try {
+        const raw = localStorage.getItem('ratan-product-catalog')
+        const ls = raw ? (JSON.parse(raw)?.state?.products ?? []) : []
+        setCatalogProducts(prev => ls.length >= prev.length ? ls : prev)
+      } catch {}
+    }
+    sync()
+    const id = setInterval(sync, 1500)
+    window.addEventListener('storage', sync)
+    window.addEventListener('focus', sync)
+    return () => { clearInterval(id); window.removeEventListener('storage', sync); window.removeEventListener('focus', sync) }
+  }, [])
 
   const showToast = useCallback((message: string, type: 'add' | 'remove') => {
     const id = Date.now()
@@ -355,17 +239,18 @@ export default function ProductsClient() {
   }
 
   useEffect(() => {
+    const searchParam = searchParams?.get('search') ?? ''
     const categoryParam = searchParams?.get('category') ?? ''
     const metalParam = searchParams?.get('metal') ?? ''
     const purityParam = searchParams?.get('purity') ?? ''
+    // If search param given, use it; else fall back to category as search term
+    if (searchParam) setSearchQuery(searchParam)
+    else if (categoryParam) setSearchQuery(categoryParam)
 
-    const metalFilter =
-      normalizeFilterValue(categoryParam, METALS) ||
-      normalizeFilterValue(metalParam, METALS)
+    const metalFilter = normalizeFilterValue(categoryParam, METALS) || normalizeFilterValue(metalParam, METALS)
     const categoryFilter = normalizeFilterValue(categoryParam, CATEGORIES)
     const purityFilter = normalizeFilterValue(purityParam, PURITIES)
 
-    // eslint-disable-next-line
     setSelectedMetal(prev => {
       const normalizedPrev = prev.join(',').toLowerCase()
       return metalFilter && normalizedPrev !== metalFilter ? [metalFilter] : prev
@@ -384,9 +269,7 @@ export default function ProductsClient() {
     set(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val])
 
   const activeFilters = [
-    ...selectedMetal,
-    ...selectedPurity,
-    ...selectedCategory,
+    ...selectedMetal, ...selectedPurity, ...selectedCategory,
     ...(priceRange.label !== 'All' ? ['price'] : []),
   ].length
 
@@ -402,22 +285,73 @@ export default function ProductsClient() {
     retry: false,
   })
 
-  const apiProducts = data?.products || []
-  const products = apiProducts.length ? apiProducts : PRODUCTS
+  // Convert catalog products to Product shape and merge — catalog products ALWAYS included
+  const catalogAsProducts: Product[] = catalogProducts.map(p => ({
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    sku: p.sku,
+    image: p.images[0] || '/images/products/placeholder.jpg',
+    images: p.images.length > 0 ? p.images : ['/images/products/placeholder.jpg'],
+    metal: p.metal,
+    purity: p.purity,
+    netWeight: p.netWeight,
+    currentPrice: p.currentPrice,
+    goldRate: p.goldRate,
+    makingCharges: p.makingCharges,
+    stoneCharges: p.stoneCharges,
+    avgRating: p.avgRating,
+    reviewCount: p.reviewCount,
+    inStock: p.inStock,
+    isFeatured: p.isFeatured,
+    isTrending: p.isTrending,
+    category: p.category,
+    createdAt: p.addedAt,
+  }))
+  const apiProducts: Product[] = data?.products?.length ? data.products : PRODUCTS
+  // Catalog products come first (admin-added real products), then fallback/API products
+  const products: Product[] = [
+    ...catalogAsProducts,
+    ...apiProducts.filter(p => !catalogAsProducts.some(c => c.id === p.id))
+  ]
 
   const filteredProducts = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim()
     const filtered = products.filter((product: Product) => {
       const productCategory =
         typeof product.category === 'string' ? product.category : product.category?.name || ''
-      const metalMatch = selectedMetal.length === 0 || selectedMetal.includes(product.metal)
-      const categoryMatch = selectedCategory.length === 0 || selectedCategory.includes(productCategory)
-      const purityMatch = selectedPurity.length === 0 || selectedPurity.includes(product.purity)
+
+      // Search query: match name, category, metal, purity, sku, description
+      const searchMatch = !q || [
+        product.name,
+        productCategory,
+        product.metal,
+        product.purity,
+        product.sku,
+        (product as any).description || '',
+        (product as any).keywords || '',
+      ].some(field => field?.toLowerCase().includes(q))
+
+      // Filters — if search query set, relax metal/category filters to let search drive
+      const metalMatch = q
+        ? true
+        : selectedMetal.length === 0 || selectedMetal.some(m =>
+            product.metal?.toLowerCase().includes(m.toLowerCase())
+          )
+      const categoryMatch = q
+        ? true
+        : selectedCategory.length === 0 || selectedCategory.some(c =>
+            productCategory.toLowerCase().includes(c.toLowerCase())
+          )
+      const purityMatch = selectedPurity.length === 0 || selectedPurity.some(p =>
+        product.purity?.toLowerCase().includes(p.toLowerCase())
+      )
       const priceMatch =
         priceRange.label === 'All' ||
         (product.currentPrice >= priceRange.min && product.currentPrice <= priceRange.max)
-      return metalMatch && categoryMatch && purityMatch && priceMatch
-    })
 
+      return searchMatch && metalMatch && categoryMatch && purityMatch && priceMatch
+    })
     return [...filtered].sort((a, b) => {
       if (sortBy === 'priceAsc') return a.currentPrice - b.currentPrice
       if (sortBy === 'priceDesc') return b.currentPrice - a.currentPrice
@@ -427,7 +361,6 @@ export default function ProductsClient() {
     })
   }, [products, selectedMetal, selectedCategory, selectedPurity, priceRange, sortBy])
 
-  // ─── Filter Panel ────────────────────────────────────────────────────────────
   const FilterPanel = (
     <div className="rounded-[28px] border border-gray-100 bg-white p-6 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
       <div className="flex items-center justify-between mb-5">
@@ -444,7 +377,6 @@ export default function ProductsClient() {
         </button>
       </div>
 
-      {/* Metal */}
       <div className="mb-5">
         <p className="text-[10px] tracking-[0.18em] text-gray-400 mb-3 uppercase font-semibold">Metal</p>
         <div className="space-y-2.5">
@@ -462,7 +394,6 @@ export default function ProductsClient() {
         </div>
       </div>
 
-      {/* Category */}
       <div className="mb-5">
         <p className="text-[10px] tracking-[0.18em] text-gray-400 mb-3 uppercase font-semibold">Category</p>
         <div className="space-y-2.5">
@@ -480,7 +411,6 @@ export default function ProductsClient() {
         </div>
       </div>
 
-      {/* Purity */}
       <div className="mb-5">
         <p className="text-[10px] tracking-[0.18em] text-gray-400 mb-3 uppercase font-semibold">Purity</p>
         <div className="flex flex-wrap gap-2">
@@ -489,11 +419,7 @@ export default function ProductsClient() {
               key={p}
               type="button"
               onClick={() => toggle(selectedPurity, p, setSelectedPurity)}
-              className={`px-3.5 py-1.5 rounded-full border text-sm font-medium transition ${
-                selectedPurity.includes(p)
-                  ? 'bg-amber-50 border-amber-300 text-amber-800'
-                  : 'bg-white border-gray-200 text-gray-600 hover:border-amber-200'
-              }`}
+              className={`px-3.5 py-1.5 rounded-full border text-sm font-medium transition ${selectedPurity.includes(p) ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-white border-gray-200 text-gray-600 hover:border-amber-200'}`}
             >
               {p}
             </button>
@@ -501,7 +427,6 @@ export default function ProductsClient() {
         </div>
       </div>
 
-      {/* Price Range */}
       <div className="mb-5">
         <p className="text-[10px] tracking-[0.18em] text-gray-400 mb-3 uppercase font-semibold">Price Range</p>
         <div className="space-y-2">
@@ -510,11 +435,7 @@ export default function ProductsClient() {
               key={range.label}
               type="button"
               onClick={() => setPriceRange(range)}
-              className={`w-full rounded-2xl border px-4 py-2.5 text-left text-sm font-medium transition ${
-                priceRange.label === range.label
-                  ? 'bg-amber-50 border-amber-300 text-amber-800'
-                  : 'bg-white border-gray-200 text-gray-600 hover:border-amber-200'
-              }`}
+              className={`w-full rounded-2xl border px-4 py-2.5 text-left text-sm font-medium transition ${priceRange.label === range.label ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-white border-gray-200 text-gray-600 hover:border-amber-200'}`}
             >
               {range.label}
             </button>
@@ -540,11 +461,20 @@ export default function ProductsClient() {
     </div>
   )
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
   return (
     <section className="py-8 lg:py-12 bg-[#f8f6f3]">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <main className="space-y-6">
+
+
+          {/* Search bar — shows active query */}
+          {searchQuery && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <span className="text-sm text-amber-800">Results for <strong>"{searchQuery}"</strong></span>
+              <button onClick={() => setSearchQuery('')} className="ml-auto text-amber-600 hover:text-amber-900 text-xs font-semibold">Clear search</button>
+            </div>
+          )}
 
           {/* Top bar */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -555,7 +485,9 @@ export default function ProductsClient() {
                 className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:border-amber-300 hover:bg-amber-50 transition"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="10" y1="18" x2="14" y2="18" />
+                  <line x1="4" y1="6" x2="20" y2="6" />
+                  <line x1="8" y1="12" x2="16" y2="12" />
+                  <line x1="10" y1="18" x2="14" y2="18" />
                 </svg>
                 Filters
                 {activeFilters > 0 && (
@@ -585,24 +517,28 @@ export default function ProductsClient() {
 
           {/* Product Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-5">
-            {isLoading ? (
-              Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
-            ) : filteredProducts.length > 0 ? (
-              filteredProducts.map((product: Product, index: number) => (
-                <motion.div
-                  key={product.id}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.04, duration: 0.3 }}
-                >
-                  <ProductCard product={product} onWishlistToggle={showToast} />
-                </motion.div>
-              ))
-            ) : (
-              <div className="col-span-2 sm:col-span-3 xl:col-span-4 rounded-2xl border border-gray-200 bg-white p-12 text-center text-gray-500 shadow-sm">
-                No products match selected filters.
-              </div>
-            )}
+            {isLoading
+              ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
+              : filteredProducts.length > 0
+                ? filteredProducts.map((product: Product, index: number) => (
+                  <motion.div
+                    key={product.id}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.04, duration: 0.3 }}
+                  >
+                    <ProductCard product={product} onWishlistToggle={showToast} />
+                  </motion.div>
+                ))
+                : (
+                  <div className="col-span-2 sm:col-span-3 xl:col-span-4 rounded-2xl border border-gray-200 bg-white p-12 text-center text-gray-500 shadow-sm">
+                    <div className="text-4xl mb-3">💎</div>
+                    <div className="font-semibold text-gray-700 mb-1">{searchQuery ? `No products found for "${searchQuery}"` : 'No products match selected filters.'}</div>
+                    <div className="text-sm text-gray-400">{searchQuery ? 'Try a different search term or browse all products' : 'Try clearing some filters'}</div>
+                    {searchQuery && <button onClick={() => setSearchQuery('')} className="mt-3 text-sm text-amber-600 hover:underline font-medium">Clear search</button>}
+                  </div>
+                )
+            }
           </div>
 
           {/* Mobile Filter Overlay */}
@@ -624,17 +560,18 @@ export default function ProductsClient() {
         </main>
       </div>
 
-      {/* Toast Notifications */}
+      {/* Toasts */}
       <div className="fixed top-4 right-4 z-[999] flex flex-col gap-2">
         {toasts.map(toast => (
           <div
             key={toast.id}
-            className={`flex items-center gap-3 px-4 py-3 rounded-2xl shadow-lg text-sm font-medium text-white transition-all duration-300 ${
-              toast.type === 'add' ? 'bg-amber-500' : 'bg-gray-700'
-            }`}
+            className={`flex items-center gap-3 px-4 py-3 rounded-2xl shadow-lg text-sm font-medium text-white transition-all duration-300 ${toast.type === 'add' ? 'bg-amber-500' : 'bg-gray-700'}`}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill={toast.type === 'add' ? 'white' : 'none'}
-              stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="16" height="16" viewBox="0 0 24 24"
+              fill={toast.type === 'add' ? 'white' : 'none'}
+              stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            >
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
             {toast.message}

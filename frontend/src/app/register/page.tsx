@@ -34,9 +34,13 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (form.password !== form.confirmPassword) {
       toast.error('Passwords do not match')
+      return
+    }
+    if (form.password.length < 6) {
+      toast.error('Password must be at least 6 characters')
       return
     }
 
@@ -49,10 +53,46 @@ export default function RegisterPage() {
         password: form.password,
       }
 
-      const res = await api.post<RegisterResponse>('/auth/register', payload)
-      setAuth(res.data.user, res.data.accessToken, res.data.refreshToken)
-      toast.success('Registration successful! Welcome to Ratan Jewellers.')
-      router.push('/')
+      try {
+        // Try real backend first
+        const res = await api.post<RegisterResponse>('/auth/register', payload)
+        setAuth(res.data.user, res.data.accessToken, res.data.refreshToken)
+        useAuthStore.getState().registerCustomer(res.data.user)
+        toast.success('Registration successful! Welcome to Ratan Jewellers.')
+        router.push('/')
+        return
+      } catch (backendErr: unknown) {
+        // Backend not available — use local registration
+        const emailExists = (() => {
+          try {
+            const store = JSON.parse(localStorage.getItem('ratan-admin-store') || '{}')
+            const customers = store?.state?.customers ?? []
+            return customers.some((c: any) => c.email === form.email)
+          } catch { return false }
+        })()
+
+        if (emailExists) {
+          toast.error('An account with this email already exists')
+          return
+        }
+
+        const localUser = {
+          id: 'user-' + Date.now(),
+          email: form.email,
+          name: form.name,
+          role: 'customer',
+          phone: form.phone,
+        }
+        // Save user with password for login fallback
+        const localUsers = (() => { try { return JSON.parse(localStorage.getItem('ratan-local-users') || '[]') } catch { return [] } })()
+        localUsers.push({ ...localUser, password: form.password })
+        localStorage.setItem('ratan-local-users', JSON.stringify(localUsers))
+        setAuth(localUser, 'local-token-' + Date.now(), 'local-refresh-' + Date.now())
+        useAuthStore.getState().registerCustomer(localUser)
+        toast.success('Registration successful! Welcome to Ratan Jewellers.')
+        router.push('/')
+        return
+      }
     } catch (err: unknown) {
       const errorMsg = err && typeof err === 'object' && 'response' in err
         ? ((err as { response?: { data?: { message?: string } } }).response?.data?.message)

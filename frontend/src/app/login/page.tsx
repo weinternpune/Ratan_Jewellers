@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Gem, Lock, Mail, ArrowLeft, ShieldCheck } from 'lucide-react'
@@ -26,21 +26,91 @@ export default function LoginPage() {
   const { setAuth } = useAuthStore()
   const router = useRouter()
 
+  // If admin already logged in, redirect them away from login page
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('ratan-auth-store')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed?.state?.isLoggedIn && parsed?.state?.currentUser) {
+          const role = parsed.state.currentUser.role
+          if (['customer','sales_staff','inventory_manager'].includes(role)) {
+            router.replace('/admin/my-dashboard')
+          } else {
+            router.replace('/admin/dashboard')
+          }
+        }
+      }
+    } catch {}
+  }, [])
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+
     try {
-      const res = await api.post<LoginResponse>('/auth/login', form)
-      setAuth(res.data.user, res.data.accessToken, res.data.refreshToken)
-      toast.success(`Welcome back, ${res.data.user.name}!`)
-      
-      const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'STORE_MANAGER', 'SALES_STAFF', 'INVENTORY_MANAGER'].includes(res.data.user.role)
-      router.push(isAdmin ? '/admin/dashboard' : '/')
-    } catch (err: unknown) {
-      const errorMsg = err && typeof err === 'object' && 'response' in err
-        ? ((err as { response?: { data?: { message?: string } } }).response?.data?.message)
-        : null
-      toast.error(errorMsg || (err as Error)?.message || 'Login failed')
+      // ── Step 1: Check if this is a staff/admin account via secure server API ──
+      const adminRes = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: form.email, password: form.password }),
+        credentials: 'include',
+      })
+      const adminData = await adminRes.json()
+
+      if (adminData.success) {
+        // Staff/Admin login — import admin auth store and set session
+        const { useAuthStore: useAdminAuth } = await import('@/store/authStore')
+        useAdminAuth.setState({
+          currentUser: adminData.user,
+          isLoggedIn: true,
+          viewAsRole: null,
+        })
+        toast.success(`Welcome back, ${adminData.user.name}!`)
+        const role: string = adminData.user.role
+        if (['customer', 'sales_staff', 'inventory_manager'].includes(role)) {
+          router.push('/admin/my-dashboard')
+        } else {
+          router.push('/admin/dashboard')
+        }
+        setLoading(false)
+        return
+      }
+
+      // ── Step 2: Try real backend for website customers ──────────────────────
+      try {
+        const res = await api.post<LoginResponse>('/auth/login', form)
+        setAuth(res.data.user, res.data.accessToken, res.data.refreshToken)
+        toast.success(`Welcome back, ${res.data.user.name}!`)
+        router.push('/')
+        setLoading(false)
+        return
+      } catch {}
+
+      // ── Step 3: Check locally registered customers ──────────────────────────
+      const localUsers: any[] = (() => {
+        try { return JSON.parse(localStorage.getItem('ratan-local-users') || '[]') } catch { return [] }
+      })()
+      const localUser = localUsers.find(
+        (u: any) => u.email.toLowerCase() === form.email.toLowerCase() && u.password === form.password
+      )
+      if (localUser) {
+        setAuth(
+          { id: localUser.id, email: localUser.email, name: localUser.name, role: 'customer' },
+          'local-' + Date.now(),
+          'local-r-' + Date.now()
+        )
+        toast.success(`Welcome back, ${localUser.name}!`)
+        router.push('/')
+        setLoading(false)
+        return
+      }
+
+      // ── Nothing matched ─────────────────────────────────────────────────────
+      toast.error('Invalid email or password')
+    } catch {
+      toast.error('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -192,5 +262,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
-

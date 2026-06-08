@@ -5,6 +5,8 @@ import { ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ProductCard from '@/components/products/ProductCard'
 import { api } from '@/lib/api'
+import { useProductCatalog } from '@/store/productCatalog'
+import { useState, useEffect } from 'react'
 
 interface Props {
   title: string
@@ -146,18 +148,52 @@ const trendingMockProducts = [
   },
 ]
 
+// Read catalog products directly from localStorage — works cross-tab, cross-session
+function readCatalogFromStorage() {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem('ratan-product-catalog')
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return parsed?.state?.products ?? []
+  } catch { return [] }
+}
+
 export default function TrendingProducts({ title }: Props) {
-  // ── React Query ────────────────────────────────────────────────────────
+  const [mounted, setMounted] = useState(false)
+  const { products: storeProducts } = useProductCatalog()
+  const [lsProducts, setLsProducts] = useState<any[]>([])
+
+  useEffect(() => {
+    setMounted(true)
+    const sync = () => setLsProducts(readCatalogFromStorage())
+    sync() // initial read after mount
+    const id = setInterval(sync, 2000)
+    window.addEventListener('storage', sync)
+    window.addEventListener('focus', sync)
+    return () => { clearInterval(id); window.removeEventListener('storage', sync); window.removeEventListener('focus', sync) }
+  }, [])
+
+  // Only use localStorage products after mount to prevent hydration mismatch
+  const catalogProducts = mounted ? (lsProducts.length >= storeProducts.length ? lsProducts : storeProducts) : []
   const { data, isLoading } = useQuery({
     queryKey: ['products', 'trending'],
-    queryFn: () =>
-      api.get<any>('/products?trending=true&limit=6'),
+    queryFn: () => api.get<any>('/products?trending=true&limit=6'),
     retry: false,
   })
 
-  const products = (data as any)?.products?.length
-    ? (data as any).products
+  const apiProducts = (data as any)?.products ?? []
+  const rawProducts = catalogProducts.length > 0
+    ? catalogProducts.slice(0, 6)
+    : apiProducts.length > 0
+    ? apiProducts
     : trendingMockProducts
+  const seen2 = new Set<string>()
+  const displayProducts = rawProducts.filter((p: any) => {
+    if (seen2.has(p.id)) return false
+    seen2.add(p.id)
+    return true
+  })
 
   return (
     <section className="py-16 sm:py-20 bg-white">
@@ -166,21 +202,15 @@ export default function TrendingProducts({ title }: Props) {
         {/* ── Section header ─────────────────────────────────────────────── */}
         <div className="relative flex items-center justify-center mb-10">
 
-          {/* "View All Products →" — top right, absolute */}
           <Link
             href="/products?trending=true"
             className="absolute right-0 hidden sm:flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-[#C8A45D] transition-colors group font-medium"
           >
             View All Products
-            <ArrowRight
-              size={14}
-              className="group-hover:translate-x-0.5 transition-transform"
-            />
+            <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
           </Link>
 
-          {/* Centered luxury heading with gold dividers */}
           <div className="flex items-center gap-4">
-            {/* Left divider */}
             <div className="flex items-center gap-1.5">
               <div className="w-8 h-px bg-[#C8A45D]" />
               <div className="w-1.5 h-1.5 rotate-45 border border-[#C8A45D]" />
@@ -193,7 +223,6 @@ export default function TrendingProducts({ title }: Props) {
               {title}
             </h2>
 
-            {/* Right divider */}
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rotate-45 border border-[#C8A45D]" />
               <div className="w-8 h-px bg-[#C8A45D]" />
@@ -201,35 +230,21 @@ export default function TrendingProducts({ title }: Props) {
           </div>
         </div>
 
-        {/* ── Product grid ───────────────────────────────────────────────── */}
-        {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-xl overflow-hidden border border-gray-100">
-                <div className="aspect-square bg-gray-100 animate-pulse" />
-                <div className="p-3 space-y-2">
-                  <div className="h-3 bg-gray-100 rounded animate-pulse w-3/4" />
-                  <div className="h-3 bg-gray-100 rounded animate-pulse w-1/2" />
-                  <div className="h-3 bg-gray-100 rounded animate-pulse w-2/3" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-            {products.map((product: any, i: number) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.06, duration: 0.5 }}
-              >
-                <ProductCard product={product} />
-              </motion.div>
-            ))}
-          </div>
-        )}
+        {/* ── Product grid — always shows products (mock fallback if no real data) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          {displayProducts.map((product: any, i: number) => (
+            <motion.div
+              key={`${product.id}-${i}`}
+              className="flex flex-col w-full h-full"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.06, duration: 0.5 }}
+            >
+              <ProductCard product={product} />
+            </motion.div>
+          ))}
+        </div>
 
         {/* Mobile "View All" CTA */}
         <div className="mt-8 text-center sm:hidden">
