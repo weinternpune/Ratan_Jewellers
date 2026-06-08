@@ -18,6 +18,7 @@ export interface StorefrontProduct {
   avgRating: number
   reviewCount: number
   inStock: boolean
+  isNewArrival: boolean
   isFeatured: boolean
   isTrending: boolean
   description: string
