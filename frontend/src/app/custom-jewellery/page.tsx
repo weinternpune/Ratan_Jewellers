@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
-//import Link from 'next/link'
+import React, { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import Navbar from '@/components/layout/Navbar'
 import Footer from '@/components/layout/Footer'
-import { Sparkles, MessageSquare, Phone, Mail, Check, ArrowRight, Pencil } from 'lucide-react'
+import { Sparkles, MessageSquare, Phone, Mail, Check, ArrowRight, Pencil, Plus, X, Image as ImageIcon } from 'lucide-react'
+import { useCustomJewelleryStore } from '@/store/customJewelleryStore'
+import { useAuthStore } from '@/store'
 import toast from 'react-hot-toast'
 
 const categories = [
@@ -53,7 +54,7 @@ const categories = [
   },
 ]
 
-const galleryImages = [
+const staticGallery = [
   { id: 1, image: '/gallery/ring-1.jpg.png', title: 'Custom Diamond Ring', category: 'Ring' },
   { id: 2, image: '/gallery/necklace-1.jpg.png', title: 'Gold Necklace Set', category: 'Necklace' },
   { id: 3, image: '/gallery/earring-1.jpg.png', title: 'Pearl Earrings', category: 'Earrings' },
@@ -63,6 +64,7 @@ const galleryImages = [
   { id: 7, image: '/gallery/ring-2.jpg.png', title: 'Sapphire Ring', category: 'Ring' },
   { id: 8, image: '/gallery/necklace-2.jpg.png', title: 'Gold Chain', category: 'Necklace' },
 ]
+// galleryImages used in JSX = store images + static
 
 const processSteps = [
   {
@@ -96,6 +98,8 @@ const processSteps = [
 ]
 
 export default function CustomJewelleryPage() {
+  const { submitRequest, galleryImages: adminGalleryImages } = useCustomJewelleryStore()
+  const { user } = useAuthStore()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -108,39 +112,28 @@ export default function CustomJewelleryPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    // Validate form
+
     if (!formData.name || !formData.email || !formData.phone || !formData.category || !formData.message) {
-      toast.error('Please fill in all fields')
+      toast.error('Please fill in all required fields')
       return
     }
 
-    const loadingToast = toast.loading('Submitting your request...')
-
     try {
-      // Use Next.js API route (no CORS issues)
-      const response = await fetch('/api/custom-jewellery', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+      // Save directly to Zustand store (persisted in localStorage — visible to admin panel immediately)
+      submitRequest({
+        name: formData.name || user?.name || '',
+        email: formData.email || user?.email || '',
+        phone: formData.phone,
+        category: formData.category,
+        metal: 'Not specified',
+        budget: 'Not specified',
+        description: formData.message,
       })
-
-      const data = await response.json()
-
-      if (data.success) {
-        toast.dismiss(loadingToast)
-        toast.success('Request submitted! We will contact you within 24 hours.')
-        setFormData({ name: '', email: '', phone: '', category: '', message: '' })
-      } else {
-        toast.dismiss(loadingToast)
-        toast.error(data.error || 'Failed to submit request. Please try again.')
-      }
+      toast.success('Request submitted! Our shop manager will contact you within 24 hours.')
+      setFormData({ name: '', email: '', phone: '', category: '', message: '' })
     } catch (error) {
-      console.error('Error submitting form:', error)
-      toast.dismiss(loadingToast)
-      toast.error('Failed to submit request. Please try again or contact us directly.')
+      console.error('Submit error:', error)
+      toast.error('Something went wrong. Please try again.')
     }
   }
 
@@ -148,9 +141,14 @@ export default function CustomJewelleryPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  const filteredGallery = selectedFilter === 'All' 
-    ? galleryImages 
-    : galleryImages.filter(item => item.category === selectedFilter)
+  // Merge admin-uploaded gallery images with static ones
+  const allGallery = [
+    ...adminGalleryImages.map(i => ({ id: parseInt(i.id.replace(/\D/g,'')||'0'), image: i.image, title: i.name, category: 'Custom' })),
+    ...staticGallery,
+  ]
+  const filteredGallery = selectedFilter === 'All'
+    ? allGallery
+    : allGallery.filter(item => item.category === selectedFilter)
 
   return (
     <main className="min-h-screen bg-white">

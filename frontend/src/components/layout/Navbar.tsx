@@ -201,7 +201,7 @@ export default function Navbar() {
               
               <Link 
                 href={isAuthenticated ? '/account' : '/login'} 
-                className="p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors hidden sm:block"
+                className="p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors"
                 aria-label="Account"
               >
                 <User size={18} className="xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
@@ -209,7 +209,7 @@ export default function Navbar() {
               
               <Link 
                 href="/wishlist" 
-                className="p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors relative hidden sm:block"
+                className="p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors relative"
                 aria-label="Wishlist"
               >
                 <Heart size={18} className="xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />

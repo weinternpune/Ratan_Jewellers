@@ -27,6 +27,7 @@ interface AuthState {
   setAuth: (u: User, a: string, r: string) => void;
   clearAuth: () => void;
   updateUser: (u: Partial<User>) => void;
+  registerCustomer: (user: User) => void;
 }
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -52,6 +53,34 @@ export const useAuthStore = create<AuthState>()(
         set((state) => ({
           user: state.user ? { ...state.user, ...userData } : null,
         })),
+      registerCustomer: (user) => {
+        try {
+          const key = 'ratan-admin-store'
+          const raw = localStorage.getItem(key)
+          const store = raw ? JSON.parse(raw) : { state: { customers: [] } }
+          const customers = store?.state?.customers ?? []
+          if (!customers.find((c: any) => c.email === user.email)) {
+            customers.unshift({
+              id: 'CRM-W' + Date.now(),
+              name: user.name,
+              phone: '',
+              email: user.email,
+              city: '',
+              totalSpend: 0,
+              orders: 0,
+              tier: 'bronze',
+              lastVisit: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+              birthday: '',
+              tags: ['Website'],
+              notes: 'Registered via website',
+            })
+            store.state.customers = customers
+            localStorage.setItem(key, JSON.stringify(store))
+          }
+        } catch (e) {
+          console.warn('Could not sync customer', e)
+        }
+      },
     }),
     {
       name: "ratan-auth",

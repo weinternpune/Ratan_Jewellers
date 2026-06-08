@@ -5,6 +5,8 @@ import { ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ProductCard from '@/components/products/ProductCard'
 import { api } from '@/lib/api'
+import { useProductCatalog } from '@/store/productCatalog'
+import { useState, useEffect } from 'react'
 
 interface Props {
   title: string
@@ -49,7 +51,36 @@ const mockProducts = Array.from({ length: 6 }, (_, i) => ({
   },
 }))
 
+// Read catalog products directly from localStorage — works cross-tab, cross-session
+function readCatalogFromStorage() {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem('ratan-product-catalog')
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return parsed?.state?.products ?? []
+  } catch { return [] }
+}
+
 export default function FeaturedProducts({ title, filter }: Props) {
+  const [mounted, setMounted] = useState(false)
+  const { products: storeProducts } = useProductCatalog()
+  const [lsProducts, setLsProducts] = useState<any[]>([])
+
+  // Poll localStorage every 2s — catches cross-tab additions instantly
+  useEffect(() => {
+    setMounted(true)
+    const sync = () => setLsProducts(readCatalogFromStorage())
+    sync() // initial read after mount
+    const id = setInterval(sync, 2000)
+    window.addEventListener('storage', sync)
+    window.addEventListener('focus', sync)
+    return () => { clearInterval(id); window.removeEventListener('storage', sync); window.removeEventListener('focus', sync) }
+  }, [])
+
+  // Merge: localStorage (cross-tab) + store (same-tab immediate)
+  // Only use localStorage products after mount to prevent hydration mismatch
+  const catalogProducts = mounted ? (lsProducts.length >= storeProducts.length ? lsProducts : storeProducts) : []
   const { data, isLoading } = useQuery({
     queryKey: ['products', filter],
     queryFn: () =>
@@ -65,9 +96,20 @@ export default function FeaturedProducts({ title, filter }: Props) {
     retry: false,
   })
 
-  const products = (data as any)?.products?.length
-    ? (data as any).products
+  // Show all catalog products first, then API, then mock — deduplicated
+  const apiProducts = (data as any)?.products ?? []
+  const rawProducts = catalogProducts.length > 0
+    ? catalogProducts.slice(0, 6)
+    : apiProducts.length > 0
+    ? apiProducts
     : mockProducts
+  // Deduplicate by id to prevent React key collision
+  const seen = new Set<string>()
+  const displayProducts = rawProducts.filter((p: any) => {
+    if (seen.has(p.id)) return false
+    seen.add(p.id)
+    return true
+  })
 
   return (
     <section className="py-16 sm:py-20 bg-white">
@@ -109,38 +151,21 @@ export default function FeaturedProducts({ title, filter }: Props) {
           </div>
         </div>
 
-        {/* ── Product grid ───────────────────────────────────────────────── */}
-        {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-xl overflow-hidden border border-gray-100">
-                {/* Square image placeholder */}
-                <div className="aspect-square w-full bg-gray-100 animate-pulse" />
-                <div className="p-3 space-y-2">
-                  <div className="h-3 bg-gray-100 rounded animate-pulse w-3/4" />
-                  <div className="h-3 bg-gray-100 rounded animate-pulse w-1/2" />
-                  <div className="h-3 bg-gray-100 rounded animate-pulse w-2/3" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-            {products.map((product: any, i: number) => (
-              <motion.div
-                key={product.id}
-                // ── Square card wrapper ──────────────────────────────────
-                className="flex flex-col w-full"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.06, duration: 0.5 }}
-              >
-                <ProductCard product={product} />
-              </motion.div>
-            ))}
-          </div>
-        )}
+        {/* ── Product grid — always shows products (mock fallback if no real data) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          {displayProducts.map((product: any, i: number) => (
+            <motion.div
+              key={`${product.id}-${i}`}
+              className="flex flex-col w-full"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.06, duration: 0.5 }}
+            >
+              <ProductCard product={product} />
+            </motion.div>
+          ))}
+        </div>
 
         {/* Mobile "View All" CTA */}
         <div className="mt-8 text-center sm:hidden">

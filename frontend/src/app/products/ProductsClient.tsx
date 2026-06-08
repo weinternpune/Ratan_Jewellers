@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { PRODUCTS } from '@/lib/products'   // ← FIX: import fallback data
+import { useProductCatalog } from '@/store/productCatalog'
 
 import type { Product } from '@/lib/products' // ← FIX: single source-of-truth type
 
@@ -200,7 +201,31 @@ export default function ProductsClient() {
   const [sortBy, setSortBy] = useState('createdAt')
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [toasts, setToasts] = useState<{ id: number; message: string; type: 'add' | 'remove' }[]>([])
+  const [searchQuery, setSearchQuery] = useState('')
   const searchParams = useSearchParams()
+  const { products: storeProducts } = useProductCatalog()
+  const [catalogProducts, setCatalogProducts] = useState<any[]>(() => {
+    if (typeof window === 'undefined') return storeProducts
+    try {
+      const raw = localStorage.getItem('ratan-product-catalog')
+      const ls = raw ? (JSON.parse(raw)?.state?.products ?? []) : []
+      return ls.length >= storeProducts.length ? ls : storeProducts
+    } catch { return storeProducts }
+  })
+  useEffect(() => {
+    const sync = () => {
+      try {
+        const raw = localStorage.getItem('ratan-product-catalog')
+        const ls = raw ? (JSON.parse(raw)?.state?.products ?? []) : []
+        setCatalogProducts(prev => ls.length >= prev.length ? ls : prev)
+      } catch {}
+    }
+    sync()
+    const id = setInterval(sync, 1500)
+    window.addEventListener('storage', sync)
+    window.addEventListener('focus', sync)
+    return () => { clearInterval(id); window.removeEventListener('storage', sync); window.removeEventListener('focus', sync) }
+  }, [])
 
   const showToast = useCallback((message: string, type: 'add' | 'remove') => {
     const id = Date.now()
@@ -214,9 +239,13 @@ export default function ProductsClient() {
   }
 
   useEffect(() => {
+    const searchParam = searchParams?.get('search') ?? ''
     const categoryParam = searchParams?.get('category') ?? ''
     const metalParam = searchParams?.get('metal') ?? ''
     const purityParam = searchParams?.get('purity') ?? ''
+    // If search param given, use it; else fall back to category as search term
+    if (searchParam) setSearchQuery(searchParam)
+    else if (categoryParam) setSearchQuery(categoryParam)
 
     const metalFilter = normalizeFilterValue(categoryParam, METALS) || normalizeFilterValue(metalParam, METALS)
     const categoryFilter = normalizeFilterValue(categoryParam, CATEGORIES)
@@ -256,20 +285,72 @@ export default function ProductsClient() {
     retry: false,
   })
 
-  // FIX: use API data when available, fall back to local PRODUCTS constant
-  const products: Product[] = data?.products?.length ? data.products : PRODUCTS
+  // Convert catalog products to Product shape and merge — catalog products ALWAYS included
+  const catalogAsProducts: Product[] = catalogProducts.map(p => ({
+    id: p.id,
+    name: p.name,
+    slug: p.slug,
+    sku: p.sku,
+    image: p.images[0] || '/images/products/placeholder.jpg',
+    images: p.images.length > 0 ? p.images : ['/images/products/placeholder.jpg'],
+    metal: p.metal,
+    purity: p.purity,
+    netWeight: p.netWeight,
+    currentPrice: p.currentPrice,
+    goldRate: p.goldRate,
+    makingCharges: p.makingCharges,
+    stoneCharges: p.stoneCharges,
+    avgRating: p.avgRating,
+    reviewCount: p.reviewCount,
+    inStock: p.inStock,
+    isFeatured: p.isFeatured,
+    isTrending: p.isTrending,
+    category: p.category,
+    createdAt: p.addedAt,
+  }))
+  const apiProducts: Product[] = data?.products?.length ? data.products : PRODUCTS
+  // Catalog products come first (admin-added real products), then fallback/API products
+  const products: Product[] = [
+    ...catalogAsProducts,
+    ...apiProducts.filter(p => !catalogAsProducts.some(c => c.id === p.id))
+  ]
 
   const filteredProducts = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim()
     const filtered = products.filter((product: Product) => {
       const productCategory =
         typeof product.category === 'string' ? product.category : product.category?.name || ''
-      const metalMatch = selectedMetal.length === 0 || selectedMetal.includes(product.metal)
-      const categoryMatch = selectedCategory.length === 0 || selectedCategory.includes(productCategory)
-      const purityMatch = selectedPurity.length === 0 || selectedPurity.includes(product.purity)
+
+      // Search query: match name, category, metal, purity, sku, description
+      const searchMatch = !q || [
+        product.name,
+        productCategory,
+        product.metal,
+        product.purity,
+        product.sku,
+        (product as any).description || '',
+        (product as any).keywords || '',
+      ].some(field => field?.toLowerCase().includes(q))
+
+      // Filters — if search query set, relax metal/category filters to let search drive
+      const metalMatch = q
+        ? true
+        : selectedMetal.length === 0 || selectedMetal.some(m =>
+            product.metal?.toLowerCase().includes(m.toLowerCase())
+          )
+      const categoryMatch = q
+        ? true
+        : selectedCategory.length === 0 || selectedCategory.some(c =>
+            productCategory.toLowerCase().includes(c.toLowerCase())
+          )
+      const purityMatch = selectedPurity.length === 0 || selectedPurity.some(p =>
+        product.purity?.toLowerCase().includes(p.toLowerCase())
+      )
       const priceMatch =
         priceRange.label === 'All' ||
         (product.currentPrice >= priceRange.min && product.currentPrice <= priceRange.max)
-      return metalMatch && categoryMatch && purityMatch && priceMatch
+
+      return searchMatch && metalMatch && categoryMatch && purityMatch && priceMatch
     })
     return [...filtered].sort((a, b) => {
       if (sortBy === 'priceAsc') return a.currentPrice - b.currentPrice
@@ -385,6 +466,16 @@ export default function ProductsClient() {
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
         <main className="space-y-6">
 
+
+          {/* Search bar — shows active query */}
+          {searchQuery && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C9A84C" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <span className="text-sm text-amber-800">Results for <strong>"{searchQuery}"</strong></span>
+              <button onClick={() => setSearchQuery('')} className="ml-auto text-amber-600 hover:text-amber-900 text-xs font-semibold">Clear search</button>
+            </div>
+          )}
+
           {/* Top bar */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
@@ -441,7 +532,10 @@ export default function ProductsClient() {
                 ))
                 : (
                   <div className="col-span-2 sm:col-span-3 xl:col-span-4 rounded-2xl border border-gray-200 bg-white p-12 text-center text-gray-500 shadow-sm">
-                    No products match selected filters.
+                    <div className="text-4xl mb-3">💎</div>
+                    <div className="font-semibold text-gray-700 mb-1">{searchQuery ? `No products found for "${searchQuery}"` : 'No products match selected filters.'}</div>
+                    <div className="text-sm text-gray-400">{searchQuery ? 'Try a different search term or browse all products' : 'Try clearing some filters'}</div>
+                    {searchQuery && <button onClick={() => setSearchQuery('')} className="mt-3 text-sm text-amber-600 hover:underline font-medium">Clear search</button>}
                   </div>
                 )
             }
