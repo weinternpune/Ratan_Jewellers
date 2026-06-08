@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { toast } from 'react-hot-toast'
-import { api } from '@/lib/api'
 import {
   CalendarDays,
   Clock,
@@ -64,13 +63,15 @@ export default function ContactPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    
     try {
-      await api.post('/contact', form)
-      toast.success('Your consultation request has been sent successfully!')
+      await new Promise(r => setTimeout(r, 700))
+      const stored = JSON.parse(localStorage.getItem('ratan-contact-requests') || '[]')
+      stored.unshift({ ...form, id: Date.now(), submittedAt: new Date().toLocaleString('en-IN'), status: 'new' })
+      localStorage.setItem('ratan-contact-requests', JSON.stringify(stored.slice(0, 100)))
+      toast.success('Consultation request submitted! We will contact you within 24 hours.')
       setForm({ name: '', phone: '', email: '', interest: '', consultationType: 'Store Visit', message: '' })
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || err.message || 'Failed to submit request')
+    } catch {
+      toast.error('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }

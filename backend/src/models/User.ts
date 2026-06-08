@@ -4,15 +4,24 @@ export type UserRole = 'CUSTOMER' | 'SALES_STAFF' | 'INVENTORY_MANAGER' | 'STORE
 
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
-  email: string; phone?: string; passwordHash?: string;
-  name: string; role: UserRole; isActive: boolean; isVerified: boolean;
-  avatar?: string; googleId?: string; lastLogin?: Date;
-  createdAt: Date; updatedAt: Date;
+  email?: string;
+  phone?: string;
+  passwordHash?: string;
+  name: string;
+  role: UserRole;
+  isActive: boolean;
+  isVerified: boolean;
+  avatar?: string;
+  googleId?: string;
+  lastLogin?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const UserSchema = new Schema<IUser>({
-  email:        { type: String, required: true, unique: true, lowercase: true, trim: true },
-  phone:        { type: String, unique: true, sparse: true, trim: true },
+  // email and phone are both optional individually — but at least one must exist (enforced in controller)
+  email:        { type: String, required: false, unique: true, sparse: true, lowercase: true, trim: true },
+  phone:        { type: String, required: false, unique: true, sparse: true, trim: true },
   passwordHash: { type: String },
   name:         { type: String, required: true, trim: true },
   role:         { type: String, enum: ['CUSTOMER','SALES_STAFF','INVENTORY_MANAGER','STORE_MANAGER','ADMIN','SUPER_ADMIN'], default: 'CUSTOMER' },

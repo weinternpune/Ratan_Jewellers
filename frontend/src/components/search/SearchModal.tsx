@@ -7,12 +7,12 @@ import { useUIStore } from '@/store'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const quickSearches = [
-  { label: 'Gold Necklaces', link: '/products?category=necklaces&metal=gold' },
-  { label: 'Diamond Rings', link: '/products?category=rings&metal=diamond' },
-  { label: 'Silver Earrings', link: '/products?category=earrings&metal=silver' },
-  { label: 'Gold Chains', link: '/products?category=chains&metal=gold' },
-  { label: 'Mangalsutras', link: '/products?category=mangalsutras' },
-  { label: 'Bracelets', link: '/products?category=bracelets' },
+  { label: 'Gold Necklaces', link: '/products?search=gold+necklaces' },
+  { label: 'Diamond Rings', link: '/products?search=diamond+rings' },
+  { label: 'Silver Earrings', link: '/products?search=silver+earrings' },
+  { label: 'Gold Chains', link: '/products?search=gold+chains' },
+  { label: 'Mangalsutras', link: '/products?search=mangalsutras' },
+  { label: 'Bracelets', link: '/products?search=bracelets' },
 ]
 
 export default function SearchModal() {

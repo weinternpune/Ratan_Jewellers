@@ -44,7 +44,7 @@ export default function FeaturedCategories() {
               transition={{ delay: i * 0.08, duration: 0.5 }}
             >
               <Link
-                href={`/products?category=${cat.slug}`}
+                href={`/products?category=${cat.slug}&search=${cat.name.toLowerCase()}`}
                 className="group block text-center rounded-2xl border border-gold/15 bg-white px-3 pt-3 pb-4 transition-all duration-300 hover:border-[#C9A24A] hover:bg-gradient-to-b hover:from-white hover:to-[#FFF9ED] hover:shadow-[0_18px_50px_rgba(201,162,74,0.15)] hover:-translate-y-1"
               >
                 <div className="relative w-full h-[120px] mb-3 rounded-xl overflow-hidden bg-gradient-to-br from-champagne to-ivory transition-transform duration-300 group-hover:scale-[1.02]">
