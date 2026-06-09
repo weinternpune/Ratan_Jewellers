@@ -20,7 +20,7 @@ const slugify = (s: string) =>
 const empty = {
   name: '', sku: '', category: 'Necklaces', metal: 'Gold', purity: '22KT',
   netWeight: '', currentPrice: '', goldRate: '6520', makingCharges: '',
-  stoneCharges: '0', description: '', isFeatured: false, isTrending: false,
+  stoneCharges: '0', description: '', isNewArrival: true, isFeatured: false, isTrending: false,
   inStock: true,
 }
 
@@ -171,6 +171,7 @@ Return ONLY the JSON, no markdown, no explanation.`
       avgRating:     0,
       reviewCount:   0,
       inStock:       form.inStock,
+      isNewArrival:  form.isNewArrival,
       isFeatured:    form.isFeatured,
       isTrending:    form.isTrending,
       description:   form.description,
@@ -355,6 +356,7 @@ Return ONLY the JSON, no markdown, no explanation.`
             <div className="flex flex-col gap-3 pt-2 border-t border-gray-100">
               {[
                 { k: 'inStock', label: 'In Stock', icon: Package, color: 'text-green-600' },
+                { k: 'isNewArrival', label: 'Show in New Arrivals', icon: Sparkles, color: 'text-blue-500' },
                 { k: 'isFeatured', label: 'Show in Featured Products', icon: Star, color: 'text-amber-500' },
                 { k: 'isTrending', label: 'Show in Trending Products', icon: TrendingUp, color: 'text-purple-500' },
               ].map(({ k, label, icon: Icon, color }) => (

@@ -32,6 +32,7 @@ const trendingMockProducts = [
     avgRating: 4.9,
     reviewCount: 142,
     inStock: true,
+    isNewArrival: true,
     isFeatured: true,
     isTrending: true,
     category: { name: 'Necklaces' },
@@ -54,6 +55,7 @@ const trendingMockProducts = [
     avgRating: 4.9,
     reviewCount: 211,
     inStock: true,
+    isNewArrival: true,
     isFeatured: true,
     isTrending: true,
     category: { name: 'Necklaces' },
@@ -76,6 +78,7 @@ const trendingMockProducts = [
     avgRating: 4.8,
     reviewCount: 89,
     inStock: true,
+    isNewArrival: true,
     isFeatured: false,
     isTrending: true,
     category: { name: 'Nose Pins' },
@@ -98,6 +101,7 @@ const trendingMockProducts = [
     avgRating: 4.9,
     reviewCount: 176,
     inStock: true,
+    isNewArrival: true,
     isFeatured: false,
     isTrending: true,
     category: { name: 'Mangalsutras' },
@@ -120,6 +124,7 @@ const trendingMockProducts = [
     avgRating: 4.8,
     reviewCount: 94,
     inStock: true,
+    isNewArrival: true,
     isFeatured: false,
     isTrending: true,
     category: { name: 'Rings' },
@@ -142,6 +147,7 @@ const trendingMockProducts = [
     avgRating: 4.9,
     reviewCount: 58,
     inStock: true,
+    isNewArrival: true,
     isFeatured: true,
     isTrending: true,
     category: { name: 'Necklaces' },
@@ -182,9 +188,10 @@ export default function TrendingProducts({ title }: Props) {
     retry: false,
   })
 
+  const trendingCatalogProducts = catalogProducts.filter((p: any) => p.isTrending === true)
   const apiProducts = (data as any)?.products ?? []
-  const rawProducts = catalogProducts.length > 0
-    ? catalogProducts.slice(0, 6)
+  const rawProducts = trendingCatalogProducts.length > 0
+    ? trendingCatalogProducts.slice(0, 6)
     : apiProducts.length > 0
     ? apiProducts
     : trendingMockProducts

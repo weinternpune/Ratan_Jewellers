@@ -204,28 +204,36 @@ export default function ProductsClient() {
   const [searchQuery, setSearchQuery] = useState('')
   const searchParams = useSearchParams()
   const { products: storeProducts } = useProductCatalog()
-  const [catalogProducts, setCatalogProducts] = useState<any[]>(() => {
-    if (typeof window === 'undefined') return storeProducts
+ const [catalogProducts, setCatalogProducts] = useState<any[]>(storeProducts)
+useEffect(() => {
+  const sync = () => {
     try {
       const raw = localStorage.getItem('ratan-product-catalog')
       const ls = raw ? (JSON.parse(raw)?.state?.products ?? []) : []
-      return ls.length >= storeProducts.length ? ls : storeProducts
-    } catch { return storeProducts }
-  })
-  useEffect(() => {
-    const sync = () => {
-      try {
-        const raw = localStorage.getItem('ratan-product-catalog')
-        const ls = raw ? (JSON.parse(raw)?.state?.products ?? []) : []
-        setCatalogProducts(prev => ls.length >= prev.length ? ls : prev)
-      } catch {}
+
+      setCatalogProducts(
+        ls.length >= storeProducts.length
+          ? ls
+          : storeProducts
+      )
+    } catch {
+      setCatalogProducts(storeProducts)
     }
-    sync()
-    const id = setInterval(sync, 1500)
-    window.addEventListener('storage', sync)
-    window.addEventListener('focus', sync)
-    return () => { clearInterval(id); window.removeEventListener('storage', sync); window.removeEventListener('focus', sync) }
-  }, [])
+  }
+
+  sync()
+
+  const id = setInterval(sync, 1500)
+
+  window.addEventListener('storage', sync)
+  window.addEventListener('focus', sync)
+
+  return () => {
+    clearInterval(id)
+    window.removeEventListener('storage', sync)
+    window.removeEventListener('focus', sync)
+  }
+}, [storeProducts])
 
   const showToast = useCallback((message: string, type: 'add' | 'remove') => {
     const id = Date.now()

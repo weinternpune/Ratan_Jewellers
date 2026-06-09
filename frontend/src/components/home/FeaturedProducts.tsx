@@ -44,6 +44,7 @@ const mockProducts = Array.from({ length: 6 }, (_, i) => ({
   avgRating: [4.8, 4.9, 4.7, 4.8, 4.9, 4.7][i],
   reviewCount: [124, 98, 75, 87, 64, 43][i],
   inStock: true,
+  isNewArrival: true,
   isFeatured: i < 2,
   isTrending: i % 3 === 0,
   category: {
@@ -96,10 +97,16 @@ export default function FeaturedProducts({ title, filter }: Props) {
     retry: false,
   })
 
-  // Show all catalog products first, then API, then mock — deduplicated
+  // Show matching catalog products first, then API, then mock — deduplicated
+  const filteredCatalogProducts = catalogProducts.filter((p: any) => {
+    if (filter === 'featured') return p.isFeatured === true
+    if (filter === 'trending') return p.isTrending === true
+    return p.isNewArrival !== false
+  })
+
   const apiProducts = (data as any)?.products ?? []
-  const rawProducts = catalogProducts.length > 0
-    ? catalogProducts.slice(0, 6)
+  const rawProducts = filteredCatalogProducts.length > 0
+    ? filteredCatalogProducts.slice(0, 6)
     : apiProducts.length > 0
     ? apiProducts
     : mockProducts
