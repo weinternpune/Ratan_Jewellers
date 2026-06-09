@@ -26,6 +26,36 @@ function readRequestsFromStorage(): CustomJewelleryRequest[] {
   }
 }
 
+// ── Fetch requests from backend API ──────────
+async function fetchRequestsFromBackend(): Promise<CustomJewelleryRequest[]> {
+  try {
+    const response = await fetch('http://localhost:5000/api/custom-jewellery')
+    const data = await response.json()
+    if (data.success && Array.isArray(data.data)) {
+      // Transform backend format to match frontend format
+      return data.data.map((item: any) => ({
+        id: item.id || `CJR-${Date.now()}-${Math.random()}`,
+        name: item.name || '',
+        email: item.email || '',
+        phone: item.phone || '',
+        category: item.category || '',
+        metal: 'Not specified',
+        budget: 'Not specified',
+        description: item.message || '',
+        status: item.status === 'pending' ? 'new' : (item.status === 'inprogress' ? 'in_review' : item.status),
+        submittedAt: item.createdAt ? new Date(item.createdAt).toLocaleString('en-IN') : '',
+        replies: [],
+        readByAdmin: false,
+        readByManager: false,
+      }))
+    }
+    return []
+  } catch (error) {
+    console.error('Error fetching from backend:', error)
+    return []
+  }
+}
+
 export default function CustomJewelleryAdminPage() {
   const store = useCustomJewelleryStore()
   const { currentUser, getEffectiveRole } = useAuthStore()
@@ -33,13 +63,21 @@ export default function CustomJewelleryAdminPage() {
   const canManage = ['store_manager', 'admin', 'super_admin'].includes(role)
   const canAddImages = role === 'super_admin'
 
-  // ── Always read directly from localStorage — guaranteed fresh ─────────────
+  // ── Always read from both localStorage and backend — guaranteed fresh ─────────────
   const [requests, setRequests] = useState<CustomJewelleryRequest[]>(() => readRequestsFromStorage())
   const [lastRefresh, setLastRefresh] = useState(0)
 
-  const refresh = useCallback(() => {
-    const data = readRequestsFromStorage()
-    setRequests(data)
+  const refresh = useCallback(async () => {
+    const localData = readRequestsFromStorage()
+    const backendData = await fetchRequestsFromBackend()
+    
+    // Merge both sources, deduplicate by ID
+    const allRequests = [...localData, ...backendData]
+    const uniqueRequests = Array.from(
+      new Map(allRequests.map(req => [req.id, req])).values()
+    ).sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+    
+    setRequests(uniqueRequests)
     setLastRefresh(Date.now())
   }, [])
 
