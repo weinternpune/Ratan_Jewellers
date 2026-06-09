@@ -52,9 +52,11 @@ html {
 
 body {
   font-family: 'Inter', sans-serif;
-  background-color: var(--cream);
+  background-color: #ffffff;
   color: var(--charcoal);
   overflow-x: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 /* Scrollbar */
@@ -337,4 +339,14 @@ body {
   animation: shimmer 1.5s infinite;
 
   border-radius: 4px;
+}
+
+/* Hide scrollbar for auto-scroll elements */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
 }
