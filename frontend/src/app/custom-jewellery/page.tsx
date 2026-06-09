@@ -120,7 +120,7 @@ export default function CustomJewelleryPage() {
 
     try {
       // Save directly to Zustand store (persisted in localStorage — visible to admin panel immediately)
-      submitRequest({
+      const requestData = {
         name: formData.name || user?.name || '',
         email: formData.email || user?.email || '',
         phone: formData.phone,
@@ -128,7 +128,28 @@ export default function CustomJewelleryPage() {
         metal: 'Not specified',
         budget: 'Not specified',
         description: formData.message,
-      })
+      }
+      
+      submitRequest(requestData)
+
+      // Also send to backend API for server-side persistence
+      try {
+        await fetch('http://localhost:5000/api/custom-jewellery', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: requestData.name,
+            email: requestData.email,
+            phone: requestData.phone,
+            category: requestData.category,
+            message: `${requestData.description}\n\nMetal: ${requestData.metal}\nBudget: ${requestData.budget}`,
+          }),
+        })
+      } catch (apiError) {
+        console.error('Backend API error:', apiError)
+        // Don't show error to user since localStorage save succeeded
+      }
+
       toast.success('Request submitted! Our shop manager will contact you within 24 hours.')
       setFormData({ name: '', email: '', phone: '', category: '', message: '' })
     } catch (error) {
