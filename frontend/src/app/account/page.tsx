@@ -38,6 +38,15 @@ export default function AccountPage() {
   const [signingOut, setSigningOut]     = useState(false)
 
   useEffect(() => {
+    // Redirect admin users to admin dashboard
+    if (typeof window !== 'undefined') {
+      const adminToken = localStorage.getItem('adminAccessToken')
+      if (adminToken) {
+        router.replace('/admin/dashboard')
+        return
+      }
+    }
+    
     if (!isAuthenticated) { toast.error('Please sign in first.'); router.push('/login'); return }
     Promise.all([
       api.get<UserProfile>('/auth/me'),

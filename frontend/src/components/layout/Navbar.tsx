@@ -29,10 +29,31 @@ export default function Navbar() {
   const { isMobileMenuOpen, toggleMobileMenu, toggleSearch } = useUIStore()
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [isMounted, setIsMounted] = useState(false)
+  const [profileDestination, setProfileDestination] = useState('/login')
 
   useEffect(() => {
     setIsMounted(true)
   }, [])
+  
+  // Determine profile destination: admin > customer > login
+  useEffect(() => {
+    const determineDestination = () => {
+      if (typeof window !== 'undefined') {
+        const adminToken = localStorage.getItem('adminAccessToken')
+        if (adminToken) {
+          setProfileDestination('/admin/dashboard')
+          return
+        }
+      }
+      if (isAuthenticated) {
+        setProfileDestination('/account')
+      } else {
+        setProfileDestination('/login')
+      }
+    }
+    
+    determineDestination()
+  }, [isAuthenticated])
   
   useEffect(() => { 
     const h = () => setScrolled(window.scrollY > 20)
@@ -200,7 +221,7 @@ export default function Navbar() {
               </button>
               
               <Link 
-                href={isAuthenticated ? '/account' : '/login'} 
+                href={profileDestination} 
                 className="p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors"
                 aria-label="Account"
               >

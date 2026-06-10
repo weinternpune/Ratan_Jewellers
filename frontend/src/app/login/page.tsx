@@ -37,16 +37,14 @@ export default function LoginPage() {
 
   // Redirect admin if already logged in
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('ratan-auth-store')
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (parsed?.state?.isLoggedIn && parsed?.state?.currentUser) {
-          router.replace('/admin/dashboard')
-        }
+    if (typeof window !== 'undefined') {
+      // Check for admin access token
+      const adminToken = localStorage.getItem('adminAccessToken')
+      if (adminToken) {
+        router.replace('/admin/dashboard')
       }
-    } catch {}
-  }, [])
+    }
+  }, [router])
 
   const goTo = (m: Mode) => { setAnimating(true); setTimeout(() => { setMode(m); setAnimating(false) }, 150) }
 
