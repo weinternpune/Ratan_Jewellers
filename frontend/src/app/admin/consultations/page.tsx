@@ -27,7 +27,7 @@ export default function ConsultationsPage() {
 
   const fetchConsultations = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/custom-jewellery')
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/custom-jewellery`)
       const data = await response.json()
       if (data.success) {
         setConsultations(data.data)
@@ -42,7 +42,7 @@ export default function ConsultationsPage() {
 
   const updateStatus = async (id: string, status: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/custom-jewellery/${id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/custom-jewellery/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -62,7 +62,7 @@ export default function ConsultationsPage() {
     if (!confirm('Are you sure you want to delete this consultation?')) return
     
     try {
-      const response = await fetch(`http://localhost:5000/api/custom-jewellery/${id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/custom-jewellery/${id}`, {
         method: 'DELETE',
       })
       const data = await response.json()

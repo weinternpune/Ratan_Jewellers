@@ -5,8 +5,17 @@ import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useWishlistStore, useCartStore } from '@/store'
-import { PRODUCTS } from '@/lib/products'
-import type { Product } from '@/lib/products'
+import { api } from '@/lib/api'
+
+interface Product {
+  _id: string; id?: string; name: string; slug: string; sku: string
+  images: string[]; metal: string; purity: string; netWeight: number
+  currentPrice: number; stoneCharges: number; avgRating: number
+  reviewCount: number; inStock: boolean; isTrending?: boolean
+  description?: string; category: string | { name: string }
+  makingCharges?: number; goldRate?: number
+}
+
 
 // ─── Star Rating ───────────────────────────────────────────────────────────────
 function StarRating({ rating, count }: { rating: number; count: number }) {
@@ -508,13 +517,13 @@ export default function ProductDetailPage() {
   const uniqueImages = [...new Set(allImages)]
 
   const categoryName = typeof product.category === 'string' ? product.category : product.category?.name || ''
-  const isWishlisted = wishlistItems.some(i => i.productId === product.id)
-  const isInCart = cartItems.some(i => i.productId === product.id)
+  const isWishlisted = wishlistItems.some(i => i.productId === product._id || product.id)
+  const isInCart = cartItems.some(i => i.productId === product._id || product.id)
 
   const handleWishlist = () => {
     toggleItem({
-      id: product.id,
-      productId: product.id,
+      id: product._id || product.id,
+      productId: product._id || product.id,
       name: product.name,
       sku: product.sku,
       image: product.image || product.images?.[0] || '',
@@ -532,8 +541,8 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     addToCart({
-      id: `cart-${product.id}`,
-      productId: product.id,
+      id: `cart-${product._id || product.id}`,
+      productId: product._id || product.id,
       name: product.name,
       sku: product.sku,
       image: product.image || product.images?.[0] || '',
@@ -549,7 +558,7 @@ export default function ProductDetailPage() {
   const related = PRODUCTS
     .filter(p => {
       const pCat = typeof p.category === 'string' ? p.category : p.category?.name || ''
-      return p.id !== product.id && pCat === categoryName
+      return p.id !== product._id || product.id && pCat === categoryName
     })
     .slice(0, 4)
 
