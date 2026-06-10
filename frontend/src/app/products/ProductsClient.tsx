@@ -6,11 +6,24 @@ import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { api } from '@/lib/api'
-import { PRODUCTS } from '@/lib/products'   // ← FIX: import fallback data
-import { useProductCatalog } from '@/store/productCatalog'
 
-import type { Product } from '@/lib/products' // ← FIX: single source-of-truth type
+// ─── Product type (from backend) ─────────────────────────────────────────────
+interface Product {
+  id: string; _id?: string; name: string; slug: string; sku: string
+  image?: string; images: string[]; metal: string; purity: string
+  netWeight: number; currentPrice: number; goldRate?: number
+  makingCharges?: number; stoneCharges: number; avgRating: number
+  reviewCount: number; inStock: boolean; isFeatured?: boolean
+  isTrending?: boolean; category: string | { name: string }; createdAt?: string
+}
 
+
+
+const normalizeFilterValue = (param, list) => {
+  if (!param) return ''
+  const m = list.find(i => i.toLowerCase() === param.toLowerCase())
+  return m ? m.toLowerCase() : ''
+}
 
 const METALS = ['Gold', 'Diamond', 'Silver']
 const PURITIES = ['24K', '22K', '18K', '14K']
@@ -203,55 +216,12 @@ export default function ProductsClient() {
   const [toasts, setToasts] = useState<{ id: number; message: string; type: 'add' | 'remove' }[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const searchParams = useSearchParams()
-  const { products: storeProducts } = useProductCatalog()
- const [catalogProducts, setCatalogProducts] = useState<any[]>(storeProducts)
-useEffect(() => {
-  const sync = () => {
-    try {
-      const raw = localStorage.getItem('ratan-product-catalog')
-      const ls = raw ? (JSON.parse(raw)?.state?.products ?? []) : []
-
-      setCatalogProducts(
-        ls.length >= storeProducts.length
-          ? ls
-          : storeProducts
-      )
-    } catch {
-      setCatalogProducts(storeProducts)
-    }
-  }
-
-  sync()
-
-  const id = setInterval(sync, 1500)
-
-  window.addEventListener('storage', sync)
-  window.addEventListener('focus', sync)
-
-  return () => {
-    clearInterval(id)
-    window.removeEventListener('storage', sync)
-    window.removeEventListener('focus', sync)
-  }
-}, [storeProducts])
-
-  const showToast = useCallback((message: string, type: 'add' | 'remove') => {
-    const id = Date.now()
-    setToasts(prev => [...prev, { id, message, type }])
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000)
-  }, [])
-
-  const normalizeFilterValue = (value: string, options: string[]) => {
-    const normalized = value?.toLowerCase().trim()
-    return options.find(option => option.toLowerCase() === normalized) ?? ''
-  }
 
   useEffect(() => {
-    const searchParam = searchParams?.get('search') ?? ''
-    const categoryParam = searchParams?.get('category') ?? ''
-    const metalParam = searchParams?.get('metal') ?? ''
-    const purityParam = searchParams?.get('purity') ?? ''
-    // If search param given, use it; else fall back to category as search term
+    const searchParam   = searchParams.get('search')
+    const categoryParam = searchParams.get('category')
+    const metalParam    = searchParams.get('metal')
+    const purityParam   = searchParams.get('purity')
     if (searchParam) setSearchQuery(searchParam)
     else if (categoryParam) setSearchQuery(categoryParam)
 
@@ -293,35 +263,7 @@ useEffect(() => {
     retry: false,
   })
 
-  // Convert catalog products to Product shape and merge — catalog products ALWAYS included
-  const catalogAsProducts: Product[] = catalogProducts.map(p => ({
-    id: p.id,
-    name: p.name,
-    slug: p.slug,
-    sku: p.sku,
-    image: p.images[0] || '/images/products/placeholder.jpg',
-    images: p.images.length > 0 ? p.images : ['/images/products/placeholder.jpg'],
-    metal: p.metal,
-    purity: p.purity,
-    netWeight: p.netWeight,
-    currentPrice: p.currentPrice,
-    goldRate: p.goldRate,
-    makingCharges: p.makingCharges,
-    stoneCharges: p.stoneCharges,
-    avgRating: p.avgRating,
-    reviewCount: p.reviewCount,
-    inStock: p.inStock,
-    isFeatured: p.isFeatured,
-    isTrending: p.isTrending,
-    category: p.category,
-    createdAt: p.addedAt,
-  }))
-  const apiProducts: Product[] = data?.products?.length ? data.products : PRODUCTS
-  // Catalog products come first (admin-added real products), then fallback/API products
-  const products: Product[] = [
-    ...catalogAsProducts,
-    ...apiProducts.filter(p => !catalogAsProducts.some(c => c.id === p.id))
-  ]
+  const products: Product[] = data?.products ?? []
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()

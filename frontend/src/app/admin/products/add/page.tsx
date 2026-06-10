@@ -6,7 +6,6 @@ import {
   CheckCircle2, ArrowLeft, Sparkles, Package,
   AlertCircle, Star, TrendingUp
 } from 'lucide-react'
-import { useProductCatalog, StorefrontProduct } from '@/store/productCatalog'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 
@@ -28,7 +27,6 @@ type Tab = 'manual' | 'pdf'
 
 export default function AddProductPage() {
   const router = useRouter()
-  const { addProduct } = useProductCatalog()
   const { currentUser } = useAuthStore()
 
   const [tab, setTab]       = useState<Tab>('manual')
@@ -188,7 +186,7 @@ Return ONLY the JSON, no markdown, no explanation.`
       source:        tab === 'pdf' ? 'pdf' : 'manual',
     }
 
-    addProduct(product)
+    console.log(product)
     toast.success(`"${product.name}" added to catalogue`)
     setSaving(false)
     router.push('/admin/products')

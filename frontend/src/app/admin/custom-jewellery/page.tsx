@@ -29,7 +29,7 @@ function readRequestsFromStorage(): CustomJewelleryRequest[] {
 // ── Fetch requests from backend API ──────────
 async function fetchRequestsFromBackend(): Promise<CustomJewelleryRequest[]> {
   try {
-    const response = await fetch('http://localhost:5000/api/custom-jewellery')
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/custom-jewellery`)
     const data = await response.json()
     if (data.success && Array.isArray(data.data)) {
       // Transform backend format to match frontend format

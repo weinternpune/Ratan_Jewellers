@@ -3,17 +3,14 @@ import jwt from 'jsonwebtoken';
 import { User, UserRole } from '../models/User';
 import { AppError } from './errorHandler';
 
-declare global {
-  namespace Express {
-    interface User {
-      id: string;
-      email: string;
-      role: UserRole;
-      name: string;
-    }
+// Extend Express Request with our custom user shape
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: { id: string; email: string; role: UserRole; name: string }
   }
 }
 
+// Alias so controllers can import AuthRequest without change
 export type AuthRequest = Request;
 
 export const authenticate: RequestHandler = async (req, res, next) => {
