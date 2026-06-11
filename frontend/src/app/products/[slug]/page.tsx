@@ -6,7 +6,141 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useWishlistStore, useCartStore } from '@/store'
 import { PRODUCTS } from '@/lib/products'
+import { useProductCatalog } from '@/store/productCatalog'
 import type { Product } from '@/lib/products'
+
+// ─── Catalog helpers (mirrors FeaturedProducts) ────────────────────────────────
+function readCatalogFromStorage(): any[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem('ratan-product-catalog')
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return parsed?.state?.products ?? []
+  } catch {
+    return []
+  }
+}
+
+/** Coerce a catalog product into the shape ProductDetailPage expects */
+function normalizeCatalogProduct(p: any): Product {
+  return {
+    ...p,
+    image: p.image ?? p.images?.[0] ?? '',
+    images: p.images ?? [],
+    avgRating: p.avgRating ?? 0,
+    reviewCount: p.reviewCount ?? 0,
+    goldRate: p.goldRate ?? 0,
+    makingCharges: p.makingCharges ?? 0,
+    stoneCharges: p.stoneCharges ?? 0,
+    inStock: p.inStock ?? true,
+    isFeatured: p.isFeatured ?? false,
+    isTrending: p.isTrending ?? false,
+    category: p.category ?? { name: '' },
+  }
+}
+
+// ─── Mock products — FeaturedProducts + TrendingProducts pools combined ──────
+const MOCK_PRODUCTS: any[] = [
+  // ── FeaturedProducts mocks (slugs: product-0 … product-5) ─────────────────
+  {
+    id: 'mock-0', name: 'Gold Traditional Necklace', slug: 'product-0', sku: 'RJ00001',
+    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1318/1779442888_0ac1f452c046c8b762b9.webp',
+    images: [], metal: 'Gold', purity: '22KT', netWeight: 15.25, currentPrice: 145000,
+    goldRate: 6500, makingCharges: 2000, stoneCharges: 0,
+    avgRating: 4.8, reviewCount: 124, inStock: true, isNewArrival: true, isFeatured: true, isTrending: true,
+    category: { name: 'Necklaces' },
+  },
+  {
+    id: 'mock-1', name: 'Diamond Stud Earrings', slug: 'product-1', sku: 'RJ00002',
+    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/163/1779964423_381a85a123b25b6c31f9.jpg',
+    images: [], metal: 'Gold', purity: '18KT', netWeight: 3.25, currentPrice: 48500,
+    goldRate: 6500, makingCharges: 3000, stoneCharges: 5000,
+    avgRating: 4.9, reviewCount: 98, inStock: true, isNewArrival: true, isFeatured: true, isTrending: false,
+    category: { name: 'Earrings' },
+  },
+  {
+    id: 'mock-2', name: 'Gold Ring For Women', slug: 'product-2', sku: 'RJ00003',
+    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1861/1773828632_55ca5de31b3813b0bd63.png',
+    images: [], metal: 'Gold', purity: '22KT', netWeight: 4.1, currentPrice: 32500,
+    goldRate: 6500, makingCharges: 1500, stoneCharges: 0,
+    avgRating: 4.7, reviewCount: 75, inStock: true, isNewArrival: true, isFeatured: false, isTrending: false,
+    category: { name: 'Rings' },
+  },
+  {
+    id: 'mock-3', name: 'Gold Bangles', slug: 'product-3', sku: 'RJ00004',
+    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/262/1633616341_88273e27e4efdf6614fd.jpg',
+    images: [], metal: 'Gold', purity: '22KT', netWeight: 20.5, currentPrice: 102000,
+    goldRate: 6500, makingCharges: 4000, stoneCharges: 5000,
+    avgRating: 4.8, reviewCount: 87, inStock: true, isNewArrival: true, isFeatured: false, isTrending: true,
+    category: { name: 'Bangles' },
+  },
+  {
+    id: 'mock-4', name: 'Mangalsutra Pendant', slug: 'product-4', sku: 'RJ00005',
+    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/764/1780054045_2efbce9def7e01b07340.webp',
+    images: [], metal: 'Gold', purity: '22KT', netWeight: 6.2, currentPrice: 35800,
+    goldRate: 6500, makingCharges: 2500, stoneCharges: 5000,
+    avgRating: 4.9, reviewCount: 64, inStock: true, isNewArrival: true, isFeatured: true, isTrending: false,
+    category: { name: 'Mangalsutras' },
+  },
+  {
+    id: 'mock-5', name: 'Silver Pooja Thali', slug: 'product-5', sku: 'RJ00006',
+    image: 'https://tiimg.tistatic.com/fp/1/006/590/fine-finished-brass-pooja-thali-023.jpg',
+    images: [], metal: 'Silver', purity: '92.5', netWeight: 250.0, currentPrice: 18500,
+    goldRate: 0, makingCharges: 3000, stoneCharges: 0,
+    avgRating: 4.7, reviewCount: 43, inStock: true, isNewArrival: false, isFeatured: false, isTrending: false,
+    category: { name: 'Pooja' },
+  },
+  // ── TrendingProducts mocks ──────────────────────────────────────────────────
+  {
+    id: 'trending-0', name: "Men's Necklace", slug: 'mens-necklace-22k', sku: 'RJT00001',
+    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1164/1662631757_9cbff375c83181ab33e4.png',
+    images: [], metal: 'Gold', purity: '22KT', netWeight: 18.75, currentPrice: 178500,
+    goldRate: 6500, makingCharges: 2200, stoneCharges: 0,
+    avgRating: 4.9, reviewCount: 142, inStock: true, isNewArrival: true, isFeatured: true, isTrending: true,
+    category: { name: 'Necklaces' },
+  },
+  {
+    id: 'trending-1', name: "Queen's Necklace", slug: 'queens-necklace', sku: 'RJT00002',
+    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/923/1779455699_aabe91f5b170208f7270.webp',
+    images: [], metal: 'Gold', purity: '22KT', netWeight: 24.3, currentPrice: 231000,
+    goldRate: 6500, makingCharges: 2800, stoneCharges: 8000,
+    avgRating: 4.9, reviewCount: 211, inStock: true, isNewArrival: true, isFeatured: true, isTrending: true,
+    category: { name: 'Necklaces' },
+  },
+  {
+    id: 'trending-2', name: 'Diamond Nose Ring', slug: 'diamond-nose-ring', sku: 'RJT00003',
+    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1704/1780137941_828a35a21f49303c9344.webp',
+    images: [], metal: 'Gold', purity: '18KT', netWeight: 0.85, currentPrice: 12500,
+    goldRate: 6500, makingCharges: 800, stoneCharges: 3500,
+    avgRating: 4.8, reviewCount: 89, inStock: true, isNewArrival: true, isFeatured: false, isTrending: true,
+    category: { name: 'Nose Pins' },
+  },
+  {
+    id: 'trending-3', name: 'EternalSpark Gold Mangalsutra', slug: 'eternalspark-gold-mangalsutra', sku: 'RJT00004',
+    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1404/1780053072_2e61ea8ef659a5e4db1f.webp',
+    images: [], metal: 'Gold', purity: '22KT', netWeight: 7.4, currentPrice: 67800,
+    goldRate: 6500, makingCharges: 1500, stoneCharges: 0,
+    avgRating: 4.9, reviewCount: 176, inStock: true, isNewArrival: true, isFeatured: false, isTrending: true,
+    category: { name: 'Mangalsutras' },
+  },
+  {
+    id: 'trending-4', name: 'SlimShine Diamond Ring', slug: 'slimshine-diamond-ring', sku: 'RJT00005',
+    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1757/1771847373_3c37a3448b16a50f89c1.jpg',
+    images: [], metal: 'Gold', purity: '18KT', netWeight: 2.15, currentPrice: 38500,
+    goldRate: 6500, makingCharges: 1200, stoneCharges: 6500,
+    avgRating: 4.8, reviewCount: 94, inStock: true, isNewArrival: true, isFeatured: false, isTrending: true,
+    category: { name: 'Rings' },
+  },
+  {
+    id: 'trending-5', name: 'Vanya Petal Flow Diamond Necklace', slug: 'vanya-petal-flow-diamond-necklace', sku: 'RJT00006',
+    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1983/1768634238_4b1b4642e14350311882.jpg',
+    images: [], metal: 'Gold', purity: '18KT', netWeight: 11.6, currentPrice: 124000,
+    goldRate: 6500, makingCharges: 2500, stoneCharges: 18000,
+    avgRating: 4.9, reviewCount: 58, inStock: true, isNewArrival: true, isFeatured: true, isTrending: true,
+    category: { name: 'Necklaces' },
+  },
+]
 
 // ─── Star Rating ───────────────────────────────────────────────────────────────
 function StarRating({ rating, count }: { rating: number; count: number }) {
@@ -84,7 +218,6 @@ function MobileZoomModal({
   const [scale, setScale] = useState(1)
   const [translate, setTranslate] = useState({ x: 0, y: 0 })
 
-  // Pinch state
   const pinchRef = useRef<{
     initialDistance: number
     initialScale: number
@@ -92,22 +225,15 @@ function MobileZoomModal({
     initialMidpoint: { x: number; y: number }
   } | null>(null)
 
-  // Pan state
   const panRef = useRef<{ startX: number; startY: number; startTx: number; startTy: number } | null>(null)
-
-  // Swipe state (when not zoomed)
   const swipeRef = useRef<{ startX: number; startY: number } | null>(null)
-
-  // Double-tap state
   const lastTapRef = useRef<number>(0)
 
-  // Reset zoom on image change
   useEffect(() => {
     setScale(1)
     setTranslate({ x: 0, y: 0 })
   }, [index])
 
-  // Prevent body scroll when modal open
   useEffect(() => {
     const original = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -127,7 +253,6 @@ function MobileZoomModal({
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 2) {
-      // Pinch start
       pinchRef.current = {
         initialDistance: getDistance(e.touches),
         initialScale: scale,
@@ -138,7 +263,6 @@ function MobileZoomModal({
       swipeRef.current = null
     } else if (e.touches.length === 1) {
       if (scale > 1) {
-        // Pan start
         panRef.current = {
           startX: e.touches[0].clientX,
           startY: e.touches[0].clientY,
@@ -146,7 +270,6 @@ function MobileZoomModal({
           startTy: translate.y,
         }
       } else {
-        // Swipe start
         swipeRef.current = {
           startX: e.touches[0].clientX,
           startY: e.touches[0].clientY,
@@ -171,7 +294,6 @@ function MobileZoomModal({
   }
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    // Swipe to change image (only if not zoomed)
     if (swipeRef.current && scale === 1 && e.changedTouches.length === 1) {
       const dx = e.changedTouches[0].clientX - swipeRef.current.startX
       const dy = e.changedTouches[0].clientY - swipeRef.current.startY
@@ -180,16 +302,12 @@ function MobileZoomModal({
         else if (dx > 0 && index > 0) setIndex(index - 1)
       }
     }
-
-    // Reset if scale dropped back
     if (scale <= 1) setTranslate({ x: 0, y: 0 })
-
     pinchRef.current = null
     panRef.current = null
     swipeRef.current = null
   }
 
-  // Double tap to zoom in/out
   const handleClick = () => {
     const now = Date.now()
     if (now - lastTapRef.current < 300) {
@@ -211,7 +329,6 @@ function MobileZoomModal({
       transition={{ duration: 0.2 }}
       className="fixed inset-0 z-[9999] bg-black/95 flex items-center justify-center touch-none select-none"
     >
-      {/* Close button */}
       <button
         type="button"
         onClick={onClose}
@@ -223,12 +340,10 @@ function MobileZoomModal({
         </svg>
       </button>
 
-      {/* Image counter */}
       <div className="absolute top-5 left-1/2 -translate-x-1/2 z-20 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-white text-xs font-semibold">
         {index + 1} / {images.length}
       </div>
 
-      {/* Image */}
       <div
         className="w-full h-full flex items-center justify-center overflow-hidden"
         onTouchStart={handleTouchStart}
@@ -249,28 +364,21 @@ function MobileZoomModal({
         />
       </div>
 
-      {/* Prev / Next arrows (tablet & up) */}
       {images.length > 1 && (
         <>
           {index > 0 && (
-            <button
-              type="button"
-              onClick={() => setIndex(index - 1)}
+            <button type="button" onClick={() => setIndex(index - 1)}
               className="hidden sm:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md text-white items-center justify-center active:scale-95 transition"
-              aria-label="Previous"
-            >
+              aria-label="Previous">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6" />
               </svg>
             </button>
           )}
           {index < images.length - 1 && (
-            <button
-              type="button"
-              onClick={() => setIndex(index + 1)}
+            <button type="button" onClick={() => setIndex(index + 1)}
               className="hidden sm:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md text-white items-center justify-center active:scale-95 transition"
-              aria-label="Next"
-            >
+              aria-label="Next">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6" />
               </svg>
@@ -279,7 +387,6 @@ function MobileZoomModal({
         </>
       )}
 
-      {/* Hint */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md text-white text-[11px] font-medium">
         Pinch to zoom · Double-tap · Swipe
       </div>
@@ -289,12 +396,7 @@ function MobileZoomModal({
 
 // ─── Zoom Image Component (Hover desktop / Tap mobile) ────────────────────────
 function ZoomImage({
-  src,
-  alt,
-  badges,
-  wishlistButton,
-  allImages,
-  activeIndex,
+  src, alt, badges, wishlistButton, allImages, activeIndex,
 }: {
   src: string
   alt: string
@@ -326,32 +428,20 @@ function ZoomImage({
     return () => ro.disconnect()
   }, [])
 
-  const handleMouseEnter = () => {
-    if (isTouchDevice) return
-    setZoom(z => ({ ...z, active: true }))
-  }
-
+  const handleMouseEnter = () => { if (!isTouchDevice) setZoom(z => ({ ...z, active: true })) }
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (isTouchDevice || !containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    setZoom({ active: true, x, y })
+    setZoom({ active: true, x: e.clientX - rect.left, y: e.clientY - rect.top })
   }
-
   const handleMouseLeave = () => setZoom(z => ({ ...z, active: false }))
-
-  const handleImageClick = () => {
-    // Open fullscreen modal on touch devices
-    if (isTouchDevice) setShowMobileModal(true)
-  }
+  const handleImageClick = () => { if (isTouchDevice) setShowMobileModal(true) }
 
   const halfLens = LENS_SIZE / 2
   const lensCx = Math.max(halfLens, Math.min(zoom.x, size.w - halfLens))
   const lensCy = Math.max(halfLens, Math.min(zoom.y, size.h - halfLens))
   const lensLeft = lensCx - halfLens
   const lensTop = lensCy - halfLens
-
   const scale = size.w / LENS_SIZE
   const bgW = size.w * scale
   const bgH = size.h * scale
@@ -376,13 +466,9 @@ function ZoomImage({
             alt={alt}
             className="w-full h-full object-cover pointer-events-none select-none"
             draggable={false}
-            onError={(e) => {
-              ;(e.target as HTMLImageElement).src =
-                'https://placehold.co/600x600/f5f0eb/c9a96e?text=Jewellery'
-            }}
+            onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/600x600/f5f0eb/c9a96e?text=Jewellery' }}
           />
 
-          {/* Mobile tap-to-zoom hint icon */}
           {isTouchDevice && (
             <div className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center pointer-events-none z-10">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8b5e2f" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -394,20 +480,16 @@ function ZoomImage({
             </div>
           )}
 
-          {/* Dim overlay on desktop zoom */}
           {zoom.active && !isTouchDevice && (
             <div className="absolute inset-0 bg-black/5 pointer-events-none transition-opacity duration-200" />
           )}
 
-          {/* Lens indicator (desktop only) */}
           {zoom.active && !isTouchDevice && size.w > 0 && (
             <div
               className="absolute pointer-events-none rounded-xl border-2 border-white/95"
               style={{
-                width: LENS_SIZE,
-                height: LENS_SIZE,
-                left: lensLeft,
-                top: lensTop,
+                width: LENS_SIZE, height: LENS_SIZE,
+                left: lensLeft, top: lensTop,
                 background: 'rgba(255,255,255,0.18)',
                 boxShadow: '0 0 0 1px rgba(0,0,0,0.2), 0 6px 24px rgba(0,0,0,0.25)',
               }}
@@ -418,14 +500,12 @@ function ZoomImage({
           {wishlistButton}
         </div>
 
-        {/* Floating zoom panel (desktop xl+ only) */}
         {zoom.active && !isTouchDevice && size.w > 0 && (
           <div
             className="hidden xl:block absolute top-0 z-30 rounded-3xl overflow-hidden border border-amber-200 shadow-2xl bg-white pointer-events-none"
             style={{
               left: 'calc(100% + 24px)',
-              width: size.w,
-              height: size.h,
+              width: size.w, height: size.h,
               backgroundImage: `url(${src})`,
               backgroundRepeat: 'no-repeat',
               backgroundSize: `${bgW}px ${bgH}px`,
@@ -439,7 +519,6 @@ function ZoomImage({
         )}
       </div>
 
-      {/* Mobile fullscreen zoom modal */}
       <AnimatePresence>
         {showMobileModal && (
           <MobileZoomModal
@@ -452,6 +531,7 @@ function ZoomImage({
     </>
   )
 }
+
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function ProductDetailPage() {
   const params = useParams()
@@ -461,24 +541,48 @@ export default function ProductDetailPage() {
   const { items: wishlistItems, toggleItem } = useWishlistStore()
   const { addItem: addToCart, items: cartItems } = useCartStore()
 
+  // ── NEW: also pull from the admin product catalog ──────────────────────────
+  const { products: storeProducts } = useProductCatalog()
+
   const [product, setProduct] = useState<Product | null>(null)
   const [activeImage, setActiveImage] = useState(0)
   const [toast, setToast] = useState<{ message: string; type: 'add' | 'remove' | 'cart' } | null>(null)
   const [addedToCart, setAddedToCart] = useState(false)
 
-  // Resolve product from PRODUCTS or API
+  // ── Product resolution: catalog (localStorage) → PRODUCTS → API ────────────
   useEffect(() => {
     if (!slug) return
-    const found = PRODUCTS.find(p => p.slug === slug)
-    if (found) {
-      setProduct(found)
+
+    // 1. Check localStorage catalog (catches cross-tab additions)
+    const lsProducts = readCatalogFromStorage()
+    const allCatalog = lsProducts.length >= storeProducts.length ? lsProducts : storeProducts
+    const fromCatalog = allCatalog.find((p: any) => p.slug === slug)
+    if (fromCatalog) {
+      setProduct(normalizeCatalogProduct(fromCatalog))
       return
     }
+
+    // 2. Check static PRODUCTS list
+    const fromStatic = PRODUCTS.find(p => p.slug === slug)
+    if (fromStatic) {
+      setProduct(fromStatic)
+      return
+    }
+
+    // 3. Check mock products (same pool rendered by FeaturedProducts cards)
+    const fromMock = MOCK_PRODUCTS.find(p => p.slug === slug)
+    if (fromMock) {
+      setProduct(fromMock)
+      return
+    }
+
+
+    // 4. Fallback to API
     fetch(`/api/products/${slug}`)
       .then(r => r.json())
       .then(d => d?.product && setProduct(d.product))
       .catch(() => {})
-  }, [slug])
+  }, [slug, storeProducts])
 
   useEffect(() => {
     setActiveImage(0)
@@ -557,7 +661,6 @@ export default function ProductDetailPage() {
   const totalMaking = product.makingCharges
   const gst = Math.round((goldValue + totalMaking + product.stoneCharges) * 0.03)
 
-  // Badges for the zoom image
   const badges = (
     <div className="absolute top-4 left-4 flex flex-col gap-2">
       {product.isFeatured && (
@@ -578,7 +681,6 @@ export default function ProductDetailPage() {
     </div>
   )
 
-  // Wishlist button for the zoom image
   const wishlistButton = (
     <button
       type="button"
@@ -617,8 +719,6 @@ export default function ProductDetailPage() {
 
           {/* ── LEFT: Image Gallery ──────────────────────────────────────── */}
           <div className="space-y-3">
-
-            {/* ── Zoom hint label (desktop only) ── */}
             <p className="hidden xl:flex items-center gap-1.5 text-[11px] text-gray-400 font-medium">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -627,8 +727,7 @@ export default function ProductDetailPage() {
               Hover image to zoom
             </p>
 
-            {/* ── AnimatePresence wraps just the src change, ZoomImage is stable ── */}
-           <AnimatePresence initial={false}>
+            <AnimatePresence initial={false}>
               <motion.div
                 key={activeImage}
                 initial={{ opacity: 0, scale: 1.03 }}
@@ -641,11 +740,12 @@ export default function ProductDetailPage() {
                   alt={product.name}
                   badges={badges}
                   wishlistButton={wishlistButton}
+                  allImages={uniqueImages}
+                  activeIndex={activeImage}
                 />
               </motion.div>
             </AnimatePresence>
 
-            {/* Thumbnail strip */}
             {uniqueImages.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                 {uniqueImages.map((img, idx) => (
@@ -666,7 +766,6 @@ export default function ProductDetailPage() {
           {/* ── RIGHT: Details ───────────────────────────────────────────── */}
           <div className="flex flex-col gap-5">
 
-            {/* Name & rating */}
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-600 mb-1">
                 {categoryName} · {product.metal}
@@ -679,7 +778,6 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Price */}
             <div className="flex items-end gap-3">
               <span className="text-3xl font-extrabold text-gray-900">
                 ₹{product.currentPrice.toLocaleString('en-IN')}
@@ -687,7 +785,6 @@ export default function ProductDetailPage() {
               <span className="text-sm text-gray-400 mb-1">Inclusive of all taxes</span>
             </div>
 
-            {/* Key specs pills */}
             <div className="flex flex-wrap gap-2">
               {[
                 { icon: <span className="iconify text-amber-600" data-icon="lucide:scale" data-width="14" />, label: `${product.netWeight}.000 gm` },
@@ -701,7 +798,6 @@ export default function ProductDetailPage() {
               ))}
             </div>
 
-            {/* Price breakdown */}
             <div className="rounded-2xl bg-white border border-gray-100 shadow-sm px-5 py-1">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400 py-2.5">Price Breakdown</p>
               <PriceRow label={`Gold Value (₹${product.goldRate.toLocaleString('en-IN')}/gm × ${product.netWeight}gm)`} value={`₹${goldValue.toLocaleString('en-IN')}`} />
@@ -713,7 +809,6 @@ export default function ProductDetailPage() {
               <PriceRow label="Total Price" value={`₹${product.currentPrice.toLocaleString('en-IN')}`} accent />
             </div>
 
-            {/* CTA buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
               {product.inStock ? (
                 <>
@@ -770,7 +865,6 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            {/* Trust badges */}
             <div className="grid grid-cols-3 gap-3">
               {[
                 { icon: <span className="iconify text-amber-600" data-icon="lucide:shield-check" data-width="22" />, title: 'Hallmark Certified', sub: 'BIS certified purity' },
@@ -785,7 +879,6 @@ export default function ProductDetailPage() {
               ))}
             </div>
 
-            {/* Product details accordion */}
             <details className="group rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
               <summary className="flex items-center justify-between px-5 py-4 cursor-pointer list-none font-semibold text-gray-800 text-sm">
                 Product Details
@@ -815,7 +908,6 @@ export default function ProductDetailPage() {
               </div>
             </details>
 
-            {/* Back button */}
             <button
               type="button"
               onClick={() => router.back()}
