@@ -131,12 +131,8 @@ export default function LoginPage() {
     if (e.key === 'Backspace' && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus()
   }
 
-  const handleGoogleLogin = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL?.replace('/api','') || 'http://localhost:5000'}/api/auth/google`, { redirect: 'manual' })
-      if (res.status === 503 || res.status === 0) { toast.error('Google sign-in is not set up yet. Please use Mobile OTP.'); return }
-    } catch {}
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000'}/api/auth/google`
+  const handleGoogleLogin = () => {
+    window.location.href = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace('/api','') + '/api/auth/google'
   }
 
   const otpComplete = otp.every(d => d !== '')
