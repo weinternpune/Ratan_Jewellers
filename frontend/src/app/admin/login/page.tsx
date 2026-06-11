@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Crown, Eye, EyeOff, LogIn, Shield } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
@@ -7,12 +7,19 @@ import toast from 'react-hot-toast'
 
 export default function AdminLoginPage() {
   const router = useRouter()
-  const { login } = useAuthStore()
+  const { login, isLoggedIn } = useAuthStore()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword]     = useState('')
   const [showPass, setShowPass]     = useState(false)
   const [error, setError]           = useState('')
   const [loading, setLoading]       = useState(false)
+
+  // Redirect if already logged in as admin
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isLoggedIn) {
+      router.replace('/admin/dashboard')
+    }
+  }, [isLoggedIn, router])
 
   const handleLogin = async () => {
     if (!identifier.trim() || !password.trim()) {
