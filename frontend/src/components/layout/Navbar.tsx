@@ -71,11 +71,11 @@ export default function Navbar() {
   
   return (
     <>
-      {/* Top Bar - Hidden on mobile, visible on tablet+ but hides on scroll */}
-      <div className={`hidden sm:block bg-white border-b border-gray-200 py-2.5 fixed top-0 left-0 right-0 z-50 transition-transform duration-300 ${
+      {/* Top Bar - Hidden on mobile, tablet, and iPad Pro. Visible on large desktop only */}
+      <div className={`hidden xl:block bg-white border-b border-gray-200 py-2.5 fixed top-0 left-0 right-0 z-[99] w-full max-w-full overflow-x-hidden transition-transform duration-300 ${
         scrolled ? '-translate-y-full' : 'translate-y-0'
       }`}>
-        <div className="w-full px-2 sm:px-4 md:px-6 lg:px-6 xl:px-8 2xl:px-12 flex justify-between items-center">
+        <div className="w-full max-w-full px-2 sm:px-4 md:px-6 lg:px-6 xl:px-8 2xl:px-12 flex justify-between items-center overflow-x-hidden">
           <div className="hidden lg:flex items-center gap-8 text-xs text-gray-700">
             <span className="flex items-center gap-2">
               <Shield size={14} className="text-gray-600" />
@@ -103,18 +103,16 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Spacer for top bar on tablet+ when not scrolled - matches top bar height */}
-      <div className={`hidden sm:block transition-all duration-300 ${scrolled ? 'h-0' : 'h-[44px]'}`} aria-hidden="true" />
-
-      {/* Main Navbar */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-md">
-        <div className="w-full px-2 sm:px-4 md:px-6 lg:px-6 xl:px-8 2xl:px-12">
-          <div className="flex items-center justify-between h-16 md:h-20">
+      {/* Main Navbar - Always visible on all devices - Fixed positioning */}
+      {/* On desktop (xl+), positioned below top bar when not scrolled, moves to top when scrolled */}
+      <nav className={`fixed left-0 right-0 z-[100] bg-white border-b border-gray-200 shadow-md w-full transition-all duration-300 ${scrolled ? 'top-0' : 'top-0 xl:top-[44px]'}`}>
+        <div className="w-full max-w-full px-1.5 xs:px-2 sm:px-3 md:px-3 lg:px-4 xl:px-8 2xl:px-12">
+          <div className="flex items-center justify-between h-16 md:h-20 w-full max-w-full gap-0.5 xs:gap-1 sm:gap-1 md:gap-1 lg:gap-2">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 md:gap-3 group flex-shrink-0">
+            <Link href="/" className="flex items-center gap-1 sm:gap-1.5 md:gap-2 lg:gap-2 xl:gap-3 group flex-shrink-0 min-w-0">
               {/* Crown Icon */}
-              <div className="relative">
-                <svg width="40" height="40" viewBox="0 0 48 48" fill="none" className="md:w-12 md:h-12 drop-shadow-md">
+              <div className="relative flex-shrink-0">
+                <svg width="36" height="36" viewBox="0 0 48 48" fill="none" className="sm:w-9 sm:h-9 md:w-10 md:h-10 lg:w-11 lg:h-11 xl:w-12 xl:h-12 drop-shadow-md">
                   {/* Crown */}
                   <path d="M8 28L12 16L18 22L24 12L30 22L36 16L40 28H8Z" fill="#C9A84C" stroke="#9D7A2E" strokeWidth="1"/>
                   <rect x="8" y="28" width="32" height="4" fill="#C9A84C" stroke="#9D7A2E" strokeWidth="1"/>
@@ -128,21 +126,21 @@ export default function Navbar() {
                 </svg>
               </div>
               
-              <div className="flex flex-col">
-                <div className="font-serif text-base md:text-xl font-bold text-[#C9A84C] tracking-wide leading-none whitespace-nowrap">
+              <div className="flex flex-col min-w-0">
+                <div className="font-serif text-xs sm:text-sm md:text-sm lg:text-base xl:text-xl font-bold text-[#C9A84C] tracking-wide leading-none whitespace-nowrap truncate">
                   RATAN JEWELLERS
                 </div>
-                <div className="text-[8px] md:text-[9px] text-gray-500 tracking-[0.15em] uppercase leading-none mt-1 hidden sm:block">
+                <div className="text-[7px] sm:text-[7px] md:text-[7px] lg:text-[8px] xl:text-[9px] text-gray-500 tracking-[0.1em] sm:tracking-[0.12em] md:tracking-[0.13em] lg:tracking-[0.15em] uppercase leading-none mt-1 hidden sm:block truncate">
                   Timeless Elegance. Trusted Since Generations.
                 </div>
               </div>
             </Link>
 
-            {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center gap-0 xl:gap-0.5 2xl:gap-1">
+            {/* Desktop Navigation - Shows on iPad Air+ (820px+), Mobile menu on iPad Mini */}
+            <div className="hidden min-[820px]:flex items-center gap-0 lg:gap-0 xl:gap-0.5 2xl:gap-1">
               <Link 
                 href="/" 
-                className={`px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide transition-colors ${
+                className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors ${
                   pathname === '/' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'
                 }`}
               >
@@ -152,10 +150,10 @@ export default function Navbar() {
               <div className="relative" ref={dropdownRef}>
                 <button 
                   onClick={() => setCollectionsOpen(!collectionsOpen)} 
-                  className="flex items-center gap-0.5 px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors"
+                  className="flex items-center gap-0.5 px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap"
                 >
                   COLLECTIONS
-                  <ChevronDown size={12} className={`xl:w-[13px] xl:h-[13px] 2xl:w-[14px] 2xl:h-[14px] transition-transform ${collectionsOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={10} className={`lg:w-3 lg:h-3 xl:w-[13px] xl:h-[13px] 2xl:w-[14px] 2xl:h-[14px] transition-transform ${collectionsOpen ? 'rotate-180' : ''}`} />
                 </button>
                 <AnimatePresence>
                   {collectionsOpen && (
@@ -180,29 +178,29 @@ export default function Navbar() {
                 </AnimatePresence>
               </div>
 
-              <Link href="/products?category=gold" className="px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
+              <Link href="/products?category=gold" className="px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
                 GOLD
               </Link>
-              <Link href="/products?category=diamond" className="px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
+              <Link href="/products?category=diamond" className="px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
                 DIAMOND
               </Link>
-              <Link href="/products?category=silver" className="px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
+              <Link href="/products?category=silver" className="px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors">
                 SILVER
               </Link>
-              <Link href="/custom-jewellery" className="px-1 xl:px-2 2xl:px-4 py-2 text-[9.5px] xl:text-[11px] 2xl:text-[13px] font-bold tracking-tight xl:tracking-normal 2xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap">
-                CUSTOM JEWELLERY
+              <Link href="/custom-jewellery" className="px-0.5 lg:px-1 xl:px-2 2xl:px-4 py-2 text-[7.5px] lg:text-[9px] xl:text-[11px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-tight xl:tracking-normal 2xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap">
+                CUSTOM
               </Link>
               <Link
                 href="/about"
-                className={`px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide transition-colors whitespace-nowrap ${
+                className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors whitespace-nowrap ${
                   pathname === '/about' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'
                 }`}
               >
-                ABOUT US
+                ABOUT
               </Link>
               <Link
                 href="/contact"
-                className={`px-1.5 xl:px-3 2xl:px-4 py-2 text-[10.5px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-normal xl:tracking-wide transition-colors ${
+                className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors ${
                   pathname === '/contact' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'
                 }`}
               >
@@ -211,31 +209,31 @@ export default function Navbar() {
             </div>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-1 xl:gap-1.5 2xl:gap-2">
+            <div className="flex items-center gap-0.5 sm:gap-1 xl:gap-1.5 2xl:gap-2 flex-shrink-0">
               <button 
                 onClick={toggleSearch} 
-                className="p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors"
+                className="p-1 sm:p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors"
                 aria-label="Search"
               >
-                <Search size={18} className="xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
+                <Search size={18} className="w-[17px] h-[17px] sm:w-[18px] sm:h-[18px] xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
               </button>
               
               <Link 
-                href={profileDestination} 
-                className="p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors"
+                href={isAuthenticated ? '/account' : '/login'} 
+                className="p-1 sm:p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors"
                 aria-label="Account"
               >
-                <User size={18} className="xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
+                <User size={18} className="w-[17px] h-[17px] sm:w-[18px] sm:h-[18px] xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
               </Link>
               
               <Link 
                 href="/wishlist" 
-                className="p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors relative"
+                className="p-1 sm:p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors relative"
                 aria-label="Wishlist"
               >
-                <Heart size={18} className="xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
+                <Heart size={18} className="w-[17px] h-[17px] sm:w-[18px] sm:h-[18px] xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
                 {isMounted && wishlistCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#C9A84C] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-4 h-4 sm:w-5 sm:h-5 bg-[#C9A84C] text-white text-[9px] sm:text-[10px] font-bold rounded-full flex items-center justify-center">
                     {wishlistCount}
                   </span>
                 )}
@@ -243,12 +241,12 @@ export default function Navbar() {
               
               <button 
                 onClick={toggleCart} 
-                className="p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors relative"
+                className="p-1 sm:p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors relative"
                 aria-label="Cart"
               >
-                <ShoppingBag size={18} className="xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
+                <ShoppingBag size={18} className="w-[17px] h-[17px] sm:w-[18px] sm:h-[18px] xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
                 {isMounted && totalItemsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#C9A84C] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-4 h-4 sm:w-5 sm:h-5 bg-[#C9A84C] text-white text-[9px] sm:text-[10px] font-bold rounded-full flex items-center justify-center">
                     {totalItemsCount}
                   </span>
                 )}
@@ -256,10 +254,10 @@ export default function Navbar() {
 
               <button 
                 onClick={toggleMobileMenu} 
-                className="p-1.5 xl:p-2 text-gray-700 lg:hidden"
+                className="p-1 sm:p-1.5 xl:p-2 text-gray-700 min-[820px]:hidden"
                 aria-label="Menu"
               >
-                {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                {isMobileMenuOpen ? <X size={20} className="w-[19px] h-[19px] sm:w-5 sm:h-5" /> : <Menu size={20} className="w-[19px] h-[19px] sm:w-5 sm:h-5" />}
               </button>
             </div>
           </div>
@@ -272,7 +270,7 @@ export default function Navbar() {
               initial={{ opacity: 0, height: 0 }} 
               animate={{ opacity: 1, height: 'auto' }} 
               exit={{ opacity: 0, height: 0 }} 
-              className="lg:hidden bg-white border-t border-gray-100"
+              className="min-[820px]:hidden bg-white border-t border-gray-100"
             >
               <div className="px-6 py-4 space-y-2">
                 {[

@@ -12,11 +12,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
+    <html lang="en" suppressHydrationWarning className="overflow-x-hidden">
+      <body className="overflow-x-hidden">
         <Providers>
           <SearchModal />
-          {children}
+          <div className="w-full overflow-x-hidden">
+            {children}
+          </div>
           <Toaster
             position="top-right"
             toastOptions={{
