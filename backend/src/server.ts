@@ -1,8 +1,10 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 import { connectDB } from './lib/db';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
@@ -26,7 +28,6 @@ import supplierRoutes  from './routes/suppliers';
 import uploadRoutes    from './routes/upload';
 import customJewelleryRoutes from './routes/customJewellery';
 
-dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
