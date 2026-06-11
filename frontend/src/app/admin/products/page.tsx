@@ -2,7 +2,6 @@
 import { useState } from 'react'
 import { Search, Plus, Edit2, Trash2, Eye, Package, Star, X, Grid, List, TrendingUp, AlertCircle } from 'lucide-react'
 import { useAdminStore, Product } from '@/store/adminStore'
-import { useProductCatalog } from '@/store/productCatalog'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
@@ -12,18 +11,7 @@ const empty: Omit<Product,'id'|'rating'|'sales'> = { name:'',category:'Necklaces
 
 export default function ProductsPage() {
   const { products: adminProducts, addProduct, updateProduct, deleteProduct } = useAdminStore()
-  const { products: catalogProducts, deleteProduct: deleteCatalogProduct, toggleFeatured, toggleTrending, toggleStock } = useProductCatalog()
-  // Merge admin + catalog products, catalog ones shown with a badge
-  const products = [
-    ...catalogProducts.map(p => ({
-      id: p.id, name: p.name, category: p.category.name, metal: p.metal,
-      weight: `${p.netWeight}g`, price: p.currentPrice, stock: p.inStock ? 99 : 0,
-      status: (p.inStock ? 'active' : 'out_of_stock') as any,
-      rating: p.avgRating, sales: p.reviewCount, description: p.description,
-      _catalog: true, _images: p.images, _sku: p.sku,
-    })),
-    ...adminProducts,
-  ]
+  const products = [...adminProducts]
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
   const [viewMode, setViewMode] = useState<'table'|'grid'>('table')
@@ -204,7 +192,7 @@ export default function ProductsPage() {
             <p className="text-sm text-gray-500">This will permanently delete <strong>{products.find(p=>p.id===confirmDelete)?.name}</strong>.</p>
             <div className="flex gap-3">
               <button onClick={()=>setConfirmDelete(null)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
-              <button onClick={()=>{ const p=products.find(p=>p.id===confirmDelete); if((p as any)?._catalog) deleteCatalogProduct(confirmDelete!); else deleteProduct(confirmDelete!); setConfirmDelete(null) }} className="flex-1 bg-red-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-red-600">Delete</button>
+              <button onClick={()=>{ const p=products.find(p=>p.id===confirmDelete); deleteProduct(confirmDelete!); setConfirmDelete(null) }} className="flex-1 bg-red-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-red-600">Delete</button>
             </div>
           </div>
         </div>
