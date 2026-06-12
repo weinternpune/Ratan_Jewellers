@@ -1,11 +1,14 @@
+
+
 "use client"
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { ShoppingBag, Search, User, Heart, Menu, X, ChevronDown, Shield, Repeat, MapPin, Package as PackageIcon } from 'lucide-react'
 import { useCartStore, useAuthStore, useUIStore, useWishlistStore } from '@/store'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useAuthStore as useAdminAuthStore } from '@/store/authStore'
 
 const categories = [
   { label: 'Necklaces', href: '/products?category=necklaces' },
@@ -19,62 +22,97 @@ const categories = [
 ]
 
 export default function Navbar() {
+  const { isLoggedIn: isAdminLoggedIn } = useAdminAuthStore()
   const [scrolled, setScrolled] = useState(false)
   const [collectionsOpen, setCollectionsOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
   const totalItemsCount = useCartStore(s => s.items.reduce((a, i) => a + i.quantity, 0))
   const wishlistCount = useWishlistStore(s => s.totalItems())
   const toggleCart = useCartStore(s => s.toggleCart)
-  const { user, isAuthenticated } = useAuthStore()
+  const { user, isAuthenticated, clearAuth } = useAuthStore()
   const { isMobileMenuOpen, toggleMobileMenu, toggleSearch } = useUIStore()
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [isMounted, setIsMounted] = useState(false)
-  const [profileDestination, setProfileDestination] = useState('/login')
 
   useEffect(() => {
     setIsMounted(true)
   }, [])
-  
-  // Determine profile destination: admin > customer > login
-  useEffect(() => {
-    const determineDestination = () => {
-      if (typeof window !== 'undefined') {
-        const adminToken = localStorage.getItem('adminAccessToken')
-        if (adminToken) {
-          setProfileDestination('/admin/dashboard')
-          return
-        }
-      }
-      if (isAuthenticated) {
-        setProfileDestination('/account')
-      } else {
-        setProfileDestination('/login')
-      }
+
+  // ── Key fix: if adminAccessToken exists, clear customer session immediately ──
+  // useEffect(() => {
+  //   if (typeof window === 'undefined') return
+  //   const adminToken = localStorage.getItem('adminAccessToken') ||
+  //                      localStorage.getItem('adminToken') ||
+  //                      localStorage.getItem('admin_token')
+  //   if (adminToken && isAuthenticated) {
+  //     clearAuth()
+  //   }
+  // }, [isAuthenticated])
+
+
+if (typeof window !== 'undefined') {
+    const adminToken = localStorage.getItem('adminAccessToken') ||
+                       localStorage.getItem('adminToken') ||
+                       localStorage.getItem('admin_token')
+    if (adminToken) {
+      router.replace('/admin/dashboard')  // ← just redirect, no clearAuth()
+      return
     }
-    
-    determineDestination()
-  }, [isAuthenticated])
-  
-  useEffect(() => { 
+  }
+
+  useEffect(() => {
     const h = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', h)
-    return () => window.removeEventListener('scroll', h) 
+    return () => window.removeEventListener('scroll', h)
   }, [])
-  
-  useEffect(() => { 
-    const h = (e: MouseEvent) => { 
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setCollectionsOpen(false) 
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setCollectionsOpen(false)
     }
     document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h) 
+    return () => document.removeEventListener('mousedown', h)
   }, [])
+
+// const handleProfileClick = (e: React.MouseEvent) => {
+//     e.preventDefault()
+//     if (typeof window === 'undefined') return
+
+//     const adminToken = localStorage.getItem('adminAccessToken') ||
+//                        localStorage.getItem('adminToken') ||
+//                        localStorage.getItem('admin_token')
+
+//     if (adminToken) {
+//       // Admin on front site → just send to login, not account
+//       router.push('/login')
+//       return
+//     }
+
+//     if (isAuthenticated) {
+//       router.push('/account')
+//     } else {
+//       router.push('/login')
+//     }
+//   }
+
+const handleProfileClick = (e: React.MouseEvent) => {
+  e.preventDefault()
   
+  if (isAdminLoggedIn) {
+    router.push('/admin/dashboard')
+    return
+  } 
+  if (isAuthenticated) {
+    router.push('/account')
+  } else {
+    router.push('/login')
+  }
+}
   return (
     <>
-      {/* Top Bar - Hidden on mobile, tablet, and iPad Pro. Visible on large desktop only */}
-      <div className={`hidden xl:block bg-white border-b border-gray-200 py-2.5 fixed top-0 left-0 right-0 z-[99] w-full max-w-full overflow-x-hidden transition-transform duration-300 ${
-        scrolled ? '-translate-y-full' : 'translate-y-0'
-      }`}>
+      {/* Top Bar */}
+      <div className={`hidden xl:block bg-white border-b border-gray-200 py-2.5 fixed top-0 left-0 right-0 z-[99] w-full max-w-full overflow-x-hidden transition-transform duration-300 ${scrolled ? '-translate-y-full' : 'translate-y-0'}`}>
         <div className="w-full max-w-full px-2 sm:px-4 md:px-6 lg:px-6 xl:px-8 2xl:px-12 flex justify-between items-center overflow-x-hidden">
           <div className="hidden lg:flex items-center gap-8 text-xs text-gray-700">
             <span className="flex items-center gap-2">
@@ -103,29 +141,23 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Main Navbar - Always visible on all devices - Fixed positioning */}
-      {/* On desktop (xl+), positioned below top bar when not scrolled, moves to top when scrolled */}
+      {/* Main Navbar */}
       <nav className={`fixed left-0 right-0 z-[100] bg-white border-b border-gray-200 shadow-md w-full transition-all duration-300 ${scrolled ? 'top-0' : 'top-0 xl:top-[44px]'}`}>
         <div className="w-full max-w-full px-1.5 xs:px-2 sm:px-3 md:px-3 lg:px-4 xl:px-8 2xl:px-12">
           <div className="flex items-center justify-between h-16 md:h-20 w-full max-w-full gap-0.5 xs:gap-1 sm:gap-1 md:gap-1 lg:gap-2">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-1 sm:gap-1.5 md:gap-2 lg:gap-2 xl:gap-3 group flex-shrink-0 min-w-0">
-              {/* Crown Icon */}
               <div className="relative flex-shrink-0">
                 <svg width="36" height="36" viewBox="0 0 48 48" fill="none" className="sm:w-9 sm:h-9 md:w-10 md:h-10 lg:w-11 lg:h-11 xl:w-12 xl:h-12 drop-shadow-md">
-                  {/* Crown */}
-                  <path d="M8 28L12 16L18 22L24 12L30 22L36 16L40 28H8Z" fill="#C9A84C" stroke="#9D7A2E" strokeWidth="1"/>
-                  <rect x="8" y="28" width="32" height="4" fill="#C9A84C" stroke="#9D7A2E" strokeWidth="1"/>
-                  {/* Jewels */}
-                  <circle cx="12" cy="16" r="2" fill="#E8D5A3"/>
-                  <circle cx="24" cy="12" r="2" fill="#E8D5A3"/>
-                  <circle cx="36" cy="16" r="2" fill="#E8D5A3"/>
-                  {/* R Letter in center */}
-                  <circle cx="24" cy="24" r="10" fill="white" stroke="#C9A84C" strokeWidth="1.5"/>
+                  <path d="M8 28L12 16L18 22L24 12L30 22L36 16L40 28H8Z" fill="#C9A84C" stroke="#9D7A2E" strokeWidth="1" />
+                  <rect x="8" y="28" width="32" height="4" fill="#C9A84C" stroke="#9D7A2E" strokeWidth="1" />
+                  <circle cx="12" cy="16" r="2" fill="#E8D5A3" />
+                  <circle cx="24" cy="12" r="2" fill="#E8D5A3" />
+                  <circle cx="36" cy="16" r="2" fill="#E8D5A3" />
+                  <circle cx="24" cy="24" r="10" fill="white" stroke="#C9A84C" strokeWidth="1.5" />
                   <text x="24" y="29" textAnchor="middle" fill="#C9A84C" fontSize="14" fontWeight="bold" fontFamily="serif">R</text>
                 </svg>
               </div>
-              
               <div className="flex flex-col min-w-0">
                 <div className="font-serif text-xs sm:text-sm md:text-sm lg:text-base xl:text-xl font-bold text-[#C9A84C] tracking-wide leading-none whitespace-nowrap truncate">
                   RATAN JEWELLERS
@@ -136,20 +168,15 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* Desktop Navigation - Shows on iPad Air+ (820px+), Mobile menu on iPad Mini */}
+            {/* Desktop Navigation */}
             <div className="hidden min-[820px]:flex items-center gap-0 lg:gap-0 xl:gap-0.5 2xl:gap-1">
-              <Link 
-                href="/" 
-                className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors ${
-                  pathname === '/' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'
-                }`}
-              >
+              <Link href="/" className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors ${pathname === '/' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'}`}>
                 HOME
               </Link>
-              
+
               <div className="relative" ref={dropdownRef}>
-                <button 
-                  onClick={() => setCollectionsOpen(!collectionsOpen)} 
+                <button
+                  onClick={() => setCollectionsOpen(!collectionsOpen)}
                   className="flex items-center gap-0.5 px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap"
                 >
                   COLLECTIONS
@@ -157,17 +184,17 @@ export default function Navbar() {
                 </button>
                 <AnimatePresence>
                   {collectionsOpen && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }} 
-                      animate={{ opacity: 1, y: 0 }} 
-                      exit={{ opacity: 0, y: 10 }} 
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
                       className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg overflow-hidden z-50"
                     >
                       {categories.map(cat => (
-                        <Link 
-                          key={cat.href} 
-                          href={cat.href} 
-                          onClick={() => setCollectionsOpen(false)} 
+                        <Link
+                          key={cat.href}
+                          href={cat.href}
+                          onClick={() => setCollectionsOpen(false)}
                           className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-[#C9A84C]/5 hover:text-[#C9A84C] transition-colors"
                         >
                           {cat.label}
@@ -190,47 +217,34 @@ export default function Navbar() {
               <Link href="/custom-jewellery" className="px-0.5 lg:px-1 xl:px-2 2xl:px-4 py-2 text-[7.5px] lg:text-[9px] xl:text-[11px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-tight xl:tracking-normal 2xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap">
                 CUSTOM
               </Link>
-              <Link
-                href="/about"
-                className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors whitespace-nowrap ${
-                  pathname === '/about' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'
-                }`}
-              >
+              <Link href="/about" className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors whitespace-nowrap ${pathname === '/about' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'}`}>
                 ABOUT
               </Link>
-              <Link
-                href="/contact"
-                className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors ${
-                  pathname === '/contact' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'
-                }`}
-              >
+              <Link href="/contact" className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors ${pathname === '/contact' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'}`}>
                 CONTACT
               </Link>
             </div>
 
             {/* Right Actions */}
             <div className="flex items-center gap-0.5 sm:gap-1 xl:gap-1.5 2xl:gap-2 flex-shrink-0">
-              <button 
-                onClick={toggleSearch} 
+              <button
+                onClick={toggleSearch}
                 className="p-1 sm:p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors"
                 aria-label="Search"
               >
                 <Search size={18} className="w-[17px] h-[17px] sm:w-[18px] sm:h-[18px] xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
               </button>
-              
-              <Link 
-                href={isAuthenticated ? '/account' : '/login'} 
+
+              {/* ── Profile icon: now a button with smart routing ── */}
+              <button
+                onClick={handleProfileClick}
                 className="p-1 sm:p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors"
                 aria-label="Account"
               >
                 <User size={18} className="w-[17px] h-[17px] sm:w-[18px] sm:h-[18px] xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
-              </Link>
-              
-              <Link 
-                href="/wishlist" 
-                className="p-1 sm:p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors relative"
-                aria-label="Wishlist"
-              >
+              </button>
+
+              <Link href="/wishlist" className="p-1 sm:p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors relative" aria-label="Wishlist">
                 <Heart size={18} className="w-[17px] h-[17px] sm:w-[18px] sm:h-[18px] xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
                 {isMounted && wishlistCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-4 h-4 sm:w-5 sm:h-5 bg-[#C9A84C] text-white text-[9px] sm:text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -238,12 +252,8 @@ export default function Navbar() {
                   </span>
                 )}
               </Link>
-              
-              <button 
-                onClick={toggleCart} 
-                className="p-1 sm:p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors relative"
-                aria-label="Cart"
-              >
+
+              <button onClick={toggleCart} className="p-1 sm:p-1.5 xl:p-2 text-gray-700 hover:text-[#C9A84C] transition-colors relative" aria-label="Cart">
                 <ShoppingBag size={18} className="w-[17px] h-[17px] sm:w-[18px] sm:h-[18px] xl:w-[19px] xl:h-[19px] 2xl:w-5 2xl:h-5" />
                 {isMounted && totalItemsCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 w-4 h-4 sm:w-5 sm:h-5 bg-[#C9A84C] text-white text-[9px] sm:text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -252,11 +262,7 @@ export default function Navbar() {
                 )}
               </button>
 
-              <button 
-                onClick={toggleMobileMenu} 
-                className="p-1 sm:p-1.5 xl:p-2 text-gray-700 min-[820px]:hidden"
-                aria-label="Menu"
-              >
+              <button onClick={toggleMobileMenu} className="p-1 sm:p-1.5 xl:p-2 text-gray-700 min-[820px]:hidden" aria-label="Menu">
                 {isMobileMenuOpen ? <X size={20} className="w-[19px] h-[19px] sm:w-5 sm:h-5" /> : <Menu size={20} className="w-[19px] h-[19px] sm:w-5 sm:h-5" />}
               </button>
             </div>
@@ -266,10 +272,10 @@ export default function Navbar() {
         {/* Mobile Menu */}
         <AnimatePresence>
           {isMobileMenuOpen && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }} 
-              animate={{ opacity: 1, height: 'auto' }} 
-              exit={{ opacity: 0, height: 0 }} 
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
               className="min-[820px]:hidden bg-white border-t border-gray-100"
             >
               <div className="px-6 py-4 space-y-2">
@@ -282,13 +288,11 @@ export default function Navbar() {
                   { label: 'About Us', href: '/about' },
                   { label: 'Contact', href: '/contact' },
                 ].map(item => (
-                  <Link 
-                    key={item.href} 
-                    href={item.href} 
-                    onClick={toggleMobileMenu} 
-                    className={`block px-4 py-2.5 text-sm hover:bg-gray-50 rounded-lg transition-colors ${
-                      pathname === item.href ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'
-                    }`}
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={toggleMobileMenu}
+                    className={`block px-4 py-2.5 text-sm hover:bg-gray-50 rounded-lg transition-colors ${pathname === item.href ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'}`}
                   >
                     {item.label}
                   </Link>
@@ -301,3 +305,5 @@ export default function Navbar() {
     </>
   )
 }
+
+
