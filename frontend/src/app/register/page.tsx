@@ -57,7 +57,6 @@ export default function RegisterPage() {
         // Try real backend first
         const res = await api.post<RegisterResponse>('/auth/register', payload)
         setAuth(res.data.user, res.data.accessToken, res.data.refreshToken)
-        useAuthStore.getState().registerCustomer(res.data.user)
         toast.success('Registration successful! Welcome to Ratan Jewellers.')
         router.push('/')
         return
@@ -88,7 +87,6 @@ export default function RegisterPage() {
         localUsers.push({ ...localUser, password: form.password })
         localStorage.setItem('ratan-local-users', JSON.stringify(localUsers))
         setAuth(localUser, 'local-token-' + Date.now(), 'local-refresh-' + Date.now())
-        useAuthStore.getState().registerCustomer(localUser)
         toast.success('Registration successful! Welcome to Ratan Jewellers.')
         router.push('/')
         return
