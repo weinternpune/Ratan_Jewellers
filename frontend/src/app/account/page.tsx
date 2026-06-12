@@ -1,3 +1,4 @@
+
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -31,33 +32,58 @@ const STATUS: Record<string, { label: string; color: string; bg: string; border:
 
 export default function AccountPage() {
   const router = useRouter()
-  const { user, isAuthenticated, clearAuth } = useAuthStore()
-  const [profile, setProfile]         = useState<UserProfile | null>(null)
+  const { user, isAuthenticated, clearAuth, hasHydrated } = useAuthStore()
+  const [profile, setProfile]           = useState<UserProfile | null>(null)
   const [recentOrders, setRecentOrders] = useState<Order[]>([])
   const [loading, setLoading]           = useState(true)
   const [signingOut, setSigningOut]     = useState(false)
 
   useEffect(() => {
-    // Redirect admin users to admin dashboard
+    // Wait for Zustand to rehydrate from localStorage before doing anything
+    if (!hasHydrated) return
+
+    // Redirect admin to admin dashboard
+    if (isAuthenticated && user) {
+      if (user.role === 'ADMIN' || user.role === 'admin') {
+        router.replace('/admin/dashboard')
+        return
+      }
+    }
+
+    // Fallback: check admin localStorage token
     if (typeof window !== 'undefined') {
-      const adminToken = localStorage.getItem('adminAccessToken')
+      const adminToken = localStorage.getItem('adminAccessToken') ||
+                         localStorage.getItem('adminToken') ||
+                         localStorage.getItem('admin_token')
       if (adminToken) {
         router.replace('/admin/dashboard')
         return
       }
     }
-    
-    if (!isAuthenticated) { toast.error('Please sign in first.'); router.push('/login'); return }
+
+    // Not logged in → send to login
+    if (!isAuthenticated) {
+      toast.error('Please sign in first.')
+      router.push('/login')
+      return
+    }
+
+    // Logged in as customer → load profile and orders
     Promise.all([
       api.get<UserProfile>('/auth/me'),
       api.get<{ data: Order[] }>('/orders/my-orders?page=1&limit=3').catch(() => ({ data: [] as Order[] })),
     ]).then(([p, o]) => {
+      if (p.role === 'ADMIN' || p.role === 'admin') {
+        router.replace('/admin/dashboard')
+        return
+      }
       setProfile(p)
       setRecentOrders((o as any).data ?? [])
     }).catch((err) => {
       if (err?.response?.status === 401) { clearAuth(); router.push('/login') }
     }).finally(() => setLoading(false))
-  }, [isAuthenticated])
+
+  }, [isAuthenticated, user, hasHydrated])
 
   const handleSignOut = async () => {
     setSigningOut(true)
@@ -69,6 +95,13 @@ export default function AccountPage() {
     toast.success('Signed out.')
     router.push('/')
   }
+
+  // Show spinner while Zustand is rehydrating — prevents instant logout on refresh
+  if (!hasHydrated) return (
+    <main className="min-h-screen bg-[#FAF6EE] flex items-center justify-center">
+      <Loader2 className="animate-spin text-[#C9A84C]" size={36}/>
+    </main>
+  )
 
   if (!isAuthenticated) return null
 
@@ -205,3 +238,5 @@ export default function AccountPage() {
     </main>
   )
 }
+
+
