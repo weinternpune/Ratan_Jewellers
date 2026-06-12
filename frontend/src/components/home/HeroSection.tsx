@@ -69,8 +69,8 @@ export default function HeroSection() {
       <div className="relative h-full w-full px-4 md:px-8 lg:px-16 z-20">
         <div className="h-full flex items-end md:items-center pb-20 md:pb-0">
           <div className="max-w-2xl">
-            {/* Title - Matching exact font style from image */}
-            <h1 className="font-serif text-[28px] md:text-[40px] lg:text-[46px] xl:text-[50px] font-normal text-white md:text-[#1a1a1a] leading-[1.25] mb-2 md:mb-4 drop-shadow-lg md:drop-shadow-sm">
+            {/* Title - Consistent styling across all responsive sections */}
+            <h1 className="font-serif text-[28px] sm:text-[32px] md:text-[40px] lg:text-[46px] xl:text-[50px] font-normal text-white md:text-[#1a1a1a] leading-[1.25] mb-2 md:mb-4 drop-shadow-lg md:drop-shadow-sm">
               Crafting Moments,<br />
               Cherishing Generations
             </h1>
@@ -126,8 +126,8 @@ export default function HeroSection() {
         ))}
       </div>
 
-      {/* Floating Action Buttons - Compact design matching image */}
-      <div className="absolute right-3 md:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-40 bg-[#8B6F47]/85 backdrop-blur-sm rounded-2xl shadow-xl py-3 md:py-4 px-2.5 md:px-3.5">
+      {/* Floating Action Buttons - Positioned to avoid text overlap */}
+      <div className="absolute right-2 sm:right-3 md:right-6 lg:right-8 top-1/2 -translate-y-1/2 z-40 bg-[#8B6F47]/85 backdrop-blur-sm rounded-2xl shadow-xl py-3 md:py-4 px-2.5 md:px-3.5">
         <div className="flex flex-col gap-3 md:gap-4">
           {/* WhatsApp */}
           <a

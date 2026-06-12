@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Quote, Star } from "lucide-react";
@@ -9,14 +10,16 @@ const testimonials = [
     id: 1,
     name: "Priya Sharma",
     location: "Mumbai",
+    image: "/images/testimonials/priya.jpeg",
     rating: 5,
-    text: "Bought my wedding set from Ratan Jewellers and I couldn't be happier. The craftsmanship is exquisite and the gold quality is exceptional. Got BIS hallmark verified too!",
+    text: "Bought my wedding set from Ratan Jewellers and I couldn't be happier. The craftsmanship is exquisite and the gold quality is exceptional. ",
     product: "Bridal Necklace Set",
   },
   {
     id: 2,
     name: "Anita Patel",
     location: "Surat",
+    image: "/images/testimonials/anita.jpeg",
     rating: 5,
     text: "The diamond ring I ordered for my engagement is absolutely stunning. WhatsApp delivery updates were so convenient. Customer service is top-notch.",
     product: "Diamond Solitaire Ring",
@@ -25,6 +28,7 @@ const testimonials = [
     id: 3,
     name: "Meera Krishnan",
     location: "Chennai",
+    image: "/images/testimonials/meera.jpeg",
     rating: 5,
     text: "I've been buying from Ratan Jewellers for 15 years. Their exchange policy is fair, pricing is transparent, and quality never disappoints. Highly recommend!",
     product: "Gold Bangles Set",
@@ -33,18 +37,12 @@ const testimonials = [
     id: 4,
     name: "Sunita Agarwal",
     location: "Jaipur",
+    image: "/images/testimonials/sunita.jpeg",
     rating: 5,
     text: "Ordered earrings online and received them beautifully packaged. The weight and purity matched exactly as described. Will definitely shop again!",
     product: "Temple Jhumka Earrings",
   },
 ];
-
-const getInitials = (name: string) =>
-  name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2);
 
 export default function Testimonials() {
   const [current, setCurrent] = useState(0);
@@ -99,9 +97,11 @@ export default function Testimonials() {
         <div className="mb-8 text-center">
           <div className="mb-2 flex w-full items-center justify-center gap-3">
             <span className="h-px w-8 bg-[var(--gold)]/70 sm:w-12" />
-            <p className="font-display text-[0.994rem] font-semibold uppercase tracking-[0.08em] text-[var(--charcoal)] sm:text-xl">
+            <span className="text-[0.85rem] text-[var(--gold)]">◇</span>
+            <p className="font-display text-2xl sm:text-3xl font-semibold uppercase tracking-[0.08em] text-[var(--charcoal)]">
               WHAT OUR CUSTOMERS SAY
             </p>
+            <span className="text-[0.85rem] text-[var(--gold)]">◇</span>
             <span className="h-px w-8 bg-[var(--gold)]/70 sm:w-12" />
           </div>
         </div>
@@ -117,7 +117,7 @@ export default function Testimonials() {
             {visibleTestimonials.map((testimonial) => (
               <motion.article
                 key={testimonial.id}
-                className="group relative flex h-[300px] flex-col  rounded-lg border border-[var(--gold)]/20 bg-white px-7 py-6 text-center shadow-[0_8px_26px_rgba(13,7,0,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--gold)]/40 hover:shadow-[0_14px_34px_rgba(13,7,0,0.1)]"
+                className="group relative flex min-h-[260px] flex-col  rounded-lg border border-[var(--gold)]/20 bg-white px-7 py-6 text-center shadow-[0_8px_26px_rgba(13,7,0,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--gold)]/40 hover:shadow-[0_14px_34px_rgba(13,7,0,0.1)]"
               >
                 <Quote
                   size={36}
@@ -125,7 +125,7 @@ export default function Testimonials() {
                   className="absolute right-5 top-5 text-[rgba(201,168,76,0.1)] transition-colors duration-300 group-hover:text-[rgba(201,168,76,0.18)]"
                 />
 
-                <div className="mb-3 flex justify-center gap-1">
+                <div className="mb-2 flex justify-center gap-1">
                   {Array.from({ length: testimonial.rating }).map(
                     (_, starIndex) => (
                       <Star
@@ -139,13 +139,18 @@ export default function Testimonials() {
                   )}
                 </div>
 
-                <p className="mx-auto flex-1 text-sm leading-6 text-[var(--charcoal)]/75">
+                <p className="mx-auto min-h-[80px] text-sm leading-6 text-[var(--charcoal)]/75 mb-3">
                   &ldquo;{testimonial.text}&rdquo;
                 </p>
 
-                <div className="mt-5 flex items-center justify-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--gold)]/35 bg-gradient-to-br from-[var(--gold-100)] to-white font-display text-base font-semibold text-[var(--gold-dark)] shadow-inner">
-                    {getInitials(testimonial.name)}
+                <div className="mt-1 flex items-center justify-center gap-3">
+                  <div className="relative h-[56px] w-[56px] flex-shrink-0 rounded-full border border-[var(--gold)]/35 overflow-hidden shadow-inner">
+                    <Image
+                      src={testimonial.image}
+                      alt={testimonial.name}
+                      fill
+                      className="object-cover"
+                    />
                   </div>
                   <div className="text-left">
                     <h3 className="text-sm font-medium leading-tight text-[var(--charcoal)]">
@@ -180,10 +185,11 @@ export default function Testimonials() {
                   type="button"
                   onClick={() => setCurrent(index)}
                   aria-label={`Show testimonial ${index + 1}`}
-                  className={`h-2 rounded-full transition-all duration-300 ${
+                  aria-current={index === current ? "true" : undefined}
+                  className={`rounded-full transition-all duration-300 focus:outline-none ${
                     index === current
-                      ? "w-6 bg-[var(--gold)]"
-                      : "w-2 bg-[var(--gold)]/30 hover:bg-[var(--gold)]/60"
+                      ? "h-2.5 w-6 bg-[var(--gold)]"
+                      : "h-3 w-3 bg-[var(--gold)]"
                   }`}
                 />
               ))}

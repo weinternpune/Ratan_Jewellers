@@ -1,4 +1,8 @@
-import { Router } from 'express';
+import { Router } from "express";
+import { getCustomers } from "../controllers/customerController";
+
 const router = Router();
-router.get('/', (req, res) => res.json({ success: true, data: [] }));
+
+router.get("/", getCustomers);
+
 export default router;

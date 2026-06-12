@@ -23,7 +23,5 @@ const UserSchema = new Schema<IUser>({
   lastLogin:    { type: Date },
 }, { timestamps: true });
 
-UserSchema.index({ email: 1 });
-UserSchema.index({ phone: 1 });
 
 export const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
