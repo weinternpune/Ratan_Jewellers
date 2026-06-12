@@ -102,7 +102,7 @@ const handleProfileClick = (e: React.MouseEvent) => {
   if (isAdminLoggedIn) {
     router.push('/admin/dashboard')
     return
-  }
+  } 
   if (isAuthenticated) {
     router.push('/account')
   } else {
