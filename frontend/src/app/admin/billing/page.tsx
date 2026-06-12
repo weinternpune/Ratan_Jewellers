@@ -12,7 +12,12 @@ const statusConfig: Record<InvoiceStatus,{label:string;color:string}> = {
   draft:{label:'Draft',color:'bg-gray-100 text-gray-500'},
 }
 
-const emptyInv = { order:'', customer:'', email:'', gstin:'', amount:0, gst:0, total:0, status:'draft' as InvoiceStatus, date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), due:'—' }
+const emptyInv = { 
+  customer:'', phone:'', 
+  category:'', metal:'', purity:'', netWeight:'', price:0, goldRate:6520, makingCharges:0,
+  amount:0, gst:0, total:0, status:'draft' as InvoiceStatus, 
+  date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), due:'—' 
+}
 
 export default function BillingPage() {
   const { invoices, orders, addInvoice, updateInvoiceStatus, sendInvoiceEmail, exportInvoicePDF } = useAdminStore()
@@ -102,7 +107,7 @@ export default function BillingPage() {
                   <tr key={inv.id} className="hover:bg-gray-50/60 transition-colors group">
                     <td className="px-5 py-4 font-mono text-sm font-semibold text-[#C9A84C]">{inv.id}</td>
                     <td className="px-5 py-4 font-mono text-xs text-gray-500">{inv.order||'—'}</td>
-                    <td className="px-5 py-4"><div className="font-medium text-gray-900">{inv.customer}</div>{inv.gstin&&<div className="text-[10px] font-mono text-gray-400">{inv.gstin}</div>}</td>
+                    <td className="px-5 py-4"><div className="font-medium text-gray-900">{inv.customer}</div>{inv.phone&&<div className="text-[10px] text-gray-400">{inv.phone}</div>}</td>
                     <td className="px-5 py-4 text-gray-700">₹{inv.amount.toLocaleString('en-IN')}</td>
                     <td className="px-5 py-4 text-gray-500 text-xs">₹{inv.gst.toLocaleString('en-IN')}</td>
                     <td className="px-5 py-4 font-bold text-gray-900">₹{inv.total.toLocaleString('en-IN')}</td>
@@ -149,13 +154,16 @@ export default function BillingPage() {
               <div className="bg-gray-50 rounded-xl p-4 mb-6">
                 <div className="text-xs font-semibold text-gray-400 uppercase mb-2">Bill To</div>
                 <div className="font-semibold text-gray-900">{previewInvoice.customer}</div>
-                {previewInvoice.gstin&&<div className="text-xs text-gray-500 font-mono">GSTIN: {previewInvoice.gstin}</div>}
-                {previewInvoice.email&&<div className="text-xs text-gray-500">{previewInvoice.email}</div>}
+                {previewInvoice.phone&&<div className="text-xs text-gray-500">Phone: {previewInvoice.phone}</div>}
               </div>
               <table className="w-full text-sm mb-6">
                 <thead className="border-b border-gray-200"><tr className="text-xs text-gray-500"><th className="text-left pb-2">Description</th><th className="text-right pb-2">Amount</th></tr></thead>
                 <tbody>
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-700">Jewellery Purchase{previewInvoice.order?` (${previewInvoice.order})`:''}</td><td className="py-3 text-right text-gray-900">₹{previewInvoice.amount.toLocaleString('en-IN')}</td></tr>
+                  {previewInvoice.category && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Category: {previewInvoice.category}</td><td></td></tr>}
+                  {previewInvoice.metal && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Metal: {previewInvoice.metal}</td><td></td></tr>}
+                  {previewInvoice.purity && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Purity: {previewInvoice.purity}</td><td></td></tr>}
+                  {previewInvoice.netWeight && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Net Weight: {previewInvoice.netWeight}</td><td></td></tr>}
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">CGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.gst/2).toLocaleString('en-IN')}</td></tr>
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">SGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.gst/2).toLocaleString('en-IN')}</td></tr>
                 </tbody>
@@ -177,39 +185,139 @@ export default function BillingPage() {
       {/* Create Invoice Modal */}
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 sticky top-0 bg-white">
               <h2 className="font-bold text-gray-900">Create Invoice</h2>
               <button onClick={()=>setShowCreate(false)} className="text-gray-400 hover:text-gray-600"><X size={18}/></button>
             </div>
-            <div className="px-6 py-5 space-y-4">
-              <div><label className="text-xs font-semibold text-gray-600 mb-1.5 block">Link to Order (optional)</label>
-                <select value={form.order} onChange={e=>{
-                  const order=orders.find(o=>o.id===e.target.value)
-                  if(order){const gst=Math.round(order.total*0.03);setForm(p=>({...p,order:order.id,customer:order.customer,email:order.email,amount:order.total,gst,total:order.total+gst}))}
-                  else setForm(p=>({...p,order:e.target.value}))
-                }} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] cursor-pointer">
-                  <option value="">— No linked order —</option>
-                  {orders.map(o=><option key={o.id} value={o.id}>{o.id} — {o.customer}</option>)}
-                </select>
+            <div className="px-6 py-5 space-y-6">
+              
+              {/* Customer Details Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Customer Name *</label>
+                  <input value={form.customer} onChange={e=>setForm(p=>({...p,customer:e.target.value}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="Customer name"/>
+                </div>
+                
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Phone Number</label>
+                  <input value={form.phone||''} onChange={e=>setForm(p=>({...p,phone:e.target.value}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="+91 98765 43210"/>
+                </div>
               </div>
-              <div><label className="text-xs font-semibold text-gray-600 mb-1.5 block">Customer Name *</label><input value={form.customer} onChange={e=>setForm(p=>({...p,customer:e.target.value}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="Customer name"/></div>
-              <div><label className="text-xs font-semibold text-gray-600 mb-1.5 block">Email</label><input value={form.email} onChange={e=>setForm(p=>({...p,email:e.target.value}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="customer@email.com"/></div>
-              <div><label className="text-xs font-semibold text-gray-600 mb-1.5 block">GSTIN (optional)</label><input value={form.gstin} onChange={e=>setForm(p=>({...p,gstin:e.target.value}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] font-mono" placeholder="27AABCU9603R1ZX"/></div>
-              <div><label className="text-xs font-semibold text-gray-600 mb-1.5 block">Amount (₹) *</label><input type="number" value={form.amount||''} onChange={e=>handleAmountChange(Number(e.target.value))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="Amount before GST"/></div>
-              <div className="bg-amber-50 rounded-xl p-3 space-y-1 text-sm">
-                <div className="flex justify-between"><span className="text-gray-600">GST (3%)</span><span className="font-semibold">₹{form.gst.toLocaleString('en-IN')}</span></div>
-                <div className="flex justify-between font-bold"><span>Total</span><span>₹{form.total.toLocaleString('en-IN')}</span></div>
+
+              {/* Product Details Section */}
+              <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Product Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Category</label>
+                    <select value={form.category||''} onChange={e=>setForm(p=>({...p,category:e.target.value}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] cursor-pointer bg-white">
+                      <option value="">Select Category</option>
+                      <option value="Necklaces">Necklaces</option>
+                      <option value="Rings">Rings</option>
+                      <option value="Bangles">Bangles</option>
+                      <option value="Earrings">Earrings</option>
+                      <option value="Chains">Chains</option>
+                      <option value="Mangalsutras">Mangalsutras</option>
+                      <option value="Anklets">Anklets</option>
+                      <option value="Bracelets">Bracelets</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Metal</label>
+                    <select value={form.metal||''} onChange={e=>setForm(p=>({...p,metal:e.target.value}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] cursor-pointer bg-white">
+                      <option value="">Select Metal</option>
+                      <option value="24K Gold">24K Gold</option>
+                      <option value="22K Gold">22K Gold</option>
+                      <option value="20K Gold">20K Gold</option>
+                      <option value="18K Gold">18K Gold</option>
+                      <option value="14K Gold">14K Gold</option>
+                      <option value="Silver">Silver</option>
+                      <option value="Platinum">Platinum</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Purity</label>
+                    <select value={form.purity||''} onChange={e=>setForm(p=>({...p,purity:e.target.value}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] cursor-pointer bg-white">
+                      <option value="">Select Purity</option>
+                      <option value="999">999 (24K)</option>
+                      <option value="916">916 (22K)</option>
+                      <option value="833">833 (20K)</option>
+                      <option value="750">750 (18K)</option>
+                      <option value="585">585 (14K)</option>
+                      <option value="925">925 (Silver)</option>
+                      <option value="950">950 (Platinum)</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Net Weight</label>
+                    <input value={form.netWeight||''} onChange={e=>setForm(p=>({...p,netWeight:e.target.value}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="10.5"/>
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Gold Rate</label>
+                    <input value={form.goldRate||''} onChange={e=>setForm(p=>({...p,goldRate:Number(e.target.value)||0}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="6520"/>
+                  </div>
+                  
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Making Charges (%)</label>
+                    <input value={form.makingCharges||''} onChange={e=>setForm(p=>({...p,makingCharges:Number(e.target.value)||0}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="10"/>
+                  </div>
+                </div>
               </div>
-              <div><label className="text-xs font-semibold text-gray-600 mb-1.5 block">Status</label>
+              
+              {/* Pricing Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Price (₹) *</label>
+                  <input value={form.price||''} onChange={e=>setForm(p=>({...p,price:Number(e.target.value)||0}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="Item price"/>
+                </div>
+                
+                <div>
+                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Amount (₹) *</label>
+                  <input value={form.amount||''} onChange={e=>handleAmountChange(Number(e.target.value)||0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="Amount before GST"/>
+                </div>
+              </div>
+
+              {/* GST Section */}
+              <div className="bg-amber-50 rounded-xl p-4 space-y-3">
+                <div className="text-xs font-semibold text-gray-600 uppercase mb-3">GST Breakdown</div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">CGST (1.5%)</span>
+                    <span className="font-semibold">₹{(form.gst/2).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">SGST (1.5%)</span>
+                    <span className="font-semibold">₹{(form.gst/2).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between items-center font-bold border-l border-amber-200 pl-4">
+                    <span>Total GST (3%)</span>
+                    <span>₹{form.gst.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+                <div className="border-t border-amber-200 pt-3">
+                  <div className="flex justify-between items-center font-bold text-base">
+                    <span>Grand Total</span>
+                    <span className="text-lg">₹{form.total.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Status</label>
                 <select value={form.status} onChange={e=>setForm(p=>({...p,status:e.target.value as InvoiceStatus}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] cursor-pointer">
                   {(Object.keys(statusConfig) as InvoiceStatus[]).map(s=><option key={s} value={s}>{statusConfig[s].label}</option>)}
                 </select>
               </div>
             </div>
+            
             <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
-              <button onClick={()=>setShowCreate(false)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
-              <button onClick={handleSubmit} className="flex-1 bg-[#0D0700] text-[#C9A84C] rounded-xl py-2.5 text-sm font-semibold hover:bg-[#1a0e00]">Create Invoice</button>
+              <button onClick={()=>setShowCreate(false)} className="flex-1 border border-gray-200 rounded-xl py-3 text-sm text-gray-600 hover:bg-gray-50 font-medium">Cancel</button>
+              <button onClick={handleSubmit} className="flex-1 bg-[#0D0700] text-[#C9A84C] rounded-xl py-3 text-sm font-semibold hover:bg-[#1a0e00]">Create Invoice</button>
             </div>
           </div>
         </div>

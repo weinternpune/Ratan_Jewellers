@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ProductCard from '@/components/products/ProductCard'
-import { api } from '@/lib/api'
+import { apiClient } from '@/lib/api'
 
 interface Props { title: string; filter: 'newest' | 'trending' | 'featured' }
 
@@ -27,7 +27,19 @@ const mockProducts = Array.from({ length: 6 }, (_, i) => ({
 export default function FeaturedProducts({ title, filter }: Props) {
   const { data } = useQuery({
     queryKey: ['products', filter],
-    queryFn: () => api.get<any>(`/products?${filter==='trending'?'trending=true':filter==='featured'?'featured=true':'sortBy=createdAt'}&limit=6`),
+    queryFn: async () => {
+  const res = await apiClient.get(
+    `/products?${
+      filter === 'trending'
+        ? 'trending=true'
+        : filter === 'featured'
+        ? 'featured=true'
+        : 'featured=true'
+    }&limit=6`
+  )
+
+  return res.data
+},
     retry: false,
   })
   const apiProducts = (data as any)?.products ?? []

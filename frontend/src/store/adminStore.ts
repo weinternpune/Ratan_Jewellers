@@ -59,16 +59,22 @@ export interface OrderItem {
 
 export interface Invoice {
   id: string
-  order: string
+  order?: string
   customer: string
-  gstin: string
+  phone?: string
+  category?: string
+  metal?: string
+  purity?: string
+  netWeight?: string
+  price?: number
+  goldRate?: number
+  makingCharges?: number
   amount: number
   gst: number
   total: number
   status: InvoiceStatus
   date: string
   due: string
-  email?: string
 }
 
 export interface InventoryItem {
@@ -142,22 +148,13 @@ const initialProducts: Product[] = [
 ]
 
 const initialOrders: Order[] = [
-  { id: 'RJ-4821', customer: 'Priya Sharma', email: 'priya.s@email.com', phone: '+91 98765 11111', items: [{ name: 'Kundan Bridal Necklace Set', qty: 1, price: 285000 }, { name: 'Pearl Drop Earrings', qty: 1, price: 45000 }], total: 328000, status: 'delivered', date: '03 Jun 2026', payment: 'UPI', address: '12 MG Road, Bhubaneswar' },
+  { id: 'RJ-4821', customer: 'Priya Sharma', email: 'priya.s@email.com', phone: '+91 98765 11111', items: [{ name: 'Kundan Bridal Necklace Set', qty: 1, price: 285000 }], total: 285000, status: 'delivered', date: '03 Jun 2026', payment: 'UPI', address: '12 MG Road, Bhubaneswar' },
   { id: 'RJ-4820', customer: 'Rohit Gupta', email: 'rohit.g@email.com', phone: '+91 87654 22222', items: [{ name: 'Diamond Solitaire Ring', qty: 1, price: 128000 }], total: 128000, status: 'shipped', date: '02 Jun 2026', payment: 'Card', address: '45 Station Rd, Cuttack' },
-  { id: 'RJ-4819', customer: 'Anita Joshi', email: 'anita.j@email.com', phone: '+91 76543 33333', items: [{ name: 'Gold Chain Necklace', qty: 2, price: 96000 }, { name: 'Pearl Drop Earrings', qty: 1, price: 45000 }], total: 214500, status: 'processing', date: '02 Jun 2026', payment: 'Net Banking', address: '78 Gandhi Nagar, Puri' },
-  { id: 'RJ-4818', customer: 'Suresh Rao', email: 'suresh.r@email.com', phone: '+91 65432 44444', items: [{ name: 'Pearl Drop Earrings', qty: 1, price: 45000 }], total: 45000, status: 'confirmed', date: '01 Jun 2026', payment: 'UPI', address: '23 Civil Lines, Sambalpur' },
-  { id: 'RJ-4817', customer: 'Kavitha Nair', email: 'kavitha.n@email.com', phone: '+91 54321 55555', items: [{ name: 'Polki Diamond Choker', qty: 1, price: 485000 }], total: 485000, status: 'placed', date: '01 Jun 2026', payment: 'EMI', address: '56 Sea Face, Puri' },
-  { id: 'RJ-4816', customer: 'Manish Patel', email: 'manish.p@email.com', phone: '+91 43210 66666', items: [{ name: 'Gold Chain Necklace', qty: 1, price: 96000 }], total: 85000, status: 'cancelled', date: '31 May 2026', payment: 'Card', address: '34 New Market, Rourkela' },
-  { id: 'RJ-4815', customer: 'Deepa Singh', email: 'deepa.s@email.com', phone: '+91 32109 77777', items: [{ name: 'Temple Gold Bangles', qty: 2, price: 172000 }], total: 192000, status: 'returned', date: '30 May 2026', payment: 'UPI', address: '89 Lake View, Bhubaneswar' },
+  { id: 'RJ-4819', customer: 'Anita Joshi', email: 'anita.j@email.com', phone: '+91 76543 33333', items: [{ name: 'Gold Chain Necklace', qty: 1, price: 96000 }], total: 96000, status: 'processing', date: '02 Jun 2026', payment: 'Net Banking', address: '78 Gandhi Nagar, Puri' },
 ]
 
 const initialInvoices: Invoice[] = [
-  { id: 'INV-2048', order: 'RJ-4821', customer: 'Priya Sharma', gstin: '27AABCU9603R1ZX', amount: 328000, gst: 9840, total: 337840, status: 'paid', date: '03 Jun 2026', due: '03 Jun 2026', email: 'priya.s@email.com' },
-  { id: 'INV-2047', order: 'RJ-4820', customer: 'Rohit Gupta', gstin: '29GGGGG1314R9Z6', amount: 128000, gst: 3840, total: 131840, status: 'pending', date: '02 Jun 2026', due: '12 Jun 2026', email: 'rohit.g@email.com' },
-  { id: 'INV-2046', order: 'RJ-4819', customer: 'Anita Joshi', gstin: '', amount: 214500, gst: 6435, total: 220935, status: 'pending', date: '02 Jun 2026', due: '12 Jun 2026', email: 'anita.j@email.com' },
-  { id: 'INV-2045', order: 'RJ-4818', customer: 'Suresh Rao', gstin: '33AAABC5400N1ZA', amount: 45000, gst: 1350, total: 46350, status: 'paid', date: '01 Jun 2026', due: '01 Jun 2026', email: 'suresh.r@email.com' },
-  { id: 'INV-2044', order: 'RJ-4817', customer: 'Kavitha Nair', gstin: '', amount: 485000, gst: 14550, total: 499550, status: 'draft', date: '01 Jun 2026', due: '—', email: 'kavitha.n@email.com' },
-  { id: 'INV-2043', order: 'RJ-4816', customer: 'Manish Patel', gstin: '24BBBFF2416P1ZK', amount: 85000, gst: 2550, total: 87550, status: 'overdue', date: '31 May 2026', due: '10 Jun 2026', email: 'manish.p@email.com' },
+  // Empty array - no mock data
 ]
 
 const initialInventory: InventoryItem[] = [
@@ -170,12 +167,7 @@ const initialInventory: InventoryItem[] = [
 ]
 
 const initialCustomers: Customer[] = [
-  { id: 'CRM-001', name: 'Priya Sharma', phone: '+91 98765 43210', email: 'priya.s@email.com', city: 'Bhubaneswar', totalSpend: 2850000, orders: 12, tier: 'platinum', lastVisit: '3 Jun 2026', birthday: '15 Aug', tags: ['Bridal', 'VIP', 'WhatsApp'], notes: 'Prefers WhatsApp for updates' },
-  { id: 'CRM-002', name: 'Rohit Gupta', phone: '+91 87654 32109', email: 'rohit.g@email.com', city: 'Cuttack', totalSpend: 840000, orders: 6, tier: 'gold', lastVisit: '2 Jun 2026', birthday: '22 Dec', tags: ['Regular'], notes: '' },
-  { id: 'CRM-003', name: 'Anita Joshi', phone: '+91 76543 21098', email: 'anita.j@email.com', city: 'Bhubaneswar', totalSpend: 320000, orders: 4, tier: 'silver', lastVisit: '1 May 2026', birthday: '08 Mar', tags: ['Bridal'], notes: '' },
-  { id: 'CRM-004', name: 'Kavitha Nair', phone: '+91 65432 10987', email: 'kavitha.n@email.com', city: 'Puri', totalSpend: 185000, orders: 3, tier: 'silver', lastVisit: '15 Apr 2026', birthday: '30 Jun', tags: ['Gift Buyer'], notes: '' },
-  { id: 'CRM-005', name: 'Suresh Rao', phone: '+91 54321 09876', email: 'suresh.r@email.com', city: 'Sambalpur', totalSpend: 45000, orders: 1, tier: 'bronze', lastVisit: '20 Mar 2026', birthday: '12 Sep', tags: [], notes: '' },
-  { id: 'CRM-006', name: 'Meena Patel', phone: '+91 43210 98765', email: 'meena.p@email.com', city: 'Bhubaneswar', totalSpend: 1250000, orders: 8, tier: 'gold', lastVisit: '28 May 2026', birthday: '04 Feb', tags: ['VIP', 'Bridal', 'WhatsApp'], notes: 'Anniversary in December' },
+  // Empty array - no mock data
 ]
 
 const initialLogs: AuditLog[] = [
@@ -349,8 +341,7 @@ export const useAdminStore = create<AdminStore>()(
         get().addInvoice({
           order: orderId,
           customer: order.customer,
-          email: order.email,
-          gstin: '',
+          phone: order.phone,
           amount: order.total,
           gst,
           total: order.total + gst,
@@ -361,8 +352,8 @@ export const useAdminStore = create<AdminStore>()(
       },
       sendInvoiceEmail: (id) => {
         const inv = get().invoices.find(i => i.id === id)
-        get().addLog({ type: 'billing', action: 'Invoice emailed', user: 'Admin', role: 'Admin', ip: '—', details: `${id} sent to ${inv?.email}` })
-        toast.success(`Invoice emailed to ${inv?.email || 'customer'}`)
+        get().addLog({ type: 'billing', action: 'Invoice emailed', user: 'Admin', role: 'Admin', ip: '—', details: `${id} sent to customer` })
+        toast.success(`Invoice emailed to customer`)
       },
       exportInvoicePDF: (id) => {
         const inv = get().invoices.find(i => i.id === id)
@@ -388,7 +379,7 @@ export const useAdminStore = create<AdminStore>()(
             <div><h1>RATAN JEWELLERS</h1><div style="font-size:12px;color:#888;margin-top:4px">123 Gold Market, Bhubaneswar, Odisha 751001</div><div style="font-size:12px;color:#888">GSTIN: 21AAAAA0000A1Z5 | Phone: +91 98765 43210</div></div>
             <div style="text-align:right"><div style="font-size:22px;font-weight:700;color:#C9A84C">${inv.id}</div><div class="badge">${inv.status.toUpperCase()}</div><div style="font-size:12px;color:#888;margin-top:4px">Date: ${inv.date}</div><div style="font-size:12px;color:#888">Due: ${inv.due}</div></div>
           </div>
-          <div style="margin-bottom:24px"><div class="label">Bill To</div><div class="value">${inv.customer}</div>${inv.gstin ? `<div style="font-size:12px;color:#888;font-family:monospace">GSTIN: ${inv.gstin}</div>` : ''}<div style="font-size:12px;color:#888">${inv.email || ''}</div></div>
+          <div style="margin-bottom:24px"><div class="label">Bill To</div><div class="value">${inv.customer}</div>${inv.phone ? `<div style="font-size:12px;color:#888">Phone: ${inv.phone}</div>` : ''}</div>
           <table>
             <tr><th>Description</th><th>HSN</th><th style="text-align:right">Amount</th></tr>
             <tr><td>Jewellery Purchase (Order ${inv.order})</td><td>7113</td><td style="text-align:right">₹${inv.amount.toLocaleString('en-IN')}</td></tr>

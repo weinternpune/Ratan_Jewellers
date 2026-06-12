@@ -1,7 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useState,useEffect } from 'react'
 import { Search, Plus, Phone, Mail, Star, Users, MessageCircle, Eye, Edit2, Trash2, X, Gift, Tag, IndianRupee } from 'lucide-react'
-import { useAdminStore, Customer, CustomerTier } from '@/store/adminStore'
+import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
 
 const tierConfig: Record<CustomerTier,{label:string;color:string}> = {
@@ -14,7 +14,8 @@ const tierConfig: Record<CustomerTier,{label:string;color:string}> = {
 const emptyCustomer: Omit<Customer,'id'> = { name:'', phone:'', email:'', city:'', totalSpend:0, orders:0, tier:'bronze', lastVisit: new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), birthday:'', tags:[], notes:'' }
 
 export default function CRMPage() {
-  const { customers, addCustomer, updateCustomer, deleteCustomer, addCustomerTag, removeCustomerTag } = useAdminStore()
+ const [customers, setCustomers] = useState<any[]>([])
+const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [tierFilter, setTierFilter] = useState<CustomerTier|'all'>('all')
   const [selected, setSelected] = useState<Customer|null>(null)
@@ -25,20 +26,57 @@ export default function CRMPage() {
   const [newTag, setNewTag] = useState('')
   const [activeTab, setActiveTab] = useState<'customers'|'followup'|'campaigns'>('customers')
 
+  useEffect(() => {
+  const loadCustomers = async () => {
+    try {
+      const data = await api.get<any[]>('/customers')
+
+      const mapped = data.map((c: any) => ({
+        id: c.id,
+        name: c.name || '',
+        email: c.email || '',
+        phone: c.phone || '',
+        city: '',
+        totalSpend: c.totalSpend || 0,
+        orders: 0,
+        tier:
+          c.totalSpend > 1000000
+            ? 'platinum'
+            : c.totalSpend > 500000
+            ? 'gold'
+            : c.totalSpend > 100000
+            ? 'silver'
+            : 'bronze',
+        lastVisit: new Date(c.createdAt).toLocaleDateString('en-IN'),
+        birthday: '',
+        tags: [],
+        notes: '',
+      }))
+
+      setCustomers(mapped)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  loadCustomers()
+}, [])
   const filtered = customers.filter(c =>
     (tierFilter==='all'||c.tier===tierFilter) &&
     (c.name.toLowerCase().includes(search.toLowerCase())||c.phone.includes(search)||c.email.toLowerCase().includes(search.toLowerCase()))
   )
 
-  const openAdd = () => { setForm(emptyCustomer); setEditTarget(null); setShowAdd(true) }
-  const openEdit = (c: Customer) => { setForm({name:c.name,phone:c.phone,email:c.email,city:c.city,totalSpend:c.totalSpend,orders:c.orders,tier:c.tier,lastVisit:c.lastVisit,birthday:c.birthday,tags:[...c.tags],notes:c.notes||''}); setEditTarget(c); setShowAdd(true) }
+  // const openAdd = () => { setForm(emptyCustomer); setEditTarget(null); setShowAdd(true) }
+  // const openEdit = (c: Customer) => { setForm({name:c.name,phone:c.phone,email:c.email,city:c.city,totalSpend:c.totalSpend,orders:c.orders,tier:c.tier,lastVisit:c.lastVisit,birthday:c.birthday,tags:[...c.tags],notes:c.notes||''}); setEditTarget(c); setShowAdd(true) }
 
-  const handleSubmit = () => {
-    if (!form.name.trim()) { toast.error('Customer name required'); return }
-    if (editTarget) updateCustomer(editTarget.id, form)
-    else addCustomer(form)
-    setShowAdd(false)
-  }
+  // const handleSubmit = () => {
+  //   if (!form.name.trim()) { toast.error('Customer name required'); return }
+  //   if (editTarget) updateCustomer(editTarget.id, form)
+  //   else addCustomer(form)
+  //   setShowAdd(false)
+  // }
 
   const handleWhatsApp = (phone: string, name: string) => {
     const msg = encodeURIComponent(`Hi ${name}, this is Ratan Jewellers. How can we assist you today?`)
@@ -61,7 +99,13 @@ export default function CRMPage() {
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div><h1 className="text-xl font-bold text-gray-900">CRM</h1><p className="text-sm text-gray-500 mt-0.5">Customer relationships, loyalty & follow-ups</p></div>
-        <button onClick={openAdd} className="flex items-center gap-2 bg-[#0D0700] text-[#C9A84C] px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#1a0e00]"><Plus size={15}/>Add Customer</button>
+       <button
+  disabled
+  className="flex items-center gap-2 bg-gray-300 text-gray-500 px-4 py-2.5 rounded-xl text-sm font-semibold cursor-not-allowed"
+>
+  <Plus size={15}/>
+  Customer Registration Only
+</button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
