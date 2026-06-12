@@ -5,7 +5,8 @@ import { useSearchParams } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { api } from '@/lib/api'
+
+import { api, apiClient } from '@/lib/api'
 
 // ─── Product type (from backend) ─────────────────────────────────────────────
 interface Product {
@@ -22,9 +23,8 @@ interface Product {
 const normalizeFilterValue = (param, list) => {
   if (!param) return ''
   const m = list.find(i => i.toLowerCase() === param.toLowerCase())
-  return m ? m.toLowerCase() : ''
+  return m || ''
 }
-
 const METALS = ['Gold', 'Diamond', 'Silver']
 const PURITIES = ['24K', '22K', '18K', '14K']
 const CATEGORIES = [
@@ -217,6 +217,18 @@ export default function ProductsClient() {
   const [searchQuery, setSearchQuery] = useState('')
   const searchParams = useSearchParams()
 
+  const showToast = useCallback(
+  (message: string, type: 'add' | 'remove') => {
+    const id = Date.now()
+
+    setToasts(prev => [...prev, { id, message, type }])
+
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id))
+    }, 2500)
+  },
+  []
+)
   useEffect(() => {
     const searchParam   = searchParams.get('search')
     const categoryParam = searchParams.get('category')
@@ -252,16 +264,20 @@ export default function ProductsClient() {
   ].length
 
   const { data, isLoading } = useQuery({
-    queryKey: ['products', selectedMetal, selectedPurity, selectedCategory, sortBy],
-    queryFn: () =>
-      api.get<{ products: Product[] }>('/products', {
+  queryKey: ['products', selectedMetal, selectedPurity, selectedCategory, sortBy],
+  queryFn: () =>
+    apiClient.get('/products', {
+      params: {
         metal: selectedMetal.join(',') || undefined,
         purity: selectedPurity.join(',') || undefined,
         category: selectedCategory.join(',') || undefined,
         sortBy,
-      }),
-    retry: false,
-  })
+      },
+    }).then(r => r.data),
+  retry: false,
+})
+
+
 
   const products: Product[] = data?.products ?? []
 

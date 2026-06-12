@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import ProductCard from '@/components/products/ProductCard'
-import { api } from '@/lib/api'
+import { apiClient } from '@/lib/api'
 
 interface Props { title: string }
 
@@ -20,7 +20,10 @@ const mock = [
 export default function TrendingProducts({ title }: Props) {
   const { data } = useQuery({
     queryKey: ['products', 'trending'],
-    queryFn: () => api.get<any>('/products?trending=true&limit=6'),
+   queryFn: async () => {
+  const res = await apiClient.get('/products?trending=true&limit=6')
+  return res.data
+},
     retry: false,
   })
   const apiProducts = (data as any)?.products ?? []

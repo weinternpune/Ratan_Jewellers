@@ -5,9 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useWishlistStore, useCartStore } from '@/store'
-import { PRODUCTS } from '@/lib/products'
-import { useProductCatalog } from '@/store/productCatalog'
-import type { Product } from '@/lib/products'
+
+type Product = any
 
 // ─── Catalog helpers (mirrors FeaturedProducts) ────────────────────────────────
 function readCatalogFromStorage(): any[] {
@@ -542,7 +541,7 @@ export default function ProductDetailPage() {
   const { addItem: addToCart, items: cartItems } = useCartStore()
 
   // ── NEW: also pull from the admin product catalog ──────────────────────────
-  const { products: storeProducts } = useProductCatalog()
+
 
   const [product, setProduct] = useState<Product | null>(null)
   const [activeImage, setActiveImage] = useState(0)
@@ -553,36 +552,23 @@ export default function ProductDetailPage() {
   useEffect(() => {
     if (!slug) return
 
-    // 1. Check localStorage catalog (catches cross-tab additions)
-    const lsProducts = readCatalogFromStorage()
-    const allCatalog = lsProducts.length >= storeProducts.length ? lsProducts : storeProducts
-    const fromCatalog = allCatalog.find((p: any) => p.slug === slug)
-    if (fromCatalog) {
-      setProduct(normalizeCatalogProduct(fromCatalog))
-      return
-    }
-
-    // 2. Check static PRODUCTS list
-    const fromStatic = PRODUCTS.find(p => p.slug === slug)
-    if (fromStatic) {
-      setProduct(fromStatic)
-      return
-    }
 
     // 3. Check mock products (same pool rendered by FeaturedProducts cards)
-    const fromMock = MOCK_PRODUCTS.find(p => p.slug === slug)
-    if (fromMock) {
-      setProduct(fromMock)
-      return
-    }
+   const fromMock = MOCK_PRODUCTS.find(p => p.slug === slug)
+if (fromMock) {
+  setProduct(fromMock)
+  return
+}
 
 
     // 4. Fallback to API
-    fetch(`/api/products/${slug}`)
-      .then(r => r.json())
-      .then(d => d?.product && setProduct(d.product))
+   fetch(`http://localhost:5000/api/products/${slug}`)
+  .then(r => r.json())
+  .then(d => {
+    if (d?.product) setProduct(d.product)
+  })
       .catch(() => {})
-  }, [slug, storeProducts])
+  }, [slug])
 
   useEffect(() => {
     setActiveImage(0)
@@ -650,12 +636,19 @@ export default function ProductDetailPage() {
     showToast('Added to cart!', 'cart')
   }
 
-  const related = PRODUCTS
-    .filter(p => {
-      const pCat = typeof p.category === 'string' ? p.category : p.category?.name || ''
-      return p.id !== product._id || product.id && pCat === categoryName
-    })
-    .slice(0, 4)
+const related = MOCK_PRODUCTS
+  .filter((p: any) => {
+    const pCat =
+      typeof p.category === 'string'
+        ? p.category
+        : p.category?.name || ''
+
+    return (
+      p.slug !== product.slug &&
+      pCat === categoryName
+    )
+  })
+  .slice(0, 4)
 
   const goldValue = product.goldRate * product.netWeight
   const totalMaking = product.makingCharges
