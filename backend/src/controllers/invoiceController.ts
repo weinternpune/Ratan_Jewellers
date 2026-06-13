@@ -57,6 +57,33 @@ export const getInvoiceById = async (req: Request, res: Response, next: NextFunc
   } catch (err) { next(err); }
 };
 
+export const updateInvoice = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) throw new AppError('Invoice not found', 404);
+    
+    const updateData = { ...req.body, isEdited: true };
+    if (invoice.isEdited) {
+      updateData.editHistory = [...(invoice.editHistory || []), { editedAt: new Date(), editedBy: req.user!.id, changes: req.body }];
+    } else {
+      updateData.editHistory = [{ editedAt: new Date(), editedBy: req.user!.id, changes: req.body }];
+    }
+    
+    const updatedInvoice = await Invoice.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    res.json({ success: true, message: 'Invoice updated', data: updatedInvoice });
+  } catch (err) { next(err); }
+};
+
+export const deleteInvoice = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) throw new AppError('Invoice not found', 404);
+    
+    await Invoice.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Invoice deleted successfully' });
+  } catch (err) { next(err); }
+};
+
 export const resendWhatsApp = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const invoice = await Invoice.findById(req.params.id);

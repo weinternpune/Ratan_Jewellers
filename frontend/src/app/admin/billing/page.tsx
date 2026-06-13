@@ -1,6 +1,6 @@
 'use client'
-import { useState } from 'react'
-import { Search, Plus, Download, Eye, Receipt, CheckCircle2, Clock, AlertCircle, X, Send, Printer, MessageCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, Plus, Download, Eye, Receipt, CheckCircle2, Clock, AlertCircle, X, Send, Printer, MessageCircle, Trash2 } from 'lucide-react'
 import { useAdminStore, Invoice, InvoiceStatus } from '@/store/adminStore'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
@@ -20,7 +20,7 @@ const emptyInv = {
 }
 
 export default function BillingPage() {
-  const { invoices, orders, addInvoice, updateInvoiceStatus, sendInvoiceEmail, exportInvoicePDF } = useAdminStore()
+  const { invoices, orders, addInvoice, updateInvoiceStatus, sendInvoiceEmail, exportInvoicePDF, clearAllBillingData, deleteInvoice, fetchInvoices, fetchOrders, fetchCustomers, loading } = useAdminStore()
   const { getEffectiveRole } = useAuthStore()
   const role = getEffectiveRole()
   // Permissions: 'full' = create+edit+delete+share, 'create' = create+share own, 'own_only' = view own only
@@ -31,7 +31,16 @@ export default function BillingPage() {
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus|'all'>('all')
   const [previewInvoice, setPreviewInvoice] = useState<Invoice|null>(null)
   const [showCreate, setShowCreate] = useState(false)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [deleteInvoiceId, setDeleteInvoiceId] = useState<string|null>(null)
   const [form, setForm] = useState(emptyInv)
+
+  // Fetch data when component mounts
+  useEffect(() => {
+    fetchInvoices()
+    fetchOrders()
+    fetchCustomers()
+  }, [])
 
   const filtered = invoices.filter(inv =>
     (statusFilter==='all'||inv.status===statusFilter) &&
@@ -65,10 +74,48 @@ export default function BillingPage() {
     setForm(p=>({...p, amount:val, gst, total:val+gst}))
   }
 
-  const handleSubmit = () => {
+  const calculateAmount = () => {
+    if (form.netWeight && form.goldRate) {
+      const weight = parseFloat(form.netWeight) || 0
+      const rate = form.goldRate || 0
+      const makingCharges = form.makingCharges || 0
+      
+      // Calculate: (Weight * Gold Rate) + (Making Charges %)
+      const baseAmount = weight * rate
+      const makingAmount = (baseAmount * makingCharges) / 100
+      const totalAmount = baseAmount + makingAmount + (form.price || 0)
+      
+      const gst = Math.round(totalAmount * 0.03)
+      setForm(p=>({...p, amount: totalAmount, gst, total: totalAmount + gst}))
+    } else if (form.amount > 0) {
+      const gst = Math.round(form.amount * 0.03)
+      setForm(p=>({...p, gst, total: form.amount + gst}))
+    }
+  }
+
+  // Auto-calculate when relevant fields change
+  const handleFieldChange = (field: string, value: string | number) => {
+    setForm(p=>({...p, [field]: value}))
+    setTimeout(calculateAmount, 100) // Small delay to ensure state is updated
+  }
+
+  const handleClearData = async () => {
+    await clearAllBillingData()
+    setShowClearConfirm(false)
+  }
+
+  const handleDeleteInvoice = async () => {
+    if (deleteInvoiceId) {
+      await deleteInvoice(deleteInvoiceId)
+      setDeleteInvoiceId(null)
+    }
+  }
+
+  const handleSubmit = async () => {
     if (!form.customer.trim()) { toast.error('Customer name required'); return }
     if (form.amount <= 0) { toast.error('Amount must be greater than 0'); return }
-    addInvoice(form)
+    
+    await addInvoice(form)
     setShowCreate(false)
     setForm(emptyInv)
   }
@@ -77,7 +124,10 @@ export default function BillingPage() {
     <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div><h1 className="text-xl font-bold text-gray-900">Billing & Invoices</h1><p className="text-sm text-gray-500 mt-0.5">GST invoices, billing history & payment tracking</p></div>
-        {canCreate && <button onClick={()=>setShowCreate(true)} className="flex items-center gap-2 bg-[#0D0700] text-[#C9A84C] px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#1a0e00]"><Plus size={15}/>Create Invoice</button>}
+        <div className="flex gap-2 flex-wrap">
+          {canCreate && <button onClick={()=>setShowCreate(true)} className="flex items-center gap-2 bg-[#0D0700] text-[#C9A84C] px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#1a0e00]"><Plus size={15}/>Create Invoice</button>}
+          {canFull && invoices.length > 0 && <button onClick={()=>setShowClearConfirm(true)} className="flex items-center gap-2 bg-red-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-red-700" title="Clear all billing data globally"><X size={15}/>Clear Data</button>}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -97,10 +147,16 @@ export default function BillingPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100"><tr>{['Invoice #','Order','Customer','Amount','GST (3%)','Total','Date','Due','Status','Actions'].map(h=><th key={h} className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>)}</tr></thead>
-            <tbody className="divide-y divide-gray-50">
+        {loading.invoices ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#C9A84C]"></div>
+            <span className="ml-3 text-gray-600">Loading invoices...</span>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-100"><tr>{['Invoice #','Order','Customer','Amount','GST (3%)','Total','Date','Due','Status','Actions'].map(h=><th key={h} className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>)}</tr></thead>
+              <tbody className="divide-y divide-gray-50">
               {filtered.map(inv=>{
                 const cfg=statusConfig[inv.status]
                 return (
@@ -128,13 +184,15 @@ export default function BillingPage() {
                       {canShare && <button onClick={()=>shareInvoiceWhatsApp(inv)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-green-600" title="Share via WhatsApp"><MessageCircle size={13}/></button>}
                       {canFull && <button onClick={()=>exportInvoicePDF(inv.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-800" title="Download PDF"><Download size={13}/></button>}
                       {canFull && <button onClick={()=>exportInvoicePDF(inv.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-800" title="Print"><Printer size={13}/></button>}
+                      {canFull && <button onClick={()=>setDeleteInvoiceId(inv.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-red-600" title="Delete Invoice"><Trash2 size={13}/></button>}
                     </div></td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        )}
         <div className="px-5 py-3 border-t border-gray-50 text-xs text-gray-400">Showing {filtered.length} of {invoices.length} invoices</div>
       </div>
 
@@ -163,7 +221,10 @@ export default function BillingPage() {
                   {previewInvoice.category && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Category: {previewInvoice.category}</td><td></td></tr>}
                   {previewInvoice.metal && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Metal: {previewInvoice.metal}</td><td></td></tr>}
                   {previewInvoice.purity && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Purity: {previewInvoice.purity}</td><td></td></tr>}
-                  {previewInvoice.netWeight && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Net Weight: {previewInvoice.netWeight}</td><td></td></tr>}
+                  {previewInvoice.netWeight && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Net Weight: {previewInvoice.netWeight}g</td><td></td></tr>}
+                  {previewInvoice.goldRate && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Gold Rate: ₹{previewInvoice.goldRate}/g</td><td></td></tr>}
+                  {previewInvoice.makingCharges && previewInvoice.makingCharges > 0 && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Making Charges: {previewInvoice.makingCharges}%</td><td></td></tr>}
+                  {previewInvoice.price && previewInvoice.price > 0 && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Additional Charges</td><td className="py-1 text-right text-xs text-gray-500">₹{previewInvoice.price.toLocaleString('en-IN')}</td></tr>}
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">CGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.gst/2).toLocaleString('en-IN')}</td></tr>
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">SGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.gst/2).toLocaleString('en-IN')}</td></tr>
                 </tbody>
@@ -211,7 +272,7 @@ export default function BillingPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Category</label>
-                    <select value={form.category||''} onChange={e=>setForm(p=>({...p,category:e.target.value}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] cursor-pointer bg-white">
+                    <select value={form.category||''} onChange={e=>handleFieldChange('category', e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] cursor-pointer bg-white">
                       <option value="">Select Category</option>
                       <option value="Necklaces">Necklaces</option>
                       <option value="Rings">Rings</option>
@@ -226,7 +287,7 @@ export default function BillingPage() {
                   
                   <div>
                     <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Metal</label>
-                    <select value={form.metal||''} onChange={e=>setForm(p=>({...p,metal:e.target.value}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] cursor-pointer bg-white">
+                    <select value={form.metal||''} onChange={e=>handleFieldChange('metal', e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] cursor-pointer bg-white">
                       <option value="">Select Metal</option>
                       <option value="24K Gold">24K Gold</option>
                       <option value="22K Gold">22K Gold</option>
@@ -240,7 +301,7 @@ export default function BillingPage() {
                   
                   <div>
                     <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Purity</label>
-                    <select value={form.purity||''} onChange={e=>setForm(p=>({...p,purity:e.target.value}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] cursor-pointer bg-white">
+                    <select value={form.purity||''} onChange={e=>handleFieldChange('purity', e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] cursor-pointer bg-white">
                       <option value="">Select Purity</option>
                       <option value="999">999 (24K)</option>
                       <option value="916">916 (22K)</option>
@@ -253,18 +314,18 @@ export default function BillingPage() {
                   </div>
                   
                   <div>
-                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Net Weight</label>
-                    <input value={form.netWeight||''} onChange={e=>setForm(p=>({...p,netWeight:e.target.value}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="10.5"/>
+                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Net Weight (grams)</label>
+                    <input value={form.netWeight||''} onChange={e=>handleFieldChange('netWeight', e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="10.5"/>
                   </div>
                   
                   <div>
-                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Gold Rate</label>
-                    <input value={form.goldRate||''} onChange={e=>setForm(p=>({...p,goldRate:Number(e.target.value)||0}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="6520"/>
+                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Gold Rate (₹/gram)</label>
+                    <input value={form.goldRate||''} onChange={e=>handleFieldChange('goldRate', Number(e.target.value) || 0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="6520"/>
                   </div>
                   
                   <div>
                     <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Making Charges (%)</label>
-                    <input value={form.makingCharges||''} onChange={e=>setForm(p=>({...p,makingCharges:Number(e.target.value)||0}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="10"/>
+                    <input value={form.makingCharges||''} onChange={e=>handleFieldChange('makingCharges', Number(e.target.value) || 0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="10"/>
                   </div>
                 </div>
               </div>
@@ -272,19 +333,53 @@ export default function BillingPage() {
               {/* Pricing Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Price (₹) *</label>
-                  <input value={form.price||''} onChange={e=>setForm(p=>({...p,price:Number(e.target.value)||0}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="Item price"/>
+                  <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Additional Price (₹)</label>
+                  <input value={form.price||''} onChange={e=>handleFieldChange('price', Number(e.target.value) || 0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="Stone/work charges"/>
                 </div>
                 
                 <div>
                   <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Amount (₹) *</label>
-                  <input value={form.amount||''} onChange={e=>handleAmountChange(Number(e.target.value)||0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="Amount before GST"/>
+                  <input value={form.amount||''} onChange={e=>handleAmountChange(Number(e.target.value)||0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] bg-gray-50" placeholder="Auto-calculated or manual" readOnly={form.netWeight && form.goldRate ? true : false}/>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {form.netWeight && form.goldRate ? 
+                      'Auto-calculated from weight & gold rate' : 
+                      'Enter amount manually or fill weight & gold rate'
+                    }
+                  </div>
                 </div>
               </div>
 
               {/* GST Section */}
               <div className="bg-amber-50 rounded-xl p-4 space-y-3">
                 <div className="text-xs font-semibold text-gray-600 uppercase mb-3">GST Breakdown</div>
+                
+                {/* Calculation breakdown if auto-calculated */}
+                {form.netWeight && form.goldRate && (
+                  <div className="bg-white rounded-lg p-3 mb-3 text-xs space-y-1">
+                    <div className="font-semibold text-gray-700 mb-2">Calculation:</div>
+                    <div className="flex justify-between">
+                      <span>Weight × Gold Rate:</span>
+                      <span>₹{((parseFloat(form.netWeight) || 0) * (form.goldRate || 0)).toLocaleString('en-IN')}</span>
+                    </div>
+                    {form.makingCharges > 0 && (
+                      <div className="flex justify-between">
+                        <span>Making Charges ({form.makingCharges}%):</span>
+                        <span>₹{(((parseFloat(form.netWeight) || 0) * (form.goldRate || 0) * (form.makingCharges || 0)) / 100).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    {form.price > 0 && (
+                      <div className="flex justify-between">
+                        <span>Additional Charges:</span>
+                        <span>₹{(form.price || 0).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    <div className="border-t pt-1 mt-2 flex justify-between font-semibold">
+                      <span>Subtotal:</span>
+                      <span>₹{form.amount.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">CGST (1.5%)</span>
@@ -318,6 +413,99 @@ export default function BillingPage() {
             <div className="flex gap-3 px-6 py-4 border-t border-gray-100">
               <button onClick={()=>setShowCreate(false)} className="flex-1 border border-gray-200 rounded-xl py-3 text-sm text-gray-600 hover:bg-gray-50 font-medium">Cancel</button>
               <button onClick={handleSubmit} className="flex-1 bg-[#0D0700] text-[#C9A84C] rounded-xl py-3 text-sm font-semibold hover:bg-[#1a0e00]">Create Invoice</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Invoice Confirmation Modal */}
+      {deleteInvoiceId && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+              <h2 className="font-bold text-gray-900 flex items-center gap-2">
+                <Trash2 size={20} className="text-red-500"/>
+                Delete Invoice
+              </h2>
+              <button onClick={()=>setDeleteInvoiceId(null)} className="text-gray-400 hover:text-gray-600"><X size={18}/></button>
+            </div>
+            <div className="p-6">
+              <div className="mb-6">
+                <p className="text-gray-700 mb-4">
+                  Are you sure you want to delete invoice <strong className="text-red-600">{deleteInvoiceId}</strong>?
+                </p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-red-700">
+                    <strong>This action cannot be undone!</strong> The invoice will be permanently removed from the system.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <button 
+                  onClick={()=>setDeleteInvoiceId(null)} 
+                  className="flex-1 border border-gray-200 rounded-xl py-3 text-sm text-gray-600 hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleDeleteInvoice} 
+                  className="flex-1 bg-red-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-red-700"
+                >
+                  Yes, Delete Invoice
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear Data Confirmation Modal */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+              <h2 className="font-bold text-gray-900 flex items-center gap-2">
+                <AlertCircle size={20} className="text-red-500"/>
+                Confirm Clear Data
+              </h2>
+              <button onClick={()=>setShowClearConfirm(false)} className="text-gray-400 hover:text-gray-600"><X size={18}/></button>
+            </div>
+            <div className="p-6">
+              <div className="mb-6">
+                <p className="text-gray-700 mb-4">
+                  <strong className="text-red-600">⚠️ Warning:</strong> This will permanently delete ALL billing data:
+                </p>
+                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 mb-4">
+                  <li>All invoices ({invoices.length} items)</li>
+                  <li>All orders ({orders.length} items)</li>
+                  <li>All customers (customer data)</li>
+                  <li>GST collection records</li>
+                </ul>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-red-700">
+                    <strong>This action cannot be undone!</strong> 
+                  </p>
+                </div>
+                <p className="text-sm text-gray-600">
+                  This change will be visible to <strong>ALL admin users</strong> (Super Admin, Admin, Store Manager, Sales Staff) immediately.
+                </p>
+              </div>
+              
+              <div className="flex gap-3">
+                <button 
+                  onClick={()=>setShowClearConfirm(false)} 
+                  className="flex-1 border border-gray-200 rounded-xl py-3 text-sm text-gray-600 hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleClearData} 
+                  className="flex-1 bg-red-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-red-700"
+                >
+                  Yes, Clear All Data
+                </button>
+              </div>
             </div>
           </div>
         </div>
