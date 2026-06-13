@@ -27,6 +27,7 @@ import waRoutes        from './routes/whatsapp';
 import supplierRoutes  from './routes/suppliers';
 import uploadRoutes    from './routes/upload';
 import customJewelleryRoutes from './routes/customJewellery';
+import adminRoutes     from './routes/admin';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -60,6 +61,7 @@ app.use('/api/whatsapp',   waRoutes);
 app.use('/api/suppliers',  supplierRoutes);
 app.use('/api/upload',     uploadRoutes);
 app.use('/api/custom-jewellery', customJewelleryRoutes);
+app.use('/api/admin',      adminRoutes);
 
 app.use('*', (_req, res) => res.status(404).json({ success: false, message: 'Route not found' }));
 app.use(errorHandler);

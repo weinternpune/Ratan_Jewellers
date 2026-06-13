@@ -5,9 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useWishlistStore, useCartStore } from '@/store'
-import { PRODUCTS } from '@/lib/products'
-import { useProductCatalog } from '@/store/productCatalog'
-import type { Product } from '@/lib/products'
+import { PRODUCTS } from '@/assets/products'
+type Product = any
 
 // ─── Catalog helpers (mirrors FeaturedProducts) ────────────────────────────────
 function readCatalogFromStorage(): any[] {
@@ -53,7 +52,7 @@ const MOCK_PRODUCTS: any[] = [
   },
   {
     id: 'mock-1', name: 'Diamond Stud Earrings', slug: 'product-1', sku: 'RJ00002',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/163/1779964423_381a85a123b25b6c31f9.jpg',
+    image: 'https://i.pinimg.com/1200x/f6/8f/30/f68f30f993851facd04f33bc45da1d1d.jpg',
     images: [], metal: 'Gold', purity: '18KT', netWeight: 3.25, currentPrice: 48500,
     goldRate: 6500, makingCharges: 3000, stoneCharges: 5000,
     avgRating: 4.9, reviewCount: 98, inStock: true, isNewArrival: true, isFeatured: true, isTrending: false,
@@ -61,7 +60,7 @@ const MOCK_PRODUCTS: any[] = [
   },
   {
     id: 'mock-2', name: 'Gold Ring For Women', slug: 'product-2', sku: 'RJ00003',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1861/1773828632_55ca5de31b3813b0bd63.png',
+    image: 'https://i.pinimg.com/1200x/2e/dc/5c/2edc5c21e8ce0c9960a3f28f3a1a99c8.jpg',
     images: [], metal: 'Gold', purity: '22KT', netWeight: 4.1, currentPrice: 32500,
     goldRate: 6500, makingCharges: 1500, stoneCharges: 0,
     avgRating: 4.7, reviewCount: 75, inStock: true, isNewArrival: true, isFeatured: false, isTrending: false,
@@ -69,7 +68,7 @@ const MOCK_PRODUCTS: any[] = [
   },
   {
     id: 'mock-3', name: 'Gold Bangles', slug: 'product-3', sku: 'RJ00004',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/262/1633616341_88273e27e4efdf6614fd.jpg',
+    image: 'https://i.pinimg.com/736x/82/6c/0f/826c0f20bcff3dc6a1026a353c266676.jpg',
     images: [], metal: 'Gold', purity: '22KT', netWeight: 20.5, currentPrice: 102000,
     goldRate: 6500, makingCharges: 4000, stoneCharges: 5000,
     avgRating: 4.8, reviewCount: 87, inStock: true, isNewArrival: true, isFeatured: false, isTrending: true,
@@ -126,15 +125,15 @@ const MOCK_PRODUCTS: any[] = [
   },
   {
     id: 'trending-4', name: 'SlimShine Diamond Ring', slug: 'slimshine-diamond-ring', sku: 'RJT00005',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1757/1771847373_3c37a3448b16a50f89c1.jpg',
+    image: 'https://i.pinimg.com/1200x/79/3f/f2/793ff22b39190c2950e6fa6d0380bc44.jpg',
     images: [], metal: 'Gold', purity: '18KT', netWeight: 2.15, currentPrice: 38500,
     goldRate: 6500, makingCharges: 1200, stoneCharges: 6500,
     avgRating: 4.8, reviewCount: 94, inStock: true, isNewArrival: true, isFeatured: false, isTrending: true,
     category: { name: 'Rings' },
   },
   {
-    id: 'trending-5', name: 'Vanya Petal Flow Diamond Necklace', slug: 'vanya-petal-flow-diamond-necklace', sku: 'RJT00006',
-    image: 'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1983/1768634238_4b1b4642e14350311882.jpg',
+    id: 'trending-5', name: 'Vanya Flow Diamond Necklace', slug: 'vanya-flow-diamond-necklace', sku: 'RJT00006',
+    image: 'https://i.pinimg.com/1200x/9a/6a/64/9a6a64e14b09e9c13fd5cdcb3ae1580d.jpg',
     images: [], metal: 'Gold', purity: '18KT', netWeight: 11.6, currentPrice: 124000,
     goldRate: 6500, makingCharges: 2500, stoneCharges: 18000,
     avgRating: 4.9, reviewCount: 58, inStock: true, isNewArrival: true, isFeatured: true, isTrending: true,
@@ -542,48 +541,26 @@ export default function ProductDetailPage() {
   const { addItem: addToCart, items: cartItems } = useCartStore()
 
   // ── NEW: also pull from the admin product catalog ──────────────────────────
-  const { products: storeProducts } = useProductCatalog()
+
 
   const [product, setProduct] = useState<Product | null>(null)
   const [activeImage, setActiveImage] = useState(0)
   const [toast, setToast] = useState<{ message: string; type: 'add' | 'remove' | 'cart' } | null>(null)
   const [addedToCart, setAddedToCart] = useState(false)
+useEffect(() => {
+  if (!slug) return
 
-  // ── Product resolution: catalog (localStorage) → PRODUCTS → API ────────────
-  useEffect(() => {
-    if (!slug) return
+  const fromAssets = PRODUCTS.find(
+    (p) => p.slug === slug
+  )
 
-    // 1. Check localStorage catalog (catches cross-tab additions)
-    const lsProducts = readCatalogFromStorage()
-    const allCatalog = lsProducts.length >= storeProducts.length ? lsProducts : storeProducts
-    const fromCatalog = allCatalog.find((p: any) => p.slug === slug)
-    if (fromCatalog) {
-      setProduct(normalizeCatalogProduct(fromCatalog))
-      return
-    }
+  if (fromAssets) {
+    setProduct(fromAssets)
+    return
+  }
 
-    // 2. Check static PRODUCTS list
-    const fromStatic = PRODUCTS.find(p => p.slug === slug)
-    if (fromStatic) {
-      setProduct(fromStatic)
-      return
-    }
-
-    // 3. Check mock products (same pool rendered by FeaturedProducts cards)
-    const fromMock = MOCK_PRODUCTS.find(p => p.slug === slug)
-    if (fromMock) {
-      setProduct(fromMock)
-      return
-    }
-
-
-    // 4. Fallback to API
-    fetch(`/api/products/${slug}`)
-      .then(r => r.json())
-      .then(d => d?.product && setProduct(d.product))
-      .catch(() => {})
-  }, [slug, storeProducts])
-
+  setProduct(null)
+}, [slug])
   useEffect(() => {
     setActiveImage(0)
     setAddedToCart(false)
@@ -650,12 +627,19 @@ export default function ProductDetailPage() {
     showToast('Added to cart!', 'cart')
   }
 
-  const related = PRODUCTS
-    .filter(p => {
-      const pCat = typeof p.category === 'string' ? p.category : p.category?.name || ''
-      return p.id !== product._id || product.id && pCat === categoryName
-    })
-    .slice(0, 4)
+const related = PRODUCTS
+  .filter((p: any) => {
+    const pCat =
+      typeof p.category === 'string'
+        ? p.category
+        : p.category?.name || ''
+
+    return (
+      p.slug !== product.slug &&
+      pCat === categoryName
+    )
+  })
+  .slice(0, 4)
 
   const goldValue = product.goldRate * product.netWeight
   const totalMaking = product.makingCharges
