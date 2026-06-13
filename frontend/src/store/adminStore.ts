@@ -598,17 +598,6 @@ export const useAdminStore = create<AdminStore>()(
       // ── Settings ───────────────────────────────────────────────────────
       setCurrentRole: (role) => set({ currentRole: role }),
 
-      // ── Audit Log ──────────────────────────────────────────────────────
-<<<<<<< HEAD
-    //   addLog: (logData) => {
-    //     const newLog: AuditLog = {
-    //       ...logData,
-    //       id: Date.now(),
-    //       time: new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-    //     }
-    //     set(s => ({ auditLogs: [newLog, ...s.auditLogs] }))
-    //   },
-    // }),
 
     // ── Audit Log ──────────────────────────────────────────────────────
 addLog: (logData) => {
