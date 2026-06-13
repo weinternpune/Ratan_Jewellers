@@ -43,10 +43,21 @@ export default function BillingPage() {
     fetchCustomers()
   }, [])
 
-  const filtered = invoices.filter(inv =>
-    (statusFilter==='all'||inv.status===statusFilter) &&
-    (inv.id.toLowerCase().includes(search.toLowerCase())||inv.customer.toLowerCase().includes(search.toLowerCase()))
-  )
+  const filtered = invoices.filter(inv => {
+    const statusMatch = statusFilter==='all' || inv.status===statusFilter
+    const searchMatch = search === '' || 
+      inv.id?.toLowerCase().includes(search.toLowerCase()) || 
+      inv.customer?.toLowerCase().includes(search.toLowerCase()) ||
+      inv.phone?.toLowerCase().includes(search.toLowerCase())
+    
+    return statusMatch && searchMatch
+  })
+
+  // Debug logging
+  console.log('Search term:', search)
+  console.log('Total invoices:', invoices.length)
+  console.log('Filtered invoices:', filtered.length)
+  console.log('Status filter:', statusFilter)
 
   const totals = {
     paid: invoices.filter(i=>i.status==='paid').reduce((a,i)=>a+i.total,0),
@@ -232,19 +243,19 @@ export default function BillingPage() {
               <div className="bg-gray-50 rounded-xl p-4 mb-6">
                 <div className="text-xs font-semibold text-gray-400 uppercase mb-2">Bill To</div>
                 <div className="font-semibold text-gray-900">{previewInvoice.customer}</div>
-                {previewInvoice.phone&&<div className="text-xs text-gray-500">Phone: {previewInvoice.phone}</div>}
+                {previewInvoice.phone ? <div className="text-xs text-gray-500">Phone: {previewInvoice.phone}</div> : null}
               </div>
               <table className="w-full text-sm mb-6">
                 <thead className="border-b border-gray-200"><tr className="text-xs text-gray-500"><th className="text-left pb-2">Description</th><th className="text-right pb-2">Amount</th></tr></thead>
                 <tbody>
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-700">Jewellery Purchase{previewInvoice.order?` (${previewInvoice.order})`:''}</td><td className="py-3 text-right text-gray-900">₹{previewInvoice.amount.toLocaleString('en-IN')}</td></tr>
-                  {previewInvoice.category && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Category: {previewInvoice.category}</td><td></td></tr>}
-                  {previewInvoice.metal && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Metal: {previewInvoice.metal}</td><td></td></tr>}
-                  {previewInvoice.purity && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Purity: {previewInvoice.purity}</td><td></td></tr>}
-                  {previewInvoice.netWeight && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Net Weight: {previewInvoice.netWeight}g</td><td></td></tr>}
-                  {previewInvoice.goldRate && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Gold Rate: ₹{previewInvoice.goldRate}/g</td><td></td></tr>}
-                  {previewInvoice.makingCharges && previewInvoice.makingCharges > 0 && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Making Charges: {previewInvoice.makingCharges}%</td><td></td></tr>}
-                  {previewInvoice.price && previewInvoice.price > 0 && <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Additional Charges</td><td className="py-1 text-right text-xs text-gray-500">₹{previewInvoice.price.toLocaleString('en-IN')}</td></tr>}
+                  {previewInvoice.category ? <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Category: {previewInvoice.category}</td><td></td></tr> : null}
+                  {previewInvoice.metal ? <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Metal: {previewInvoice.metal}</td><td></td></tr> : null}
+                  {previewInvoice.purity ? <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Purity: {previewInvoice.purity}</td><td></td></tr> : null}
+                  {previewInvoice.netWeight ? <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Net Weight: {previewInvoice.netWeight}g</td><td></td></tr> : null}
+                  {previewInvoice.goldRate ? <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Gold Rate: ₹{previewInvoice.goldRate}/g</td><td></td></tr> : null}
+                  {(previewInvoice.makingCharges && previewInvoice.makingCharges > 0) ? <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Making Charges: {previewInvoice.makingCharges}%</td><td></td></tr> : null}
+                  {(previewInvoice.price && previewInvoice.price > 0) ? <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Additional Charges</td><td className="py-1 text-right text-xs text-gray-500">₹{previewInvoice.price.toLocaleString('en-IN')}</td></tr> : null}
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">CGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.gst/2).toLocaleString('en-IN')}</td></tr>
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">SGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.gst/2).toLocaleString('en-IN')}</td></tr>
                 </tbody>
