@@ -131,9 +131,13 @@ const initialUsers: AdminUser[] = [
   { id: 2, name: 'Priya Mehta', email: 'priya@ratanjewellers.com', role: 'admin', status: 'active', joined: 'Mar 2023', lastLogin: '1 day ago', avatar: 'PM', phone: '+91 87654 32109' },
 ]
 
-const initialProducts: Product[] = [
-  { id: 'RJ001', name: 'Kundan Bridal Necklace Set', category: 'Necklaces', metal: '22K Gold', weight: '45.2g', price: 285000, stock: 3, status: 'active', rating: 4.8, sales: 12 },
-]
+const initialProducts: Product[] = []
+
+/** Legacy demo products shipped with early builds — strip from persisted storage */
+const SEED_PRODUCT_IDS = new Set(['RJ001', 'RJ002', 'RJ003', 'RJ004', 'RJ005', 'RJ006', 'RJ007', 'RJ008'])
+
+const stripSeedProducts = (products: Product[] | undefined) =>
+  (products ?? []).filter(p => !SEED_PRODUCT_IDS.has(p.id))
 
 const initialOrders: Order[] = [
   { id: 'RJ-4821', customer: 'Demo Customer', email: 'demo@example.com', phone: '+91 98765 43210', items: [{ name: 'Gold Chain', qty: 1, price: 50000 }], total: 50000, status: 'delivered', date: '13 Jun 2026', payment: 'UPI' },
@@ -185,6 +189,7 @@ interface AdminStore {
   addProduct: (p: Omit<Product, 'id' | 'rating' | 'sales'>) => void
   updateProduct: (id: string, data: Partial<Product>) => void
   deleteProduct: (id: string) => void
+  clearSeedProducts: () => void
 
   // Orders
   addOrder: (o: Omit<Order, 'id' | 'date'>) => void
@@ -284,6 +289,12 @@ export const useAdminStore = create<AdminStore>()(
       deleteProduct: (id) => {
         set(s => ({ products: s.products.filter(p => p.id !== id) }))
         toast.success('Product deleted')
+      },
+      clearSeedProducts: () => {
+        const cleaned = stripSeedProducts(get().products)
+        if (cleaned.length !== get().products.length) {
+          set({ products: cleaned })
+        }
       },
 
       // ── Orders ─────────────────────────────────────────────────────────
@@ -623,6 +634,22 @@ export const useAdminStore = create<AdminStore>()(
     }),
     {
       name: 'ratan-admin-store',
+      version: 2,
+      migrate: (persistedState, version) => {
+        const state = persistedState as { products?: Product[] } | undefined
+        if (!state) return persistedState
+        if (version < 2) {
+          state.products = []
+        }
+        return state
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state?.products?.length) return
+        const cleaned = stripSeedProducts(state.products)
+        if (cleaned.length !== state.products.length) {
+          useAdminStore.setState({ products: cleaned })
+        }
+      },
       partialize: (s) => ({
         users: s.users,
         products: s.products,
