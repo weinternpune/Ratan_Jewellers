@@ -136,16 +136,13 @@ const initialUsers: AdminUser[] = [
   { id: 8, name: 'Sunita Joshi', email: 'sunita@example.com', role: 'customer', status: 'active', joined: 'Jan 2024', lastLogin: '1 week ago', avatar: 'SJ', phone: '+91 21098 76543' },
 ]
 
-const initialProducts: Product[] = [
-  { id: 'RJ001', name: 'Kundan Bridal Necklace Set', category: 'Necklaces', metal: '22K Gold', weight: '45.2g', price: 285000, stock: 3, status: 'active', rating: 4.8, sales: 12, description: 'Exquisite Kundan bridal necklace with matching earrings' },
-  { id: 'RJ002', name: 'Diamond Solitaire Ring', category: 'Rings', metal: '18K Gold', weight: '4.1g', price: 128000, stock: 8, status: 'active', rating: 4.9, sales: 28, description: '0.5 carat solitaire diamond engagement ring' },
-  { id: 'RJ003', name: 'Temple Gold Bangles (2pc)', category: 'Bangles', metal: '22K Gold', weight: '28.6g', price: 172000, stock: 0, status: 'out_of_stock', rating: 4.7, sales: 19, description: 'Traditional temple design gold bangles pair' },
-  { id: 'RJ004', name: 'Pearl Drop Earrings', category: 'Earrings', metal: '18K Gold', weight: '6.8g', price: 45000, stock: 15, status: 'active', rating: 4.6, sales: 34, description: 'South sea pearl drop earrings in 18K gold setting' },
-  { id: 'RJ005', name: 'Gold Chain Necklace 22"', category: 'Chains', metal: '22K Gold', weight: '18.4g', price: 96000, stock: 6, status: 'active', rating: 4.5, sales: 41, description: '22 inch gold chain in Singapore design' },
-  { id: 'RJ006', name: 'Bridal Mangalsutra Set', category: 'Mangalsutras', metal: '22K Gold', weight: '12.2g', price: 68000, stock: 11, status: 'active', rating: 4.9, sales: 23, description: 'Traditional black bead mangalsutra with 22K gold pendant' },
-  { id: 'RJ007', name: 'Polki Diamond Choker', category: 'Necklaces', metal: '20K Gold', weight: '62.4g', price: 485000, stock: 1, status: 'active', rating: 5.0, sales: 4, description: 'Royal polki diamond choker necklace' },
-  { id: 'RJ008', name: 'Silver Anklets Pair', category: 'Anklets', metal: 'Silver', weight: '32.1g', price: 8500, stock: 22, status: 'active', rating: 4.4, sales: 67, description: 'Traditional silver anklets with ghungroo' },
-]
+const initialProducts: Product[] = []
+
+/** Legacy demo products shipped with early builds — strip from persisted storage */
+const SEED_PRODUCT_IDS = new Set(['RJ001', 'RJ002', 'RJ003', 'RJ004', 'RJ005', 'RJ006', 'RJ007', 'RJ008'])
+
+const stripSeedProducts = (products: Product[] | undefined) =>
+  (products ?? []).filter(p => !SEED_PRODUCT_IDS.has(p.id))
 
 const initialOrders: Order[] = [
   { id: 'RJ-4821', customer: 'Priya Sharma', email: 'priya.s@email.com', phone: '+91 98765 11111', items: [{ name: 'Kundan Bridal Necklace Set', qty: 1, price: 285000 }], total: 285000, status: 'delivered', date: '03 Jun 2026', payment: 'UPI', address: '12 MG Road, Bhubaneswar' },
@@ -204,6 +201,7 @@ interface AdminStore {
   addProduct: (p: Omit<Product, 'id' | 'rating' | 'sales'>) => void
   updateProduct: (id: string, data: Partial<Product>) => void
   deleteProduct: (id: string) => void
+  clearSeedProducts: () => void
 
   // Orders
   addOrder: (o: Omit<Order, 'id' | 'date'>) => void
@@ -294,6 +292,12 @@ export const useAdminStore = create<AdminStore>()(
         set(s => ({ products: s.products.filter(p => p.id !== id) }))
         get().addLog({ type: 'product', action: 'Product deleted', user: 'Admin', role: 'Admin', ip: '—', details: `Deleted: ${p?.name}` })
         toast.success('Product deleted')
+      },
+      clearSeedProducts: () => {
+        const cleaned = stripSeedProducts(get().products)
+        if (cleaned.length !== get().products.length) {
+          set({ products: cleaned })
+        }
       },
 
       // ── Orders ─────────────────────────────────────────────────────────
@@ -468,6 +472,22 @@ export const useAdminStore = create<AdminStore>()(
     }),
     {
       name: 'ratan-admin-store',
+      version: 2,
+      migrate: (persistedState, version) => {
+        const state = persistedState as { products?: Product[] } | undefined
+        if (!state) return persistedState
+        if (version < 2) {
+          state.products = []
+        }
+        return state
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state?.products?.length) return
+        const cleaned = stripSeedProducts(state.products)
+        if (cleaned.length !== state.products.length) {
+          useAdminStore.setState({ products: cleaned })
+        }
+      },
       partialize: (s) => ({
         users: s.users,
         products: s.products,
