@@ -51,15 +51,82 @@ export const getInvoices = async (req: AuthRequest, res: Response, next: NextFun
 
 export const getInvoiceById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const invoice = await Invoice.findById(req.params.id);
+    // First try to find by invoiceNumber, then by ObjectId
+    let invoice = await Invoice.findOne({ invoiceNumber: req.params.id });
+    if (!invoice) {
+      invoice = await Invoice.findById(req.params.id);
+    }
+    
     if (!invoice) throw new AppError('Invoice not found', 404);
     res.json({ success: true, data: invoice });
   } catch (err) { next(err); }
 };
 
+export const updateInvoice = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    // First try to find by invoiceNumber, then by ObjectId
+    let invoice = await Invoice.findOne({ invoiceNumber: req.params.id });
+    if (!invoice) {
+      invoice = await Invoice.findById(req.params.id);
+    }
+    
+    if (!invoice) throw new AppError('Invoice not found', 404);
+    
+    const updateData = { ...req.body, isEdited: true };
+    if (invoice.isEdited) {
+      updateData.editHistory = [...(invoice.editHistory || []), { editedAt: new Date(), editedBy: req.user!.id, changes: req.body }];
+    } else {
+      updateData.editHistory = [{ editedAt: new Date(), editedBy: req.user!.id, changes: req.body }];
+    }
+    
+    const updatedInvoice = await Invoice.findByIdAndUpdate(invoice._id, updateData, { new: true });
+    res.json({ success: true, message: 'Invoice updated', data: updatedInvoice });
+  } catch (err) { next(err); }
+};
+
+export const deleteInvoice = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    console.log('Delete request for ID:', req.params.id);
+    
+    // First try to find by invoiceNumber, then by ObjectId
+    let invoice = await Invoice.findOne({ invoiceNumber: req.params.id });
+    console.log('Found by invoiceNumber:', invoice ? 'Yes' : 'No');
+    
+    if (!invoice) {
+      console.log('Trying to find by ObjectId...');
+      // Only try ObjectId if it looks like a valid ObjectId (24 hex characters)
+      if (req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+        invoice = await Invoice.findById(req.params.id);
+        console.log('Found by ObjectId:', invoice ? 'Yes' : 'No');
+      }
+    }
+    
+    if (!invoice) {
+      console.log('Invoice not found with ID:', req.params.id);
+      throw new AppError('Invoice not found', 404);
+    }
+    
+    console.log('Deleting invoice with MongoDB _id:', invoice._id);
+    
+    // Delete using the actual _id (ensure it's properly converted)
+    const result = await Invoice.findByIdAndDelete(invoice._id);
+    console.log('Delete result:', result ? 'Success' : 'Failed');
+    
+    res.json({ success: true, message: 'Invoice deleted successfully' });
+  } catch (err) { 
+    console.error('Delete invoice error:', err);
+    next(err); 
+  }
+};
+
 export const resendWhatsApp = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const invoice = await Invoice.findById(req.params.id);
+    // First try to find by invoiceNumber, then by ObjectId
+    let invoice = await Invoice.findOne({ invoiceNumber: req.params.id });
+    if (!invoice) {
+      invoice = await Invoice.findById(req.params.id);
+    }
+    
     if (!invoice) throw new AppError('Invoice not found', 404);
     if (!invoice.pdfUrl) throw new AppError('PDF not yet generated', 400);
     await sendWhatsAppMessage({ invoiceId: invoice._id.toString(), phone: invoice.customerPhone, pdfUrl: invoice.pdfUrl, customerName: invoice.customerName, invoiceNumber: invoice.invoiceNumber, totalAmount: invoice.totalAmount });
