@@ -2,11 +2,12 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useWishlistStore, useCartStore } from '@/store'
 import { useSearchParams } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { PRODUCTS } from '@/assets/products'
 
-import { api, apiClient } from '@/lib/api'
+
 
 // ─── Product type (from backend) ─────────────────────────────────────────────
 interface Product {
@@ -263,23 +264,9 @@ export default function ProductsClient() {
     ...(priceRange.label !== 'All' ? ['price'] : []),
   ].length
 
-  const { data, isLoading } = useQuery({
-  queryKey: ['products', selectedMetal, selectedPurity, selectedCategory, sortBy],
-  queryFn: () =>
-    apiClient.get('/products', {
-      params: {
-        metal: selectedMetal.join(',') || undefined,
-        purity: selectedPurity.join(',') || undefined,
-        category: selectedCategory.join(',') || undefined,
-        sortBy,
-      },
-    }).then(r => r.data),
-  retry: false,
-})
+const isLoading = false
 
-
-
-  const products: Product[] = data?.products ?? []
+const products: Product[] = PRODUCTS
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
