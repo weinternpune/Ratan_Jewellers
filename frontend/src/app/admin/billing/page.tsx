@@ -15,7 +15,7 @@ const statusConfig: Record<InvoiceStatus,{label:string;color:string}> = {
 const emptyInv = { 
   customer:'', phone:'', 
   category:'', metal:'', purity:'', netWeight:'', price:0, goldRate:6520, makingCharges:0,
-  amount:0, gst:0, total:0, status:'draft' as InvoiceStatus, 
+  amount:0, gst:0, total:0, status:'paid' as InvoiceStatus, 
   date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), due:'—' 
 }
 
@@ -33,6 +33,7 @@ export default function BillingPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [deleteInvoiceId, setDeleteInvoiceId] = useState<string|null>(null)
+  const [deletingInvoice, setDeletingInvoice] = useState(false)
   const [form, setForm] = useState(emptyInv)
 
   // Fetch data when component mounts
@@ -105,9 +106,28 @@ export default function BillingPage() {
   }
 
   const handleDeleteInvoice = async () => {
-    if (deleteInvoiceId) {
-      await deleteInvoice(deleteInvoiceId)
-      setDeleteInvoiceId(null)
+    if (deleteInvoiceId && !deletingInvoice) {
+      try {
+        console.log('Frontend: Attempting to delete invoice:', deleteInvoiceId)
+        setDeletingInvoice(true)
+        
+        await deleteInvoice(deleteInvoiceId)
+        
+        console.log('Frontend: Invoice deleted successfully:', deleteInvoiceId)
+        toast.success(`Invoice ${deleteInvoiceId} deleted successfully`)
+        setDeleteInvoiceId(null)
+      } catch (error: any) {
+        console.error('Frontend: Delete invoice error:', error)
+        console.error('Frontend: Error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        })
+        const errorMessage = error.message || 'Failed to delete invoice'
+        toast.error(`Delete failed: ${errorMessage}`)
+      } finally {
+        setDeletingInvoice(false)
+      }
     }
   }
 
@@ -303,13 +323,13 @@ export default function BillingPage() {
                     <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Purity</label>
                     <select value={form.purity||''} onChange={e=>handleFieldChange('purity', e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] cursor-pointer bg-white">
                       <option value="">Select Purity</option>
-                      <option value="999">999 (24K)</option>
-                      <option value="916">916 (22K)</option>
-                      <option value="833">833 (20K)</option>
-                      <option value="750">750 (18K)</option>
-                      <option value="585">585 (14K)</option>
-                      <option value="925">925 (Silver)</option>
-                      <option value="950">950 (Platinum)</option>
+                      <option value="24KT">24KT</option>
+                      <option value="22KT">22KT</option>
+                      <option value="20KT">20KT</option>
+                      <option value="18KT">18KT</option>
+                      <option value="14KT">14KT</option>
+                      <option value="Silver">Silver</option>
+                      <option value="Platinum">Platinum</option>
                     </select>
                   </div>
                   
@@ -450,9 +470,17 @@ export default function BillingPage() {
                 </button>
                 <button 
                   onClick={handleDeleteInvoice} 
-                  className="flex-1 bg-red-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-red-700"
+                  disabled={deletingInvoice}
+                  className="flex-1 bg-red-600 text-white rounded-xl py-3 text-sm font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
-                  Yes, Delete Invoice
+                  {deletingInvoice ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    'Yes, Delete Invoice'
+                  )}
                 </button>
               </div>
             </div>

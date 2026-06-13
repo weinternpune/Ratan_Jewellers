@@ -92,8 +92,19 @@ export const adminApi = {
 // Utility function to handle API errors
 export const handleApiError = (error: any) => {
   console.error('API Error:', error)
+  let errorMessage = 'An unexpected error occurred'
+  
   if (error.response?.data?.message) {
-    throw new Error(error.response.data.message)
+    errorMessage = error.response.data.message
+  } else if (error.response?.status === 404) {
+    errorMessage = 'Item not found'
+  } else if (error.response?.status === 401) {
+    errorMessage = 'Unauthorized access'
+  } else if (error.response?.status === 403) {
+    errorMessage = 'Forbidden action'
+  } else if (error.message) {
+    errorMessage = error.message
   }
-  throw new Error('An unexpected error occurred')
+  
+  throw new Error(errorMessage)
 }

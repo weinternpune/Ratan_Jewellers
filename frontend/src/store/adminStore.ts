@@ -417,7 +417,7 @@ export const useAdminStore = create<AdminStore>()(
             amount: newInvoice.subtotal,
             gst: (newInvoice.cgst || 0) + (newInvoice.sgst || 0),
             total: newInvoice.totalAmount,
-            status: 'pending',
+            status: 'paid',
             date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
             due: '—',
             category: invData.category,
@@ -452,9 +452,10 @@ export const useAdminStore = create<AdminStore>()(
           await invoiceApi.delete(id)
           set(s => ({ invoices: s.invoices.filter(i => i.id !== id) }))
           get().addLog({ type: 'billing', action: 'Invoice deleted', user: 'Admin', role: 'Admin', ip: '—', details: `Deleted invoice ${id}` })
-          toast.success(`Invoice ${id} deleted`)
+          // Toast will be handled by the calling function
         } catch (error) {
           handleApiError(error)
+          throw error // Re-throw so the calling function can handle it
         }
       },
 
