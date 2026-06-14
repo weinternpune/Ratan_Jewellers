@@ -44,8 +44,11 @@ export const useAuthStore = create<AuthStore>()(
 
           const { user, accessToken, refreshToken } = data.data
           if (typeof window !== 'undefined') {
-            localStorage.setItem('adminAccessToken', accessToken)
-            localStorage.setItem('adminRefreshToken', refreshToken)
+           localStorage.setItem('accessToken', accessToken)
+localStorage.setItem('refreshToken', refreshToken)
+
+localStorage.setItem('adminAccessToken', accessToken)
+localStorage.setItem('adminRefreshToken', refreshToken)
           }
           set({ currentUser: { id:user.id, name:user.name, email:user.email, phone:user.phone, role:user.role.toLowerCase() as AdminRole, avatar:user.avatar, status:'active' }, accessToken, isLoggedIn:true, viewAsRole:null })
           return { success: true }
@@ -60,6 +63,9 @@ export const useAuthStore = create<AuthStore>()(
           const rt = localStorage.getItem('adminRefreshToken')
           if (rt) await fetch(`${API()}/auth/logout`, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${get().accessToken}` }, body: JSON.stringify({ refreshToken:rt }) })
         } catch {}
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+
         localStorage.removeItem('adminAccessToken')
         localStorage.removeItem('adminRefreshToken')
         set({ currentUser:null, accessToken:null, isLoggedIn:false, viewAsRole:null })
