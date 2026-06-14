@@ -146,52 +146,54 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className={`flex items-center gap-3 px-4 py-5 border-b border-[#C9A84C]/20 ${collapsed?'justify-center':''}`}>
-        <div className="flex-shrink-0 w-9 h-9 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/40 flex items-center justify-center">
-          <Crown size={18} className="text-[#C9A84C]"/>
+    <div className="grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
+      <div>
+        {/* Logo */}
+        <div className={`flex items-center gap-3 px-4 py-5 border-b border-[#C9A84C]/20 ${collapsed?'justify-center':''}`}>
+          <div className="flex-shrink-0 w-9 h-9 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/40 flex items-center justify-center">
+            <Crown size={18} className="text-[#C9A84C]"/>
+          </div>
+          {!collapsed && <div><div className="text-[#C9A84C] font-bold text-sm tracking-wider leading-none">RATAN</div><div className="text-white/40 text-[9px] tracking-widest leading-none mt-0.5">ADMIN PANEL</div></div>}
         </div>
-        {!collapsed && <div><div className="text-[#C9A84C] font-bold text-sm tracking-wider leading-none">RATAN</div><div className="text-white/40 text-[9px] tracking-widest leading-none mt-0.5">ADMIN PANEL</div></div>}
+
+        {/* Super Admin — role switcher */}
+        {!collapsed && currentUser.role === 'super_admin' && (
+          <div className="px-3 py-3 border-b border-white/5">
+            <div className="text-white/30 text-[9px] uppercase tracking-widest mb-1.5 px-1">View As Role</div>
+            <div className="relative">
+              <button onClick={()=>setRoleDropOpen(!roleDropOpen)} className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${roleColors[effectiveRole]}`}>{roleLabels[effectiveRole]}</span>
+                <ChevronDown size={12} className={`text-white/40 transition-transform ${roleDropOpen?'rotate-180':''}`}/>
+              </button>
+              {roleDropOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-[#1a0e00] border border-white/10 rounded-lg overflow-hidden z-50 shadow-xl">
+                  <button onClick={()=>{setViewAsRole(null);setRoleDropOpen(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-white/5 flex items-center gap-2 ${!viewAsRole?'bg-white/10':''}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${roleColors['super_admin']}`}>Super Admin (default)</span>
+                  </button>
+                  {(Object.keys(RBAC) as AdminRole[]).filter(r=>r!=='super_admin').map(role=>(
+                    <button key={role} onClick={()=>{setViewAsRole(role);setRoleDropOpen(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-white/5 flex items-center gap-2 ${viewAsRole===role?'bg-white/10':''}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${roleColors[role]}`}>{roleLabels[role]}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Show current role badge for non super_admin */}
+        {!collapsed && currentUser.role !== 'super_admin' && (
+          <div className="px-3 py-3 border-b border-white/5">
+            <div className="text-white/30 text-[9px] uppercase tracking-widest mb-1.5 px-1">Your Role</div>
+            <div className="px-3 py-2 rounded-lg bg-white/5">
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${roleColors[currentUser.role]}`}>{roleLabels[currentUser.role]}</span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Super Admin — role switcher */}
-      {!collapsed && currentUser.role === 'super_admin' && (
-        <div className="px-3 py-3 border-b border-white/5">
-          <div className="text-white/30 text-[9px] uppercase tracking-widest mb-1.5 px-1">View As Role</div>
-          <div className="relative">
-            <button onClick={()=>setRoleDropOpen(!roleDropOpen)} className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${roleColors[effectiveRole]}`}>{roleLabels[effectiveRole]}</span>
-              <ChevronDown size={12} className={`text-white/40 transition-transform ${roleDropOpen?'rotate-180':''}`}/>
-            </button>
-            {roleDropOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-[#1a0e00] border border-white/10 rounded-lg overflow-hidden z-50 shadow-xl">
-                <button onClick={()=>{setViewAsRole(null);setRoleDropOpen(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-white/5 flex items-center gap-2 ${!viewAsRole?'bg-white/10':''}`}>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${roleColors['super_admin']}`}>Super Admin (default)</span>
-                </button>
-                {(Object.keys(RBAC) as AdminRole[]).filter(r=>r!=='super_admin').map(role=>(
-                  <button key={role} onClick={()=>{setViewAsRole(role);setRoleDropOpen(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-white/5 flex items-center gap-2 ${viewAsRole===role?'bg-white/10':''}`}>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${roleColors[role]}`}>{roleLabels[role]}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Show current role badge for non super_admin */}
-      {!collapsed && currentUser.role !== 'super_admin' && (
-        <div className="px-3 py-3 border-b border-white/5">
-          <div className="text-white/30 text-[9px] uppercase tracking-widest mb-1.5 px-1">Your Role</div>
-          <div className="px-3 py-2 rounded-lg bg-white/5">
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${roleColors[currentUser.role]}`}>{roleLabels[currentUser.role]}</span>
-          </div>
-        </div>
-      )}
-
       {/* Nav */}
-      <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
+      <nav className="min-h-0 overflow-y-auto overscroll-contain px-2 py-3 space-y-0.5">
         {navItems.map(({href,label,icon:Icon,module})=>{
           const accessible = perms[module] !== 'none'
           const active = pathname === href || pathname.startsWith(href+'/')
@@ -219,7 +221,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </nav>
 
       {/* Bottom */}
-      <div className="px-3 py-3 border-t border-white/5 space-y-1">
+      <div className="px-3 py-3 border-t border-white/5 space-y-1 bg-[#0D0700]">
         <Link href="/" className={`flex items-center gap-3 px-3 py-2 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors text-sm ${collapsed?'justify-center':''}`}>
           <Home size={15}/>
           {!collapsed && <span>Back to Site</span>}
@@ -246,7 +248,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/60" onClick={()=>setMobileOpen(false)}/>
-          <aside className="relative w-64 bg-[#0D0700] flex flex-col h-full shadow-2xl">
+          <aside className="relative w-64 max-w-[85vw] bg-[#0D0700] flex flex-col h-full min-h-0 overflow-hidden shadow-2xl">
             <button onClick={()=>setMobileOpen(false)} className="absolute top-4 right-4 text-white/40 hover:text-white"><X size={20}/></button>
             <SidebarContent/>
           </aside>
@@ -256,7 +258,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="flex-shrink-0 h-14 bg-white border-b border-gray-200 flex items-center gap-3 px-4 shadow-sm">
-          <button onClick={()=>setMobileOpen(true)} className="lg:hidden text-gray-500 hover:text-gray-800"><Menu size={20}/></button>
+          <button type="button" onClick={()=>setMobileOpen(true)} aria-label="Open admin navigation" className="lg:hidden text-gray-500 hover:text-gray-800"><Menu size={20}/></button>
           <div className="flex-1 hidden sm:flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 max-w-xs">
             <Search size={14} className="text-gray-400"/>
             <input className="bg-transparent text-sm text-gray-600 placeholder-gray-400 outline-none flex-1" placeholder="Search..."/>

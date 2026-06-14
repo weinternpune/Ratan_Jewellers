@@ -409,7 +409,7 @@ nav[class*="fixed"] {
 
 /* Prevent navbar from disappearing on mobile scroll */
 @media (max-width: 1024px) {
-  nav {
+  nav[class*="fixed"] {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
