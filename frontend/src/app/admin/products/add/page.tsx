@@ -6,21 +6,17 @@ import {
   CheckCircle2, ArrowLeft, Sparkles, Package,
   AlertCircle, Star, TrendingUp
 } from 'lucide-react'
-import { useProductCatalog, StorefrontProduct } from '@/store/productCatalog'
-import { useAuthStore } from '@/store/authStore'
+import { useAdminStore } from '@/store/adminStore'
 import toast from 'react-hot-toast'
 
 const categories = ['Necklaces','Rings','Bangles','Earrings','Chains','Mangalsutras','Anklets','Pendants','Bracelets','Nose Pins','Pooja Items','Silver']
 const metals     = ['Gold','Silver','Platinum','Rose Gold','White Gold']
 const purities   = ['24KT','22KT','20KT','18KT','14KT','9KT','92.5','Sterling Silver','950 Platinum']
 
-const slugify = (s: string) =>
-  s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-
 const empty = {
   name: '', sku: '', category: 'Necklaces', metal: 'Gold', purity: '22KT',
   netWeight: '', currentPrice: '', goldRate: '6520', makingCharges: '',
-  stoneCharges: '0', description: '', isFeatured: false, isTrending: false,
+  stoneCharges: '0', description: '', isNewArrival: true, isFeatured: false, isTrending: false,
   inStock: true,
 }
 
@@ -28,8 +24,7 @@ type Tab = 'manual' | 'pdf'
 
 export default function AddProductPage() {
   const router = useRouter()
-  const { addProduct } = useProductCatalog()
-  const { currentUser } = useAuthStore()
+  const addProduct = useAdminStore(s => s.addProduct)
 
   const [tab, setTab]       = useState<Tab>('manual')
   const [form, setForm]     = useState(empty)
@@ -155,40 +150,17 @@ Return ONLY the JSON, no markdown, no explanation.`
     setSaving(true)
     await new Promise(r => setTimeout(r, 500))
 
-    const product: Omit<StorefrontProduct, 'addedAt'> = {
-      id:            `rj-${Date.now()}`,
-      name:          form.name.trim(),
-      slug:          slugify(form.name),
-      sku:           form.sku || `RJ${String(Date.now()).slice(-5)}`,
+    addProduct({
+      name: form.name.trim(),
+      category: form.category,
+      metal: `${form.purity} ${form.metal}`,
+      weight: `${form.netWeight}g`,
+      price: parseFloat(form.currentPrice) || 0,
+      stock: form.inStock ? 1 : 0,
+      status: form.inStock ? 'active' : 'out_of_stock',
+      description: form.description,
       images,
-      metal:         form.metal,
-      purity:        form.purity,
-      netWeight:     parseFloat(form.netWeight) || 0,
-      currentPrice:  parseFloat(form.currentPrice) || 0,
-      goldRate:      parseFloat(form.goldRate) || 6520,
-      makingCharges: parseFloat(form.makingCharges) || 0,
-      stoneCharges:  parseFloat(form.stoneCharges) || 0,
-      avgRating:     0,
-      reviewCount:   0,
-      inStock:       form.inStock,
-      isFeatured:    form.isFeatured,
-      isTrending:    form.isTrending,
-      description:   form.description,
-      category:      { name: form.category },
-      keywords:      [
-        form.name,
-        form.category,
-        form.metal,
-        form.purity,
-        form.sku,
-        form.description,
-      ].filter(Boolean).join(' ').toLowerCase(),
-      addedBy:       currentUser?.name || 'Super Admin',
-      source:        tab === 'pdf' ? 'pdf' : 'manual',
-    }
-
-    addProduct(product)
-    toast.success(`"${product.name}" added to catalogue`)
+    })
     setSaving(false)
     router.push('/admin/products')
   }
@@ -355,6 +327,7 @@ Return ONLY the JSON, no markdown, no explanation.`
             <div className="flex flex-col gap-3 pt-2 border-t border-gray-100">
               {[
                 { k: 'inStock', label: 'In Stock', icon: Package, color: 'text-green-600' },
+                { k: 'isNewArrival', label: 'Show in New Arrivals', icon: Sparkles, color: 'text-blue-500' },
                 { k: 'isFeatured', label: 'Show in Featured Products', icon: Star, color: 'text-amber-500' },
                 { k: 'isTrending', label: 'Show in Trending Products', icon: TrendingUp, color: 'text-purple-500' },
               ].map(({ k, label, icon: Icon, color }) => (

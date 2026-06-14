@@ -1,8 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Search, Plus, Edit2, Trash2, Eye, Package, Star, X, Grid, List, TrendingUp, AlertCircle } from 'lucide-react'
 import { useAdminStore, Product } from '@/store/adminStore'
-import { useProductCatalog } from '@/store/productCatalog'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
@@ -11,19 +10,12 @@ const metals = ['24K Gold','22K Gold','20K Gold','18K Gold','14K Gold','Silver',
 const empty: Omit<Product,'id'|'rating'|'sales'> = { name:'',category:'Necklaces',metal:'22K Gold',weight:'',price:0,stock:0,status:'active',description:'' }
 
 export default function ProductsPage() {
-  const { products: adminProducts, addProduct, updateProduct, deleteProduct } = useAdminStore()
-  const { products: catalogProducts, deleteProduct: deleteCatalogProduct, toggleFeatured, toggleTrending, toggleStock } = useProductCatalog()
-  // Merge admin + catalog products, catalog ones shown with a badge
-  const products = [
-    ...catalogProducts.map(p => ({
-      id: p.id, name: p.name, category: p.category.name, metal: p.metal,
-      weight: `${p.netWeight}g`, price: p.currentPrice, stock: p.inStock ? 99 : 0,
-      status: (p.inStock ? 'active' : 'out_of_stock') as any,
-      rating: p.avgRating, sales: p.reviewCount, description: p.description,
-      _catalog: true, _images: p.images, _sku: p.sku,
-    })),
-    ...adminProducts,
-  ]
+  const { products: adminProducts, addProduct, updateProduct, deleteProduct, clearSeedProducts } = useAdminStore()
+  const products = [...adminProducts]
+
+  useEffect(() => {
+    clearSeedProducts()
+  }, [clearSeedProducts])
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
   const [viewMode, setViewMode] = useState<'table'|'grid'>('table')
@@ -37,6 +29,21 @@ export default function ProductsPage() {
     (category==='All'||p.category===category) &&
     (p.name.toLowerCase().includes(search.toLowerCase())||p.id.toLowerCase().includes(search.toLowerCase()))
   )
+
+  const stats = useMemo(() => {
+    const totalProducts = products.length
+    const outOfStock = products.filter(p => p.stock === 0).length
+    const catalogueValue = products.reduce((sum, p) => sum + p.price * p.stock, 0)
+    const rated = products.filter(p => p.rating > 0)
+    const avgRating = rated.length ? rated.reduce((sum, p) => sum + p.rating, 0) / rated.length : 0
+    return { totalProducts, outOfStock, catalogueValue, avgRating }
+  }, [products])
+
+  const formatCatalogueValue = (value: number) => {
+    if (value === 0) return '₹0'
+    if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`
+    return `₹${value.toLocaleString('en-IN')}`
+  }
 
   const openAdd = () => { setForm(empty); setEditTarget(null); setShowModal(true) }
   const openEdit = (p: Product) => { setForm({name:p.name,category:p.category,metal:p.metal,weight:p.weight,price:p.price,stock:p.stock,status:p.status,description:p.description||''}); setEditTarget(p); setShowModal(true) }
@@ -56,10 +63,10 @@ export default function ProductsPage() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><div className="flex items-center gap-2 mb-2"><Package size={14} className="text-amber-500"/><span className="text-xs text-gray-500">Total Products</span></div><div className="text-2xl font-bold text-gray-900">{products.length}</div></div>
-        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><div className="flex items-center gap-2 mb-2"><AlertCircle size={14} className="text-red-500"/><span className="text-xs text-gray-500">Out of Stock</span></div><div className="text-2xl font-bold text-red-600">{products.filter(p=>p.stock===0).length}</div></div>
-        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><div className="flex items-center gap-2 mb-2"><TrendingUp size={14} className="text-green-500"/><span className="text-xs text-gray-500">Catalogue Value</span></div><div className="text-lg font-bold text-gray-900">₹{(products.reduce((a,p)=>a+p.price*Math.max(p.stock,1),0)/100000).toFixed(1)}L</div></div>
-        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><div className="flex items-center gap-2 mb-2"><Star size={14} className="text-amber-500"/><span className="text-xs text-gray-500">Avg Rating</span></div><div className="text-2xl font-bold text-gray-900">{products.filter(p=>p.rating>0).length>0?(products.filter(p=>p.rating>0).reduce((a,p)=>a+p.rating,0)/products.filter(p=>p.rating>0).length).toFixed(1):'—'}</div></div>
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><div className="flex items-center gap-2 mb-2"><Package size={14} className="text-amber-500"/><span className="text-xs text-gray-500">Total Products</span></div><div className="text-2xl font-bold text-gray-900">{stats.totalProducts}</div></div>
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><div className="flex items-center gap-2 mb-2"><AlertCircle size={14} className="text-red-500"/><span className="text-xs text-gray-500">Out of Stock</span></div><div className="text-2xl font-bold text-red-600">{stats.outOfStock}</div></div>
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><div className="flex items-center gap-2 mb-2"><TrendingUp size={14} className="text-green-500"/><span className="text-xs text-gray-500">Catalogue Value</span></div><div className="text-lg font-bold text-gray-900">{formatCatalogueValue(stats.catalogueValue)}</div></div>
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><div className="flex items-center gap-2 mb-2"><Star size={14} className="text-amber-500"/><span className="text-xs text-gray-500">Avg Rating</span></div><div className="text-2xl font-bold text-gray-900">{stats.avgRating.toFixed(1)}</div></div>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -204,7 +211,7 @@ export default function ProductsPage() {
             <p className="text-sm text-gray-500">This will permanently delete <strong>{products.find(p=>p.id===confirmDelete)?.name}</strong>.</p>
             <div className="flex gap-3">
               <button onClick={()=>setConfirmDelete(null)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
-              <button onClick={()=>{ const p=products.find(p=>p.id===confirmDelete); if((p as any)?._catalog) deleteCatalogProduct(confirmDelete!); else deleteProduct(confirmDelete!); setConfirmDelete(null) }} className="flex-1 bg-red-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-red-600">Delete</button>
+              <button onClick={()=>{ const p=products.find(p=>p.id===confirmDelete); deleteProduct(confirmDelete!); setConfirmDelete(null) }} className="flex-1 bg-red-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-red-600">Delete</button>
             </div>
           </div>
         </div>

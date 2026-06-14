@@ -1,6 +1,9 @@
+
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
+
 import jwt from 'jsonwebtoken';
+
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '../models/User';
 import { Customer } from '../models/Customer';
@@ -41,6 +44,97 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
   } catch (err) { next(err); }
 };
 
+
+import { sendOTP, verifyOTP } from '../services/otpService';
+
+
+// ─── OTP Handlers ─────────────────────────────────────────────────────────────
+export const sendOTPHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { identifier, type = 'phone', purpose } = req.body;
+    if (!identifier || !purpose) throw new AppError('Identifier and purpose are required', 400);
+    if (!['register', 'login', 'reset_password'].includes(purpose)) throw new AppError('Invalid purpose', 400);
+    if (purpose === 'login') {
+      const field = type === 'phone' ? { phone: identifier } : { email: identifier };
+      if (!await User.findOne(field)) throw new AppError('No account found. Please register first.', 404);
+    }
+
+    if (purpose === 'register') {
+      const field = type === 'phone' ? { phone: identifier } : { email: identifier };
+      if (await User.findOne(field)) throw new AppError('Account already exists. Please login instead.', 409);
+    }
+    const result = await sendOTP(identifier, type as 'phone' | 'email', purpose);
+    if (!result.success) throw new AppError(result.message, 429);
+    res.json({ success: true, message: result.message });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const verifyOTPHandler = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { identifier, code, purpose, name, type = 'phone' } = req.body;
+    if (!identifier || !code || !purpose) throw new AppError('All fields required', 400);
+
+    const result = await verifyOTP(identifier, code, purpose);
+    if (!result.success) throw new AppError(result.message, 400);
+
+    if (purpose === 'register') {
+      if (!name) throw new AppError('Name is required for registration', 400);
+      const exists = await User.findOne(type === 'phone' ? { phone: identifier } : { email: identifier });
+      if (exists) throw new AppError('Account already exists', 409);
+      const userData: any = { name, isVerified: true };
+      if (type === 'phone') userData.phone = identifier; else userData.email = identifier;
+      const user = await User.create(userData);
+      await Customer.create({ userId: user._id, referralCode: uuidv4().substring(0, 8).toUpperCase() });
+      const tokens = generateTokens(user._id.toString());
+      await Session.create({ userId: user._id, token: tokens.refreshToken, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
+      return res.status(201).json({ success: true, message: 'Registration successful! Welcome to Ratan Jewellers.', data: { user: formatUser(user), ...tokens } });
+    }
+
+    if (purpose === 'login') {
+      const field = type === 'phone' ? { phone: identifier } : { email: identifier };
+      const user = await User.findOne(field);
+      if (!user) throw new AppError('User not found', 404);
+      if (!user.isActive) throw new AppError('Account deactivated', 401);
+      const tokens = generateTokens(user._id.toString());
+      await User.findByIdAndUpdate(user._id, { lastLogin: new Date(), isVerified: true });
+      await Session.create({ userId: user._id, token: tokens.refreshToken, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
+      return res.json({ success: true, message: `Welcome back, ${user.name}!`, data: { user: formatUser(user), ...tokens } });
+    }
+    res.json({ success: true, message: 'OTP verified. You may now set a new password.' });
+  } catch (err) { next(err); }
+};
+
+export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { identifier, code, newPassword } = req.body;
+    if (!identifier || !code || !newPassword) throw new AppError('All fields required', 400);
+    if (newPassword.length < 8) throw new AppError('Password must be at least 8 characters', 400);
+
+    const result = await verifyOTP(identifier, code, 'reset_password');
+    if (!result.success) throw new AppError(result.message, 400);
+
+    const isPhone = /^\+?\d{10,15}$/.test(identifier);
+    const user = await User.findOne(isPhone ? { phone:identifier } : { email:identifier });
+    if (!user) throw new AppError('User not found', 404);
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await User.findByIdAndUpdate(user._id, { passwordHash, isVerified:true });
+    await Session.deleteMany({ userId: user._id });
+    res.json({ success: true, message: 'Password reset successfully. Please login with your new password.' });
+  } catch (err) { next(err); }
+};
+
+export const googleCallback = async (req: Request, res: Response) => {
+  const user = req.user as any;
+  if (!user) return res.redirect(`${process.env.FRONTEND_URL}/login?error=google_failed`);
+  const { accessToken, refreshToken } = generateTokens(user._id.toString());
+  await Session.create({ userId: user._id, token: refreshToken, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
+  await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+  res.redirect(`${process.env.FRONTEND_URL}/auth/callback?accessToken=${accessToken}&refreshToken=${refreshToken}`);
+};
+
 export const refreshToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { refreshToken } = req.body;
@@ -67,46 +161,5 @@ export const getMe = async (req: AuthRequest, res: Response, next: NextFunction)
     const user = await User.findById(req.user!.id).select('-passwordHash');
     const customer = await Customer.findOne({ userId: req.user!.id });
     res.json({ success: true, data: { ...user?.toObject(), customer } });
-  } catch (err) { next(err); }
-};
-
-// ── Admin/Staff login — returns role-specific session ─────────────────────
-export const adminLogin = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { identifier, password } = req.body;
-    if (!identifier || !password) throw new AppError('Email and password required', 400);
-
-    const id = identifier.trim().toLowerCase();
-    const user = await User.findOne({
-      $or: [{ email: id }, { phone: id.replace(/\D/g,'') }]
-    });
-
-    if (!user || !user.passwordHash) throw new AppError('Invalid credentials', 401);
-    if (!user.isActive) throw new AppError('Account deactivated', 403);
-    if (user.role === 'CUSTOMER') throw new AppError('Invalid credentials', 401);
-    if (!await bcrypt.compare(password, user.passwordHash)) throw new AppError('Invalid credentials', 401);
-
-    const roleMap: Record<string, string> = {
-      'SUPER_ADMIN':'super_admin','ADMIN':'admin','STORE_MANAGER':'store_manager',
-      'INVENTORY_MANAGER':'inventory_manager','SALES_STAFF':'sales_staff',
-    };
-
-    const { accessToken, refreshToken } = generateTokens(user._id.toString());
-    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
-    await Session.create({ userId: user._id, token: refreshToken, expiresAt: new Date(Date.now() + 8*60*60*1000) });
-
-    const avatar = user.name.split(' ').map((n:string) => n[0]).join('').toUpperCase().slice(0,2);
-
-    res.json({
-      success: true,
-      data: {
-        user: {
-          id: user._id.toString(), name: user.name, email: user.email,
-          phone: user.phone || '', role: roleMap[user.role] || 'sales_staff',
-          avatar, status: 'active',
-        },
-        accessToken, refreshToken,
-      }
-    });
   } catch (err) { next(err); }
 };
