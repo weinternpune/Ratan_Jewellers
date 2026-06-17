@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useWishlistStore, useCartStore } from '@/store'
-
+import { PRODUCTS } from '@/assets/products'
 type Product = any
 
 // ─── Catalog helpers (mirrors FeaturedProducts) ────────────────────────────────
@@ -547,29 +547,20 @@ export default function ProductDetailPage() {
   const [activeImage, setActiveImage] = useState(0)
   const [toast, setToast] = useState<{ message: string; type: 'add' | 'remove' | 'cart' } | null>(null)
   const [addedToCart, setAddedToCart] = useState(false)
+useEffect(() => {
+  if (!slug) return
 
-  // ── Product resolution: catalog (localStorage) → PRODUCTS → API ────────────
-  useEffect(() => {
-    if (!slug) return
+  const fromAssets = PRODUCTS.find(
+    (p) => p.slug === slug
+  )
 
+  if (fromAssets) {
+    setProduct(fromAssets)
+    return
+  }
 
-    // 3. Check mock products (same pool rendered by FeaturedProducts cards)
-   const fromMock = MOCK_PRODUCTS.find(p => p.slug === slug)
-if (fromMock) {
-  setProduct(fromMock)
-  return
-}
-
-
-    // 4. Fallback to API
-   fetch(`http://localhost:5000/api/products/${slug}`)
-  .then(r => r.json())
-  .then(d => {
-    if (d?.product) setProduct(d.product)
-  })
-      .catch(() => {})
-  }, [slug])
-
+  setProduct(null)
+}, [slug])
   useEffect(() => {
     setActiveImage(0)
     setAddedToCart(false)
@@ -636,7 +627,7 @@ if (fromMock) {
     showToast('Added to cart!', 'cart')
   }
 
-const related = MOCK_PRODUCTS
+const related = PRODUCTS
   .filter((p: any) => {
     const pCat =
       typeof p.category === 'string'

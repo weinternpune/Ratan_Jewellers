@@ -20,8 +20,10 @@ export const adminLogin = async (req: Request, res: Response, next: NextFunction
     if (!user.isActive) throw new AppError('Account deactivated', 401);
     if (!await bcrypt.compare(password, user.passwordHash)) throw new AppError('Invalid credentials', 401);
 
-    const accessToken  = jwt.sign({ userId: user._id }, process.env.JWT_SECRET as string,         { expiresIn: '8h' });
-    const refreshToken = jwt.sign({ userId: user._id }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: '7d' });
+    const jwtSecret   = process.env.JWT_SECRET         || '8kX92@mnP#qL7zV$Rt!2BxPq2026'
+    const jwtRefresh  = process.env.JWT_REFRESH_SECRET  || '9uY#72Lm@vQx!P4sKd2026Refresh'
+    const accessToken  = jwt.sign({ userId: user._id }, jwtSecret,  { expiresIn: '8h' });
+    const refreshToken = jwt.sign({ userId: user._id }, jwtRefresh, { expiresIn: '7d' });
 
     await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 

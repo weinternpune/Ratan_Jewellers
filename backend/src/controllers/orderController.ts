@@ -3,6 +3,12 @@ import { Order } from '../models/Order';
 import { AppError } from '../middleware/errorHandler';
 import { AuthRequest } from '../middleware/auth';
 
+const generateOrderNumber = async (): Promise<string> => {
+  const year = new Date().getFullYear(), month = String(new Date().getMonth()+1).padStart(2,'0');
+  const count = await Order.countDocuments({ createdAt: { $gte: new Date(`${year}-${month}-01`) } });
+  return `RJ-${year}${month}-${String(count+1).padStart(4,'0')}`;
+};
+
 // ── Place Order ───────────────────────────────────────────────────────────────
 export const placeOrder = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -90,5 +96,37 @@ export const cancelOrder = async (req: Request, res: Response, next: NextFunctio
     await order.save();
 
     res.json({ success: true, message: 'Order cancelled successfully', data: order });
+  } catch (err) { next(err); }
+};
+
+// ── Admin Functions ───────────────────────────────────────────────────────────
+export const getAllOrders = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { page='1', limit='20', search, status } = req.query;
+    const pageNum = parseInt(page as string), limitNum = parseInt(limit as string);
+    const filter: any = {};
+    if (search) filter.$or = [{ orderNumber: { $regex: search, $options: 'i' } }];
+    if (status) filter.status = status;
+    const [orders, total] = await Promise.all([Order.find(filter).sort({ createdAt: -1 }).skip((pageNum-1)*limitNum).limit(limitNum), Order.countDocuments(filter)]);
+    res.json({ success: true, data: { orders, pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total/limitNum) } } });
+  } catch (err) { next(err); }
+};
+
+export const updateOrderStatus = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const order = await Order.findByIdAndUpdate(id, { status }, { new: true });
+    if (!order) throw new AppError('Order not found', 404);
+    res.json({ success: true, message: 'Order status updated', data: order });
+  } catch (err) { next(err); }
+};
+
+export const deleteOrder = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) throw new AppError('Order not found', 404);
+    await Order.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: 'Order deleted successfully' });
   } catch (err) { next(err); }
 };
