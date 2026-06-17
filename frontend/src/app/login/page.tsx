@@ -39,7 +39,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const res = await api.post<{success:boolean;data:LoginResponse}>('/auth/login', { email: email.trim().toLowerCase(), password })
-      const { user, accessToken, refreshToken } = res.data.data
+      const { user, accessToken, refreshToken } = res.data
       setAuth(user, accessToken, refreshToken)
 
       if (ADMIN_ROLES.includes(user.role.toUpperCase())) {

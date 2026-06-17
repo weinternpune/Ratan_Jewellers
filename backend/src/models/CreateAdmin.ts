@@ -1,41 +1,35 @@
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import { User } from "./User";
 
 dotenv.config();
 
+const ADMIN_EMAIL = "prabinakumardas90@gmail.com";
+const ADMIN_PASSWORD = "Admin@2025";
+
 async function createAdmin() {
   try {
-    await mongoose.connect(
-      process.env.MONGODB_URI || "mongodb://localhost:27017/ratan_jewellers"
-    );
+    const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/ratan_jewellers";
+    await mongoose.connect(uri);
+    console.log("Connected to host:", mongoose.connection.host, "| db:", mongoose.connection.name);
 
-    const hash = await bcrypt.hash("Admin@2025", 12);
+    // Wipe any existing record for this email so a stale/partial account
+    // (no password, wrong role, OAuth-created, etc.) can't block login.
+    const deleted = await User.deleteMany({ email: ADMIN_EMAIL.toLowerCase().trim() });
+    console.log("Removed existing records:", deleted.deletedCount);
 
-    const result = await mongoose.connection.collection("users").updateOne(
-      { email: "prabinakumardas90@gmail.com" },
-      {
-        $setOnInsert: {
-          email: "prabinakumardas90@gmail.com",
-          passwordHash: hash,
-          name: "Priya",
-          role: "ADMIN",
-          isActive: true,
-          isVerified: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      },
-      {
-        upsert: true,
-      }
-    );
+    const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+    const admin = await User.create({
+      email: ADMIN_EMAIL.toLowerCase().trim(),
+      passwordHash,
+      name: "Priya",
+      role: "SUPER_ADMIN",
+      isActive: true,
+      isVerified: true,
+    });
 
-    console.log(
-      "User created:",
-      result.upsertedCount > 0 ? "YES" : "ALREADY EXISTS"
-    );
-
+    console.log("✅ Admin ready:", admin.email, admin.role, admin._id.toString());
     await mongoose.disconnect();
     process.exit(0);
   } catch (error) {

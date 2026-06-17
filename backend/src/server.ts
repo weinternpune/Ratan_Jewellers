@@ -35,7 +35,18 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:3000', credentials: true, methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'], allowedHeaders: ['Content-Type','Authorization'] }));
+const allowedOrigin = process.env.FRONTEND_URL;
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // curl, server-to-server, etc.
+    if (process.env.NODE_ENV === 'production') return callback(null, origin === allowedOrigin);
+    const isLocalDev = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
+    callback(null, isLocalDev || origin === allowedOrigin);
+  },
+  credentials: true,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization'],
+}));
 app.use('/api/',      rateLimit({ windowMs: 15*60*1000, max: 100, standardHeaders: true, legacyHeaders: false }));
 app.use('/api/auth/', rateLimit({ windowMs: 15*60*1000, max: 10 }));
 app.use(express.json({ limit: '10mb' }));

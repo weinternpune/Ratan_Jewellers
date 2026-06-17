@@ -39,7 +39,7 @@ function VerifyEmailInner() {
     setLoading(true)
     try {
       const res = await api.post<{success:boolean;data:any}>('/auth/verify-otp', { email, otp: code })
-      const { user, accessToken, refreshToken } = res.data.data
+      const { user, accessToken, refreshToken } = res.data
       setAuth(user, accessToken, refreshToken)
       toast.success('Email verified! Welcome to Ratan Jewellers.')
       router.push('/')

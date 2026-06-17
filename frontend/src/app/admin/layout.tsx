@@ -273,8 +273,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Auth guard — waits for Zustand to rehydrate before redirecting
   useEffect(() => {
     if (!hydrated) return
-    if (pathname === '/admin/login') return
-    if (!isLoggedIn || !currentUser) { router.replace('/admin/login'); return }
+    if (!isLoggedIn || !currentUser) { router.replace('/login'); return }
     try {
       const raw = localStorage.getItem('ratan-auth')
       if (raw) {
@@ -302,9 +301,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )
     }
   }, [isLoggedIn, currentUser, pathname])
-
-  // Login page: no layout chrome
-  if (pathname === '/admin/login') return <>{children}</>
 
   // Loading spinner while Zustand rehydrates from localStorage
   if (!hydrated || !isLoggedIn || !currentUser) return (
