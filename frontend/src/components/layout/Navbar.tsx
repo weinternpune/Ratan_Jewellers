@@ -112,7 +112,7 @@ const handleProfileClick = (e: React.MouseEvent) => {
   return (
     <>
       {/* Top Bar */}
-      <div className={`hidden xl:block bg-white border-b border-gray-200 py-2.5 fixed top-0 left-0 right-0 z-[99] w-full max-w-full overflow-x-hidden transition-transform duration-300 ${scrolled ? '-translate-y-full' : 'translate-y-0'}`}>
+      <div className={`hidden xl:block bg-white border-gray-200 py-3.5 fixed top-0 left-0 right-0 z-[99] w-full max-w-full overflow-x-hidden transition-transform duration-300 ${scrolled ? '-translate-y-full' : 'translate-y-0'}`}>
         <div className="w-full max-w-full px-2 sm:px-4 md:px-6 lg:px-6 xl:px-8 2xl:px-12 flex justify-between items-center overflow-x-hidden">
           <div className="hidden lg:flex items-center gap-8 text-xs text-gray-700">
             <span className="flex items-center gap-2">
@@ -142,7 +142,7 @@ const handleProfileClick = (e: React.MouseEvent) => {
       </div>
 
       {/* Main Navbar */}
-      <nav className={`fixed left-0 right-0 z-[100] bg-white border-b border-gray-200 shadow-md w-full transition-all duration-300 ${scrolled ? 'top-0' : 'top-0 xl:top-[44px]'}`}>
+      <nav className={`fixed left-0 right-0 z-[100] bg-white border-b border-gray-200 shadow-md w-full transition-all duration-300 ${scrolled ? 'top-0' : 'top-0 xl:top-[35px]'}`}>
         <div className="w-full max-w-full px-1.5 xs:px-2 sm:px-3 md:px-3 lg:px-4 xl:px-8 2xl:px-12">
           <div className="flex items-center justify-between h-16 md:h-20 w-full max-w-full gap-0.5 xs:gap-1 sm:gap-1 md:gap-1 lg:gap-2">
             {/* Logo */}
