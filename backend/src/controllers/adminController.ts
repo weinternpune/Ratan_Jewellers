@@ -4,6 +4,7 @@ import { Order } from '../models/Order';
 import { Customer } from '../models/Customer';
 import { AppError } from '../middleware/errorHandler';
 import { AuthRequest } from '../middleware/auth';
+import { User } from "../models/User";
 
 export const clearAllBillingData = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -80,6 +81,28 @@ export const getDashboardStats = async (req: AuthRequest, res: Response, next: N
         orders: ordersByStatus,
         customers: customerCount
       }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//all users
+
+export const getAllUsers = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const users = await User.find(
+      { role: { $ne: 'CUSTOMER' } },
+      'name email role isActive'
+    ).sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: users
     });
   } catch (err) {
     next(err);

@@ -49,10 +49,6 @@ export default function LoginPage() {
           currentUser: { id:user.id, name:user.name, email:user.email, phone:'', role:roleMap[user.role.toUpperCase()]||'admin', avatar:user.name.split(' ').map((n:string)=>n[0]).join('').toUpperCase().slice(0,2), status:'active' },
           isLoggedIn: true, viewAsRole: null,
         })
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('ratan_access_token', accessToken)
-          localStorage.setItem('ratan_refresh_token', refreshToken)
-        }
       }
 
       toast.success(`Welcome back, ${user.name}!`)
