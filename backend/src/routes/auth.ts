@@ -1,54 +1,33 @@
-import { Router, RequestHandler } from 'express';
+import express from 'express';
+import { RequestHandler } from 'express';
+import * as authController from '../controllers/authController';
 import passport from 'passport';
-import {
-  register, login, refreshToken, logout, getMe,
-  sendOTPHandler, verifyOTPHandler, resetPassword, googleCallback,
-  sendEmailOTP, verifyEmailOTP, checkAccountExists,
-  sendPasswordResetOTP, resetPasswordWithOTP, debugCheckUser,
-} from '../controllers/authController';
-import { adminLogin } from '../controllers/adminAuthController';
-import { authenticate } from '../middleware/auth';
 
-const router = Router();
-const auth   = authenticate as unknown as RequestHandler;
+const router = express.Router();
 
-// Customer auth
-router.post('/register',       register       as RequestHandler);
-router.post('/login',          login          as RequestHandler);
-router.post('/refresh',        refreshToken   as RequestHandler);
-router.post('/logout',   auth, logout         as RequestHandler);
-router.get('/me',        auth, getMe          as RequestHandler);
+router.post('/register', authController.register);
+router.post('/login', authController.login);
+router.post('/refresh-token', authController.refreshToken);
+router.post('/logout', authController.logout);
+router.get('/me', authController.getMe);
 
-// OTP
-router.post('/otp/send',       sendOTPHandler   as RequestHandler);
-router.post('/otp/verify',     verifyOTPHandler as RequestHandler);
-router.post('/reset-password', resetPassword    as RequestHandler);
+router.post('/send-otp', authController.sendEmailOTP);
+router.post('/verify-otp', authController.verifyEmailOTP);
+router.post('/check-account', authController.checkAccountExists);
 
-// Admin login
-router.post('/admin/login',    adminLogin as RequestHandler);
+router.post('/send-reset-otp', authController.sendPasswordResetOTP);
+router.post('/reset-password-otp', authController.resetPasswordWithOTP);
 
-// Google OAuth — check env at REQUEST TIME (not import time) so .env is already loaded
-const googleGuard: RequestHandler = (req, res, next) => {
-  const id     = process.env.GOOGLE_CLIENT_ID;
-  const secret = process.env.GOOGLE_CLIENT_SECRET;
-  if (!id || id === 'your_google_client_id' || !secret) {
-    return res.status(503).json({ success: false, message: 'Google OAuth is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your .env file.' });
-  }
-  next();
-};
+router.get('/debug-user', authController.debugCheckUser);
 
-router.get('/google',
-  googleGuard,
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
-
-router.get('/google/callback',
-  googleGuard,
-  passport.authenticate('google', {
+// Google OAuth
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/google/callback', 
+  passport.authenticate('google', { 
     session: false,
     failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=google_failed`,
   }),
-  googleCallback as RequestHandler
+  authController.googleCallback as RequestHandler
 );
 
 export default router;
