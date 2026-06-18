@@ -9,7 +9,7 @@ export default function AdminRootPage() {
 
   useEffect(() => {
     if (!isLoggedIn || !currentUser) {
-      router.replace('/admin/login')
+      router.replace('/login')
       return
     }
     const role = getEffectiveRole()

@@ -15,19 +15,47 @@ export type AuthRequest = Request;
 
 export const authenticate: RequestHandler = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) throw new AppError('Authentication required', 401);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
-    const dbUser = await User.findById(decoded.userId).select('_id email role name isActive');
-    if (!dbUser || !dbUser.isActive) throw new AppError('User not found or inactive', 401);
-    req.user = { id: dbUser._id.toString(), email: dbUser.email, role: dbUser.role, name: dbUser.name };
+    const token = req.headers.authorization?.replace("Bearer ", "");
+
+    if (!token) {
+      throw new AppError("Authentication required", 401);
+    }
+
+    const jwtSecret = process.env.JWT_SECRET || "8kX92@mnP#qL7zV$Rt!2BxPq2026";
+
+    console.log("VERIFY SECRET:", jwtSecret);
+    console.log("TOKEN RECEIVED:", token);
+
+    const decoded = jwt.verify(token, jwtSecret) as { userId: string };
+
+    console.log("DECODED:", decoded);
+
+    const dbUser = await User.findById(decoded.userId).select(
+      "_id email role name isActive",
+    );
+
+    if (!dbUser || !dbUser.isActive) {
+      throw new AppError("User not found or inactive", 401);
+    }
+
+    req.user = {
+      id: dbUser._id.toString(),
+      email: dbUser.email,
+      role: dbUser.role,
+      name: dbUser.name,
+    };
+
     next();
   } catch (err) {
-    if (err instanceof jwt.JsonWebTokenError) return next(new AppError('Invalid token', 401));
+    console.error("JWT VERIFY ERROR:", err);
+
+    if (err instanceof jwt.JsonWebTokenError) {
+      return next(new AppError("Invalid token", 401));
+    }
+
     next(err);
   }
 };
-
 export const authorize = (...roles: UserRole[]): RequestHandler => {
   return (req, res, next) => {
     if (!req.user) return next(new AppError('Authentication required', 401));
