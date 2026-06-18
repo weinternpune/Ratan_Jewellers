@@ -1,6 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+
+import { writeTokens, clearTokens } from '@/lib/api'
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface User {
   id: string; email: string; name: string; role: string; phone?: string; avatar?: string
@@ -32,20 +35,18 @@ export const useAuthStore = create<AuthState>()(
       user: null, accessToken: null, isAuthenticated: false,
       hasHydrated: false,
       setHasHydrated: (v) => set({ hasHydrated: v }),
-      setAuth: (user, accessToken, refreshToken) => {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('accessToken', accessToken)
-          localStorage.setItem('refreshToken', refreshToken)
-        }
-        set({ user, accessToken, isAuthenticated: true })
-      },
+     setAuth: (user, accessToken, refreshToken) => {
+  writeTokens(accessToken, refreshToken)
+  set({ user, accessToken, isAuthenticated: true })
+},
       clearAuth: () => {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
-        }
-        set({ user: null, accessToken: null, isAuthenticated: false })
-      },
+  clearTokens()
+  set({
+    user: null,
+    accessToken: null,
+    isAuthenticated: false,
+  })
+},
       updateUser: (userData) =>
         set((s) => ({ user: s.user ? { ...s.user, ...userData } : null })),
     }),

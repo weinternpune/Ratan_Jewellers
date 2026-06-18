@@ -25,7 +25,7 @@ const formatUser = (user: any) => ({ id: user._id, email: user.email, name: user
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, phone, password, name } = req.body;
+    const { email, phone, password, name, role } = req.body;
     if (!name || !password) throw new AppError('Name and password are required', 400);
     const orConditions: any[] = [];
     if (email) orConditions.push({ email });
@@ -34,8 +34,23 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     const exists = await User.findOne({ $or: orConditions });
     if (exists) throw new AppError('Account already exists with this email or phone', 409);
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await User.create({ email, phone, passwordHash, name, isVerified: false });
-    await Customer.create({ userId: user._id, referralCode: uuidv4().substring(0, 8).toUpperCase() });
+const allowedRoles = [
+  "CUSTOMER",
+  "SALES_STAFF",
+  "INVENTORY_MANAGER",
+  "STORE_MANAGER",
+  "ADMIN",
+  "SUPER_ADMIN",
+];
+
+const user = await User.create({
+  email,
+  phone,
+  passwordHash,
+  name,
+  role: allowedRoles.includes(role) ? role : "CUSTOMER",
+  isVerified: false,
+});    await Customer.create({ userId: user._id, referralCode: uuidv4().substring(0, 8).toUpperCase() });
     const { accessToken, refreshToken } = generateTokens(user._id.toString());
     await Session.create({ userId: user._id, token: refreshToken, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
     res.status(201).json({ success: true, message: 'Registration successful', data: { user: formatUser(user), accessToken, refreshToken } });
