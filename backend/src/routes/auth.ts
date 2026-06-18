@@ -1,7 +1,25 @@
-import express from 'express';
-import { RequestHandler } from 'express';
-import * as authController from '../controllers/authController';
+import { Router, RequestHandler } from 'express';
 import passport from 'passport';
+
+import {
+  register,
+  login,
+  refreshToken,
+  logout,
+  getMe,
+  sendOTPHandler,
+  verifyOTPHandler,
+  resetPassword,
+  sendEmailOTP,
+  verifyEmailOTP,
+  checkAccountExists,
+  sendPasswordResetOTP,
+  resetPasswordWithOTP,
+  debugCheckUser,
+  googleCallback
+} from '../controllers/authController';
+
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 const auth = authenticate as unknown as RequestHandler;
@@ -28,7 +46,7 @@ router.post('/forgot-password/send-otp', sendPasswordResetOTP as RequestHandler)
 router.post('/forgot-password/reset', resetPasswordWithOTP as RequestHandler);
 
 // ── Admin Login ─────────────────────────────────────────────────────────────
-router.post('/admin/login', adminLogin as RequestHandler);
+// router.post('/admin/login', adminLogin as RequestHandler);
 
 // TEMPORARY — remove after debugging
 router.post('/debug-check', debugCheckUser as RequestHandler);
@@ -61,7 +79,7 @@ router.get(
     session: false,
     failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=google_failed`,
   }),
-  authController.googleCallback as RequestHandler
+  googleCallback as RequestHandler
 );
 
 export default router;
