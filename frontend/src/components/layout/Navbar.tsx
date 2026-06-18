@@ -217,7 +217,7 @@ const handleProfileClick = (e: React.MouseEvent) => {
               <Link href="/custom-jewellery" className="px-0.5 lg:px-1 xl:px-2 2xl:px-4 py-2 text-[7.5px] lg:text-[9px] xl:text-[11px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-tight xl:tracking-normal 2xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap">
                 CUSTOM
               </Link>
-              <Link href="/about" className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors whitespace-nowrap ${pathname === '/about' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'}`}>
+              <Link href="/about" className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-3 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors whitespace-nowrap ${pathname === '/about' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'}`}>
                 ABOUT
               </Link>
               <Link href="/contact" className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors ${pathname === '/contact' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'}`}>

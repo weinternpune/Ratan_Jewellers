@@ -78,7 +78,7 @@ export default function ContactPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#FAF6EE] text-[#2C2C2C]">
+    <main className="min-h-screen bg-[#FAF6EE] text-[#2C2C2C] pt-24">
       <Navbar />
       <CartDrawer />
 
