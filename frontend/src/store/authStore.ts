@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { api, writeTokens, clearTokens, readRefreshToken } from '@/lib/api'
 
 export type AdminRole = 'customer' | 'sales_staff' | 'inventory_manager' | 'store_manager' | 'admin' | 'super_admin'
 
@@ -10,7 +11,6 @@ export interface StaffAccount {
 
 interface AuthStore {
   currentUser: StaffAccount | null
-  accessToken: string | null
   viewAsRole: AdminRole | null
   isLoggedIn: boolean
   managedStaff: StaffAccount[]
@@ -28,10 +28,10 @@ const API = () => 'http://localhost:5000/api'
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
-      currentUser: null, accessToken: null, viewAsRole: null,
+      currentUser: null, viewAsRole: null,
       isLoggedIn: false, managedStaff: [],
 
-      // ── Login — calls Express backend ─────────────────────────────────
+      // ── Login — calls Express backend via the shared apiClient ────────
       login: async (identifier, password) => {
         try {
           console.log('🔐 Starting login process...', { identifier, apiUrl: API() })
@@ -92,37 +92,40 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       // ── Logout ────────────────────────────────────────────────────────
-      logout: async () => {
-        try {
-          const rt = localStorage.getItem('adminRefreshToken')
-          if (rt) await fetch(`${API()}/auth/logout`, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${get().accessToken}` }, body: JSON.stringify({ refreshToken:rt }) })
-        } catch {}
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
+     logout: async () => {
+  try {
+    const rt = readRefreshToken()
 
-        localStorage.removeItem('adminAccessToken')
-        localStorage.removeItem('adminRefreshToken')
-        set({ currentUser:null, accessToken:null, isLoggedIn:false, viewAsRole:null })
-      },
+    if (rt) {
+      await api.post('/auth/logout', {
+        refreshToken: rt,
+      })
+    }
+  } catch {}
+
+  clearTokens()
+
+  set({
+    currentUser: null,
+    isLoggedIn: false,
+    viewAsRole: null,
+  })
+},
 
       setViewAsRole: (role) => { if (get().currentUser?.role === 'super_admin') set({ viewAsRole: role }) },
       getEffectiveRole: () => { const { currentUser, viewAsRole } = get(); if (!currentUser) return 'customer'; if (currentUser.role === 'super_admin' && viewAsRole) return viewAsRole; return currentUser.role },
 
-      // ── Create Staff — calls Express backend ──────────────────────────
+      // ── Create Staff — calls Express backend via the shared apiClient ──
       createStaff: async (data) => {
         if (get().currentUser?.role !== 'super_admin') return { success: false, error: 'Only Super Admin can create staff accounts' }
         try {
-          const res    = await fetch(`${API()}/auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type':'application/json', Authorization:`Bearer ${get().accessToken}` },
-            body: JSON.stringify({ ...data, role: data.role.toUpperCase() }),
-          })
-          const result = await res.json()
-          if (!result.success) return { success: false, error: result.message }
+          const result = await api.post<{ user: any }>('/auth/register', { ...data, role: data.role.toUpperCase() })
           const staff: StaffAccount = { id:result.data.user.id, name:result.data.user.name, email:result.data.user.email, role:data.role, status:'active' }
           set(s => ({ managedStaff: [staff, ...s.managedStaff] }))
           return { success: true, staff }
-        } catch { return { success: false, error: 'Server error. Try again.' } }
+        } catch (err: any) {
+          return { success: false, error: err?.response?.data?.message || 'Server error. Try again.' }
+        }
       },
 
       updateStaffStatus: (id, status) => set(s => ({ managedStaff: s.managedStaff.map(st => st.id === id ? { ...st, status } : st) })),

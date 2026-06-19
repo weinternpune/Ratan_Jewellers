@@ -279,19 +279,6 @@ export default function AdminDashboardPage() {
 
   // ── Export + Reset handler ───────────────────────────────────────────────
   
-  // const handleExportAndReset = async () => {
-  //   setResetting(true)
-  //   // 1. Generate and open PDF
-  //   exportDashboardPDF({ totalRevenue, pendingOrders, lowStock, unpaidInvoices, orders, products, customers, inventory, invoices, auditLogs })
-  //   // 2. Wait a moment so print dialog opens before we wipe state
-  //   await new Promise(r => setTimeout(r, 900))
-  //   // 3. Clear Zustand store (also clears persisted localStorage via persist middleware)
-  //   resetAll()
-  //   // 4. Clear custom jewellery store from localStorage
-  //   localStorage.removeItem('ratan-custom-jewellery')
-  //   setResetting(false)
-  //   setShowResetModal(false)
-  // }
 
   const handleExportAndReset = async () => {
   setResetting(true)
@@ -327,7 +314,7 @@ export default function AdminDashboardPage() {
   const dashData = {
     Sales: () => (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <StatCard label="Total Revenue" value={`₹${(totalRevenue/100000).toFixed(1)}L`} trendVal="+12%" trend="up" icon={IndianRupee} color="bg-amber-50" accent="text-amber-600" sub="Delivered orders"/>
           <StatCard label="Total Orders" value={orders.length.toString()} trendVal="+8%" trend="up" icon={ShoppingCart} color="bg-blue-50" accent="text-blue-600"/>
           <StatCard label="Pending Orders" value={pendingOrders.toString()} trendVal={pendingOrders>5?"High":"Normal"} trend={pendingOrders>5?"down":"neutral"} icon={Clock} color="bg-orange-50" accent="text-orange-600"/>
@@ -366,7 +353,7 @@ export default function AdminDashboardPage() {
 
     Orders: () => (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <StatCard label="Total Orders" value={orders.length.toString()} icon={ShoppingCart} color="bg-orange-50" accent="text-orange-600"/>
           <StatCard label="Delivered" value={orders.filter(o=>o.status==='delivered').length.toString()} icon={CheckCircle2} color="bg-green-50" accent="text-green-600"/>
           <StatCard label="In Progress" value={orders.filter(o=>['placed','confirmed','processing','shipped'].includes(o.status)).length.toString()} icon={Clock} color="bg-amber-50" accent="text-amber-600"/>
@@ -396,7 +383,7 @@ export default function AdminDashboardPage() {
 
     Inventory: () => (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+<div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <StatCard label="Total SKUs" value={products.length.toString()} icon={Package} color="bg-green-50" accent="text-green-600"/>
           <StatCard label="Stock Value" value={`₹${(inventory.reduce((a,i)=>a+i.value,0)/10000000).toFixed(2)}Cr`} icon={IndianRupee} color="bg-emerald-50" accent="text-emerald-600"/>
           <StatCard label="Low Stock Alerts" value={lowStock.toString()} trendVal={lowStock>0?"Action Needed":"OK"} trend={lowStock>0?"down":"neutral"} icon={AlertCircle} color="bg-red-50" accent="text-red-500"/>
@@ -430,7 +417,7 @@ export default function AdminDashboardPage() {
 
     Customer: () => (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <StatCard label="Total Customers" value={customers.length.toString()} icon={Users} color="bg-purple-50" accent="text-purple-600"/>
           <StatCard label="Platinum" value={customers.filter(c=>c.tier==='platinum').length.toString()} icon={Star} color="bg-yellow-50" accent="text-yellow-600"/>
           <StatCard label="Gold" value={customers.filter(c=>c.tier==='gold').length.toString()} icon={Star} color="bg-amber-50" accent="text-amber-600"/>
@@ -460,7 +447,7 @@ export default function AdminDashboardPage() {
 
     GST: () => (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+<div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <StatCard label="Total GST Collected" value={`₹${(invoices.reduce((a,i)=>a+i.gst,0)/1000).toFixed(1)}K`} icon={FileText} color="bg-blue-50" accent="text-blue-600"/>
           <StatCard label="Paid Invoices GST" value={`₹${(invoices.filter(i=>i.status==='paid').reduce((a,i)=>a+i.gst,0)/1000).toFixed(1)}K`} icon={CheckCircle2} color="bg-green-50" accent="text-green-600"/>
           <StatCard label="Pending GST" value={`₹${(invoices.filter(i=>i.status==='pending').reduce((a,i)=>a+i.gst,0)/1000).toFixed(1)}K`} icon={Clock} color="bg-amber-50" accent="text-amber-600"/>
@@ -495,7 +482,7 @@ export default function AdminDashboardPage() {
 
     Revenue: () => (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+<div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <StatCard label="Total Billed" value={`₹${(invoices.reduce((a,i)=>a+i.total,0)/100000).toFixed(1)}L`} icon={IndianRupee} color="bg-blue-50" accent="text-blue-600"/>
           <StatCard label="Collected" value={`₹${(invoices.filter(i=>i.status==='paid').reduce((a,i)=>a+i.total,0)/100000).toFixed(1)}L`} icon={TrendingUp} color="bg-green-50" accent="text-green-600"/>
           <StatCard label="Outstanding" value={`₹${(unpaidInvoices/100000).toFixed(1)}L`} icon={AlertCircle} color="bg-red-50" accent="text-red-500"/>
@@ -528,7 +515,9 @@ export default function AdminDashboardPage() {
   const ActiveDash = dashData[activeTab]
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto space-y-4 sm:space-y-6">
+      <div className="rounded-lg sm:rounded-2xl p-3 sm:p-5 border"></div>
+
 
       {/* ── Reset Confirmation Modal ── */}
       {showResetModal && (
@@ -572,6 +561,7 @@ export default function AdminDashboardPage() {
               >
                 {resetting
                   ? <><RefreshCw size={13} className="animate-spin"/>Processing...</>
+
                   : <><Download size={13}/>Export PDF &amp; Reset</>
                 }
               </button>

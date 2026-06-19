@@ -7,8 +7,7 @@ export function useAuthGuard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    
+  const token = localStorage.getItem('accessToken');    
     if (!token) {
       router.push('/login');
     } else {

@@ -1,9 +1,11 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Plus, Edit2, Trash2, Eye, Shield, X, UserCheck, UserX } from 'lucide-react'
 import { useAuthStore, AdminRole, StaffAccount } from '@/store/authStore'
+import { useAuthStore as useCustomerAuthStore } from '@/store'
 import { useAdminStore } from '@/store/adminStore'
 import toast from 'react-hot-toast'
+import { api } from '@/lib/api'
 
 const roleColors: Record<AdminRole, string> = {
   customer: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -32,6 +34,7 @@ const STAFF_ROLES: AdminRole[] = ['admin','store_manager','inventory_manager','s
 
 export default function UsersPage() {
   const { currentUser, managedStaff, createStaff, updateStaffStatus, deleteStaff, getEffectiveRole } = useAuthStore()
+  const { hasHydrated } = useCustomerAuthStore()
   const { customers } = useAdminStore()
   const role = getEffectiveRole()
   const isSuperAdmin = currentUser?.role === 'super_admin'
@@ -45,14 +48,36 @@ export default function UsersPage() {
   const [creating, setCreating] = useState(false)
   const [form, setForm] = useState({ name:'', email:'', phone:'', password:'', confirmPassword:'', role:'sales_staff' as AdminRole })
   const [formError, setFormError] = useState('')
+  const [dbUsers, setDbUsers] = useState<StaffAccount[]>([])
 
   const modules = ['Website','E-Commerce','Billing','Inventory','CRM','Analytics','Admin']
 
+const fetchUsers = async () => {
+  try {
+    const users = await api.get<any[]>('/admin/users')
+
+    setDbUsers(
+      users.map((u) => ({
+        id: u._id,
+        name: u.name,
+        email: u.email,
+        role: u.role.toLowerCase(),
+        status: u.isActive ? 'active' : 'inactive',
+      }))
+    )
+  } catch (error) {
+    console.error('Failed to load users', error)
+  }
+}
+useEffect(() => {
+  if (!hasHydrated) return
+
+  fetchUsers()
+}, [hasHydrated])
+
   // Combine env-configured staff (shown as locked) + super admin created staff
-  const envStaff: StaffAccount[] = [
-    { id:'SA001', name: currentUser?.role==='super_admin'?currentUser.name:'Super Admin', email:'(configured in .env)', phone:'', role:'super_admin', avatar:'SA', status:'active' },
-  ]
-  const allStaff = [...envStaff, ...managedStaff]
+ 
+  const allStaff = dbUsers
   const filteredStaff = allStaff.filter(u =>
     (filterRole==='all'||u.role===filterRole) &&
     (u.name.toLowerCase().includes(search.toLowerCase())||u.email.toLowerCase().includes(search.toLowerCase()))
@@ -70,10 +95,21 @@ export default function UsersPage() {
     const result = await createStaff({ name:form.name, email:form.email, phone:form.phone, password:form.password, role:form.role })
     setCreating(false)
     if (result.success) {
-      toast.success(`${roleLabels[form.role]} "${form.name}" created`)
-      setShowModal(false)
-      setForm({ name:'', email:'', phone:'', password:'', confirmPassword:'', role:'sales_staff' })
-    } else {
+  await fetchUsers()
+
+  toast.success(`${roleLabels[form.role]} "${form.name}" created`)
+
+  setShowModal(false)
+
+  setForm({
+    name:'',
+    email:'',
+    phone:'',
+    password:'',
+    confirmPassword:'',
+    role:'sales_staff'
+  })
+} else {
       setFormError(result.error || 'Failed to create account')
     }
   }

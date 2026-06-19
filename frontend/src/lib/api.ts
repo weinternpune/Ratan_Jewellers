@@ -5,39 +5,117 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
 export const apiClient = axios.create({
   baseURL: API_URL,
   withCredentials: true,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+  },
 })
 
-function readToken(key: string): string | null {
-  if (typeof window === 'undefined') return null
-  const v = localStorage.getItem(key)
-  if (!v || v === 'null' || v === 'undefined' || v.trim() === '') return null
-  return v
+/* -------------------------------------------------------------------------- */
+/* Token Helpers                                                              */
+/* -------------------------------------------------------------------------- */
+
+const TOKEN_KEYS = {
+  access: 'accessToken',
+  refresh: 'refreshToken',
+
+  // Legacy keys kept for backward compatibility
+  adminAccess: 'adminAccessToken',
+  adminRefresh: 'adminRefreshToken',
+  ratanAccess: 'ratan_access_token',
+  ratanRefresh: 'ratan_refresh_token',
 }
 
-function clearTokens() {
-  localStorage.removeItem('accessToken')
-  localStorage.removeItem('refreshToken')
+export function readAccessToken(): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem(TOKEN_KEYS.access)
 }
+
+export function readRefreshToken(): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem(TOKEN_KEYS.refresh)
+}
+
+export function writeTokens(
+  accessToken: string,
+  refreshToken: string
+): void {
+  if (typeof window === 'undefined') return
+
+  // Canonical keys
+  localStorage.setItem(TOKEN_KEYS.access, accessToken)
+  localStorage.setItem(TOKEN_KEYS.refresh, refreshToken)
+
+  // Legacy compatibility keys
+  localStorage.setItem(TOKEN_KEYS.adminAccess, accessToken)
+  localStorage.setItem(TOKEN_KEYS.adminRefresh, refreshToken)
+  localStorage.setItem(TOKEN_KEYS.ratanAccess, accessToken)
+  localStorage.setItem(TOKEN_KEYS.ratanRefresh, refreshToken)
+}
+
+export function clearTokens(): void {
+  if (typeof window === 'undefined') return
+
+  Object.values(TOKEN_KEYS).forEach((key) =>
+    localStorage.removeItem(key)
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/* Request Interceptor                                                        */
+/* -------------------------------------------------------------------------- */
+
+// apiClient.interceptors.request.use((config) => {
+//   const token = readAccessToken()
+
+//   if (token) {
+//     config.headers.Authorization = `Bearer ${token}`
+//   }
+
+//   return config
+// })
 
 apiClient.interceptors.request.use((config) => {
-  const token = readToken('accessToken')
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
-})
+  const token = readAccessToken();
 
-// ── Single-flight refresh lock — prevents race condition where two parallel
-//    401s both try to use the same (soon-to-be-rotated) refresh token ────────
+  console.log("TOKEN FROM LOCALSTORAGE:", token);
+  console.log("REQUEST:", config.url);
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+    console.log("AUTH HEADER ADDED");
+  } else {
+    console.log("NO TOKEN FOUND");
+  }
+
+  return config;
+});
+
+/* -------------------------------------------------------------------------- */
+/* Refresh Logic                                                              */
+/* -------------------------------------------------------------------------- */
+
 let refreshPromise: Promise<string | null> | null = null
 
 async function performRefresh(): Promise<string | null> {
-  const rt = readToken('refreshToken')
-  if (!rt) { clearTokens(); return null }
+  const refreshToken = readRefreshToken()
+
+  if (!refreshToken) {
+    clearTokens()
+    return null
+  }
+
   try {
-    const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken: rt })
-    const { accessToken, refreshToken: nr } = res.data.data
-    localStorage.setItem('accessToken', accessToken)
-    localStorage.setItem('refreshToken', nr)
+    const res = await axios.post(`${API_URL}/auth/refresh`, {
+      refreshToken,
+    })
+
+    const {
+      accessToken,
+      refreshToken: newRefreshToken,
+    } = res.data.data
+
+    writeTokens(accessToken, newRefreshToken)
+
     return accessToken
   } catch {
     clearTokens()
@@ -45,34 +123,66 @@ async function performRefresh(): Promise<string | null> {
   }
 }
 
-apiClient.interceptors.response.use(
-  (r) => r,
-  async (error) => {
-    const original = error.config
-    if (error.response?.status === 401 && !original._retry) {
-      original._retry = true
+/* -------------------------------------------------------------------------- */
+/* Response Interceptor                                                       */
+/* -------------------------------------------------------------------------- */
 
-      // Reuse an in-flight refresh instead of starting a second one
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config
+
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry
+    ) {
+      originalRequest._retry = true
+
       if (!refreshPromise) {
-        refreshPromise = performRefresh().finally(() => { refreshPromise = null })
+        refreshPromise = performRefresh().finally(() => {
+          refreshPromise = null
+        })
       }
+
       const newToken = await refreshPromise
 
       if (newToken) {
-        original.headers.Authorization = `Bearer ${newToken}`
-        return apiClient(original)
+        originalRequest.headers.Authorization = `Bearer ${newToken}`
+        return apiClient(originalRequest)
       }
     }
+
     return Promise.reject(error)
   }
 )
 
+/* -------------------------------------------------------------------------- */
+/* API Helpers                                                                */
+/* -------------------------------------------------------------------------- */
+
 export const api = {
-  get:    <T>(url: string, params?: object) => apiClient.get<{ success: boolean; data: T }>(url, { params }).then(r => r.data.data),
-  post:   <T>(url: string, data?: object)   => apiClient.post<{ success: boolean; data: T; message: string }>(url, data).then(r => r.data),
-  put:    <T>(url: string, data?: object)   => apiClient.put<{ success: boolean; data: T }>(url, data).then(r => r.data.data),
-  patch:  <T>(url: string, data?: object)   => apiClient.patch<{ success: boolean; data: T }>(url, data).then(r => r.data.data),
-  delete: (url: string)                     => apiClient.delete(url).then(r => r.data),
+  get: <T>(url: string, params?: object) =>
+    apiClient
+      .get<{ success: boolean; data: T }>(url, { params })
+      .then((r) => r.data.data),
+
+  post: <T>(url: string, data?: object) =>
+    apiClient
+      .post<{ success: boolean; data: T; message: string }>(url, data)
+      .then((r) => r.data),
+
+  put: <T>(url: string, data?: object) =>
+    apiClient
+      .put<{ success: boolean; data: T }>(url, data)
+      .then((r) => r.data.data),
+
+  patch: <T>(url: string, data?: object) =>
+    apiClient
+      .patch<{ success: boolean; data: T }>(url, data)
+      .then((r) => r.data.data),
+
+  delete: (url: string) =>
+    apiClient.delete(url).then((r) => r.data),
 }
 
 export default apiClient
