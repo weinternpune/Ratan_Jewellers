@@ -64,15 +64,31 @@ export function clearTokens(): void {
 /* Request Interceptor                                                        */
 /* -------------------------------------------------------------------------- */
 
+// apiClient.interceptors.request.use((config) => {
+//   const token = readAccessToken()
+
+//   if (token) {
+//     config.headers.Authorization = `Bearer ${token}`
+//   }
+
+//   return config
+// })
+
 apiClient.interceptors.request.use((config) => {
-  const token = readAccessToken()
+  const token = readAccessToken();
+
+  console.log("TOKEN FROM LOCALSTORAGE:", token);
+  console.log("REQUEST:", config.url);
 
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+    config.headers.Authorization = `Bearer ${token}`;
+    console.log("AUTH HEADER ADDED");
+  } else {
+    console.log("NO TOKEN FOUND");
   }
 
-  return config
-})
+  return config;
+});
 
 /* -------------------------------------------------------------------------- */
 /* Refresh Logic                                                              */
