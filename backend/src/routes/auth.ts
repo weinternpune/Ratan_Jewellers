@@ -8,7 +8,6 @@ import {
 } from '../controllers/authController';
 import { adminLogin } from '../controllers/adminAuthController';
 import { authenticate } from '../middleware/auth';
-
 const router = Router();
 const auth = authenticate as unknown as RequestHandler;
 
