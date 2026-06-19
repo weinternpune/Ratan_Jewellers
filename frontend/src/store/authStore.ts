@@ -20,7 +20,7 @@ interface AuthStore {
   getEffectiveRole: () => AdminRole
   createStaff: (data: { name: string; email: string; phone?: string; password: string; role: AdminRole }) => Promise<{ success: boolean; error?: string; staff?: StaffAccount }>
   updateStaffStatus: (id: string, status: 'active' | 'inactive') => void
-  deleteStaff: (id: string) => void
+  deleteStaff: (id: string) => Promise<{ success: boolean; error?: string }>
 }
 
 const API = () => 'http://localhost:5000/api'
@@ -129,7 +129,24 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       updateStaffStatus: (id, status) => set(s => ({ managedStaff: s.managedStaff.map(st => st.id === id ? { ...st, status } : st) })),
-      deleteStaff: (id) => set(s => ({ managedStaff: s.managedStaff.filter(st => st.id !== id) })),
+      deleteStaff: async (id) => {
+  try {
+    await api.delete(`/admin/users/${id}`)
+
+    set((state) => ({
+      managedStaff: state.managedStaff.filter((staff) => staff.id !== id),
+    }))
+
+    return { success: true }
+  } catch (err: any) {
+    return {
+      success: false,
+      error:
+        err?.response?.data?.message ||
+        'Failed to delete staff account',
+    }
+  }
+},
     }),
     { name: 'ratan-auth-store', partialize: (s) => ({ currentUser:s.currentUser, viewAsRole:s.viewAsRole, isLoggedIn:s.isLoggedIn, managedStaff:s.managedStaff }) }
   )

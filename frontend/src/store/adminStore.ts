@@ -582,34 +582,57 @@ export const useAdminStore = create<AdminStore>()(
       },
 
       // ── Customers ──────────────────────────────────────────────────────
-      fetchCustomers: async () => {
-        try {
-          set(s => ({ loading: { ...s.loading, customers: true } }))
-          const result = await customerApi.getAll()
-          
-          const frontendCustomers: Customer[] = (result.customers || []).map((customer: BackendCustomer) => ({
-            id: customer._id || customer.id || '',
-            name: customer.name || 'Unknown Customer',
-            phone: customer.phone || '',
-            email: customer.email || '',
-            city: customer.city || '',
-            totalSpend: customer.totalPurchases || 0,
-            orders: 0,
-            tier: (customer.segment?.toLowerCase() || 'bronze') as CustomerTier,
-            lastVisit: customer.updatedAt ? new Date(customer.updatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-            birthday: customer.dateOfBirth ? new Date(customer.dateOfBirth).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
-            tags: customer.tags || []
-          }))
-          
-          set(s => ({ 
-            customers: frontendCustomers,
-            loading: { ...s.loading, customers: false }
-          }))
-        } catch (error) {
-          handleApiError(error)
-          set(s => ({ loading: { ...s.loading, customers: false } }))
-        }
+     fetchCustomers: async () => {
+  try {
+    set((s) => ({
+      loading: {
+        ...s.loading,
+        customers: true,
       },
+    }))
+
+    const customers = await customerApi.getAll()
+
+    const frontendCustomers: Customer[] = (customers || []).map(
+      (customer: any) => ({
+        id: customer.id || customer._id || "",
+        name: customer.name || "Unknown Customer",
+        phone: customer.phone || "",
+        email: customer.email || "",
+        city: customer.city || "",
+        totalSpend: customer.totalSpend || 0,
+        orders: customer.orders || 0,
+        tier: (
+          customer.segment?.toLowerCase() || "bronze"
+        ) as CustomerTier,
+        lastVisit: customer.updatedAt
+          ? new Date(customer.updatedAt).toLocaleDateString("en-IN")
+          : "Not Available",
+        birthday: customer.birthday
+          ? new Date(customer.birthday).toLocaleDateString("en-IN")
+          : "Not Available",
+        tags: customer.tags || [],
+      })
+    )
+
+    set((s) => ({
+      customers: frontendCustomers,
+      loading: {
+        ...s.loading,
+        customers: false,
+      },
+    }))
+  } catch (error) {
+    console.error(error)
+
+    set((s) => ({
+      loading: {
+        ...s.loading,
+        customers: false,
+      },
+    }))
+  }
+},
 
       addCustomer: (customerData) => {
         const newCustomer: Customer = { ...customerData, id: `CRM-${String(Date.now()).slice(-3)}` }
