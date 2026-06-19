@@ -399,30 +399,30 @@ section {
 }
 
 /* Ensure navbar stays visible during scroll on all devices */
-nav[class*="fixed"] {
+/* nav[class*="fixed"] {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
   z-index: 100 !important;
-}
+} */
 
 /* Prevent navbar from disappearing on mobile scroll */
-@media (max-width: 1024px) {
-  nav[class*="fixed"] {
+/* @media (max-width: 1024px) {
+  nav {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     right: 0 !important;
     z-index: 100 !important;
   }
-}
+} */
 
 /* Fix for iOS Safari fixed positioning */
-@supports (-webkit-touch-callout: none) {
+/* @supports (-webkit-touch-callout: none) {
   nav[class*="fixed"] {
     position: fixed !important;
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
   }
-}
+} */

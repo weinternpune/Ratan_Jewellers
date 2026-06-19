@@ -11,9 +11,14 @@ import { Session } from '../models/index';
 import { AppError } from '../middleware/errorHandler';
 import { AuthRequest } from '../middleware/auth';
 
+const JWT_SECRET         = process.env.JWT_SECRET         || '8kX92@mnP#qL7zV$Rt!2BxPq2026'
+const JWT_REFRESH_SECRET  = process.env.JWT_REFRESH_SECRET  || '9uY#72Lm@vQx!P4sKd2026Refresh'
+const JWT_EXPIRE          = process.env.JWT_EXPIRE          || '15m'
+const JWT_REFRESH_EXPIRE  = process.env.JWT_REFRESH_EXPIRE  || '7d'
+
 const generateTokens = (userId: string) => ({
-  accessToken:  jwt.sign({ userId }, process.env.JWT_SECRET as string,         { expiresIn: (process.env.JWT_EXPIRE || '15m') as any }),
-  refreshToken: jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET as string, { expiresIn: (process.env.JWT_REFRESH_EXPIRE || '7d') as any }),
+  accessToken:  jwt.sign({ userId }, JWT_SECRET,         { expiresIn: JWT_EXPIRE as any }),
+  refreshToken: jwt.sign({ userId }, JWT_REFRESH_SECRET, { expiresIn: JWT_REFRESH_EXPIRE as any }),
 });
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
@@ -138,10 +143,20 @@ export const googleCallback = async (req: Request, res: Response) => {
 export const refreshToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { refreshToken } = req.body;
-    if (!refreshToken) throw new AppError('Refresh token required', 400);
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET as string) as { userId: string };
+    if (!refreshToken || typeof refreshToken !== 'string') {
+      throw new AppError('Refresh token required', 400);
+    }
+    let decoded: { userId: string };
+    try {
+      decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as { userId: string };
+    } catch {
+      // Malformed/expired/invalid signature — always a clean 401, never a 500
+      throw new AppError('Invalid or expired refresh token. Please sign in again.', 401);
+    }
     const session = await Session.findOne({ token: refreshToken });
-    if (!session || session.expiresAt < new Date()) throw new AppError('Invalid refresh token', 401);
+    if (!session || session.expiresAt < new Date()) {
+      throw new AppError('Session expired. Please sign in again.', 401);
+    }
     const { accessToken, refreshToken: newRefreshToken } = generateTokens(decoded.userId);
     await Session.findOneAndUpdate({ token: refreshToken }, { token: newRefreshToken, expiresAt: new Date(Date.now() + 7*24*60*60*1000) });
     res.json({ success: true, data: { accessToken, refreshToken: newRefreshToken } });
