@@ -125,15 +125,71 @@ export interface GoldRates {
   '14K': string
 }
 
+interface BackendOrder {
+  orderNumber?: string
+  _id?: string
+  id?: string
+  customerName?: string
+  customer?: string
+  customerEmail?: string
+  email?: string
+  customerPhone?: string
+  phone?: string
+  items?: OrderItem[]
+  totalAmount?: number
+  total?: number
+  status?: string
+  createdAt?: string
+  paymentMode?: string
+  payment?: string
+}
+
+interface BackendInvoice {
+  invoiceNumber?: string
+  _id: string
+  customerName?: string
+  customerPhone?: string
+  subtotal?: number
+  cgst?: number
+  sgst?: number
+  totalAmount?: number
+  status?: string
+  createdAt?: string
+  notes?: string
+  items?: Array<{
+    purity?: string
+    netWeight?: number
+    goldRate?: number
+    makingCharges?: number
+  }>
+}
+
+interface BackendCustomer {
+  _id?: string
+  id?: string
+  name?: string
+  phone?: string
+  email?: string
+  city?: string
+  totalPurchases?: number
+  segment?: string
+  updatedAt?: string
+  dateOfBirth?: string
+  tags?: string[]
+}
+
 // ── Initial Data ──────────────────────────────────────────────────────────
 const initialUsers: AdminUser[] = [
   { id: 1, name: 'Rajesh Sharma', email: 'rajesh@ratanjewellers.com', role: 'super_admin', status: 'active', joined: 'Jan 2022', lastLogin: '2 hrs ago', avatar: 'RS', phone: '+91 98765 43210' },
   { id: 2, name: 'Priya Mehta', email: 'priya@ratanjewellers.com', role: 'admin', status: 'active', joined: 'Mar 2023', lastLogin: '1 day ago', avatar: 'PM', phone: '+91 87654 32109' },
 ]
 
-const initialProducts: Product[] = [
-  { id: 'RJ001', name: 'Kundan Bridal Necklace Set', category: 'Necklaces', metal: '22K Gold', weight: '45.2g', price: 285000, stock: 3, status: 'active', rating: 4.8, sales: 12 },
-]
+const initialProducts: Product[] = []
+
+const SEED_PRODUCT_IDS = new Set(['RJ001', 'RJ002', 'RJ003', 'RJ004', 'RJ005', 'RJ006', 'RJ007', 'RJ008'])
+
+const stripSeedProducts = (products: Product[] | undefined) =>
+  (products ?? []).filter(product => !SEED_PRODUCT_IDS.has(product.id))
 
 const initialOrders: Order[] = [
   { id: 'RJ-4821', customer: 'Demo Customer', email: 'demo@example.com', phone: '+91 98765 43210', items: [{ name: 'Gold Chain', qty: 1, price: 50000 }], total: 50000, status: 'delivered', date: '13 Jun 2026', payment: 'UPI' },
@@ -143,9 +199,7 @@ const initialInvoices: Invoice[] = [
   { id: 'INV-2049', customer: 'Demo Customer', phone: '+91 98765 43210', amount: 50000, gst: 1500, total: 51500, status: 'paid', date: '13 Jun 2026', due: '—', category: 'Necklaces', metal: '22K Gold', purity: '916', netWeight: '8.5', goldRate: 6520, makingCharges: 10, price: 5000 },
 ]
 
-const initialInventory: InventoryItem[] = [
-  { id: 'INV-001', name: 'Gold Necklace Sets', category: 'Necklaces', metal: '22K Gold', stock: 42, minStock: 10, maxStock: 80, value: 1840000, location: 'Display A', lastUpdated: '1 hr ago', trend: 'stable' },
-]
+const initialInventory: InventoryItem[] = []
 
 const initialCustomers: Customer[] = [
   { id: 'CRM-001', name: 'Demo Customer', phone: '+91 98765 43210', email: 'demo@example.com', city: 'Bhubaneswar', totalSpend: 50000, orders: 1, tier: 'gold', lastVisit: '13 Jun 2026', birthday: '15 May 1990', tags: ['VIP'] },
@@ -185,6 +239,7 @@ interface AdminStore {
   addProduct: (p: Omit<Product, 'id' | 'rating' | 'sales'>) => void
   updateProduct: (id: string, data: Partial<Product>) => void
   deleteProduct: (id: string) => void
+  clearSeedProducts: () => void
 
   // Orders
   addOrder: (o: Omit<Order, 'id' | 'date'>) => void
@@ -223,7 +278,10 @@ interface AdminStore {
 
   // Audit
   addLog: (log: Omit<AuditLog, 'id' | 'time'>) => void
-  
+
+  // Reset
+  resetAll: () => void
+
   // Clear data
   clearAllBillingData: () => Promise<void>
 }
@@ -285,6 +343,12 @@ export const useAdminStore = create<AdminStore>()(
         set(s => ({ products: s.products.filter(p => p.id !== id) }))
         toast.success('Product deleted')
       },
+      clearSeedProducts: () => {
+        const cleaned = stripSeedProducts(get().products)
+        if (cleaned.length !== get().products.length) {
+          set({ products: cleaned })
+        }
+      },
 
       // ── Orders ─────────────────────────────────────────────────────────
       fetchOrders: async () => {
@@ -292,8 +356,8 @@ export const useAdminStore = create<AdminStore>()(
           set(s => ({ loading: { ...s.loading, orders: true } }))
           const result = await orderApi.getAll()
           
-          const frontendOrders: Order[] = (result.orders || []).map((order: any) => ({
-            id: order.orderNumber || order._id || order.id,
+          const frontendOrders: Order[] = (result.orders || []).map((order: BackendOrder) => ({
+            id: order.orderNumber || order._id || order.id || '',
             customer: order.customerName || order.customer || 'Unknown Customer',
             email: order.customerEmail || order.email || '',
             phone: order.customerPhone || order.phone || '',
@@ -355,7 +419,7 @@ export const useAdminStore = create<AdminStore>()(
           set(s => ({ loading: { ...s.loading, invoices: true } }))
           const result = await invoiceApi.getAll()
           
-          const frontendInvoices: Invoice[] = (result.invoices || []).map((invoice: any) => ({
+          const frontendInvoices: Invoice[] = (result.invoices || []).map((invoice: BackendInvoice) => ({
             id: invoice.invoiceNumber || invoice._id,
             customer: invoice.customerName || 'Unknown Customer',
             phone: invoice.customerPhone || '',
@@ -523,8 +587,8 @@ export const useAdminStore = create<AdminStore>()(
           set(s => ({ loading: { ...s.loading, customers: true } }))
           const result = await customerApi.getAll()
           
-          const frontendCustomers: Customer[] = (result.customers || []).map((customer: any) => ({
-            id: customer._id || customer.id,
+          const frontendCustomers: Customer[] = (result.customers || []).map((customer: BackendCustomer) => ({
+            id: customer._id || customer.id || '',
             name: customer.name || 'Unknown Customer',
             phone: customer.phone || '',
             email: customer.email || '',
@@ -584,10 +648,10 @@ export const useAdminStore = create<AdminStore>()(
         toast.success('Gold rates updated')
       },
 
-      // ── Settings ───────────────────────────────────────────────────────
+      // ── Settings ──────────────────────────────────────────────────────
       setCurrentRole: (role) => set({ currentRole: role }),
 
-      // ── Audit Log ──────────────────────────────────────────────────────
+      // ── Audit Log ─────────────────────────────────────────────────────
       addLog: (logData) => {
         const newLog: AuditLog = {
           ...logData,
@@ -595,6 +659,22 @@ export const useAdminStore = create<AdminStore>()(
           time: new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
         }
         set(s => ({ auditLogs: [newLog, ...s.auditLogs] }))
+      },
+
+      // ── Reset Store ───────────────────────────────────────────────────
+      resetAll: () => {
+        set({
+          products: [],
+          orders: [],
+          invoices: [],
+          inventory: [],
+          customers: [],
+          auditLogs: [],
+          goldRates: { '24K': '6520', '22K': '5980', '18K': '4890', '14K': '3810' },
+          currentRole: 'super_admin',
+          loading: { invoices: false, orders: false, customers: false },
+        })
+        toast.success('Dashboard reset successfully')
       },
 
       // ── Clear Data ─────────────────────────────────────────────────────
@@ -623,6 +703,22 @@ export const useAdminStore = create<AdminStore>()(
     }),
     {
       name: 'ratan-admin-store',
+      version: 2,
+      migrate: (persistedState, version) => {
+        const state = persistedState as { products?: Product[] } | undefined
+        if (!state) return persistedState
+        if (version < 2) {
+          state.products = []
+        }
+        return state
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state?.products?.length) return
+        const cleaned = stripSeedProducts(state.products)
+        if (cleaned.length !== state.products.length) {
+          useAdminStore.setState({ products: cleaned })
+        }
+      },
       partialize: (s) => ({
         users: s.users,
         products: s.products,
