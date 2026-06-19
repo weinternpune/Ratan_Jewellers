@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { Search, Plus, Edit2, Trash2, Eye, Shield, X, UserCheck, UserX } from 'lucide-react'
 import { useAuthStore, AdminRole, StaffAccount } from '@/store/authStore'
+import { useAuthStore as useCustomerAuthStore } from '@/store'
 import { useAdminStore } from '@/store/adminStore'
 import toast from 'react-hot-toast'
 import { api } from '@/lib/api'
@@ -33,6 +34,7 @@ const STAFF_ROLES: AdminRole[] = ['admin','store_manager','inventory_manager','s
 
 export default function UsersPage() {
   const { currentUser, managedStaff, createStaff, updateStaffStatus, deleteStaff, getEffectiveRole } = useAuthStore()
+  const { hasHydrated } = useCustomerAuthStore()
   const { customers } = useAdminStore()
   const role = getEffectiveRole()
   const isSuperAdmin = currentUser?.role === 'super_admin'
@@ -68,8 +70,10 @@ const fetchUsers = async () => {
   }
 }
 useEffect(() => {
+  if (!hasHydrated) return
+
   fetchUsers()
-}, [])
+}, [hasHydrated])
 
   // Combine env-configured staff (shown as locked) + super admin created staff
  
