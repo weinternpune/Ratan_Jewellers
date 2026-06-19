@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Search, Plus, Edit2, Trash2, Eye, Shield, X, UserCheck, UserX } from 'lucide-react'
+import { Search, Plus, Edit2, Trash2, Eye, Shield, X, UserCheck, UserX, Mail, Phone, Wallet, Star, Tag, Cake, FileText, CalendarDays } from 'lucide-react'
 import { useAuthStore, AdminRole, StaffAccount } from '@/store/authStore'
 import { useAuthStore as useCustomerAuthStore } from '@/store'
 import { useAdminStore } from '@/store/adminStore'
@@ -32,10 +32,28 @@ const permColor = (v: string) => v==='None'?'bg-gray-100 text-gray-400':(v==='Fu
 const avatarColors = ['bg-amber-400','bg-blue-400','bg-green-400','bg-purple-400','bg-red-400','bg-teal-400']
 const STAFF_ROLES: AdminRole[] = ['admin','store_manager','inventory_manager','sales_staff']
 
+// Helper to safely format/display a value, falling back to "Not Available"
+const displayVal = (val: any): string => {
+  if (val === null || val === undefined || val === '') return 'Not Available'
+  return String(val)
+}
+const displayDate = (val: any): string => {
+  if (!val) return 'Not Available'
+  const d = new Date(val)
+  if (isNaN(d.getTime())) return 'Not Available'
+  return d.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+const displayCurrency = (val: any): string => {
+  if (val === null || val === undefined || val === '') return 'Not Available'
+  const num = Number(val)
+  if (isNaN(num)) return 'Not Available'
+  return `₹${num.toLocaleString('en-IN')}`
+}
+
 export default function UsersPage() {
   const { currentUser, managedStaff, createStaff, updateStaffStatus, deleteStaff, getEffectiveRole } = useAuthStore()
   const { hasHydrated } = useCustomerAuthStore()
-  const { customers } = useAdminStore()
+  const { customers, fetchCustomers, loading } = useAdminStore()
   const role = getEffectiveRole()
   const isSuperAdmin = currentUser?.role === 'super_admin'
 
@@ -49,6 +67,12 @@ export default function UsersPage() {
   const [form, setForm] = useState({ name:'', email:'', phone:'', password:'', confirmPassword:'', role:'sales_staff' as AdminRole })
   const [formError, setFormError] = useState('')
   const [dbUsers, setDbUsers] = useState<StaffAccount[]>([])
+
+  // Staff details modal state (Super Admin only)
+  const [staffDetailsTarget, setStaffDetailsTarget] = useState<StaffAccount|null>(null)
+  const [staffDetailsData, setStaffDetailsData] = useState<any|null>(null)
+  const [staffDetailsLoading, setStaffDetailsLoading] = useState(false)
+  const [staffDetailsError, setStaffDetailsError] = useState('')
 
   const modules = ['Website','E-Commerce','Billing','Inventory','CRM','Analytics','Admin']
 
@@ -73,7 +97,36 @@ useEffect(() => {
   if (!hasHydrated) return
 
   fetchUsers()
-}, [hasHydrated])
+  fetchCustomers()
+}, [hasHydrated, fetchCustomers])
+
+
+  // Close staff details modal on Escape key
+  useEffect(() => {
+    if (!staffDetailsTarget) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setStaffDetailsTarget(null)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [staffDetailsTarget])
+
+  // Fetch full staff details when a staff member is selected
+  const openStaffDetails = async (staff: StaffAccount) => {
+    setStaffDetailsTarget(staff)
+    setStaffDetailsData(null)
+    setStaffDetailsError('')
+    setStaffDetailsLoading(true)
+    try {
+      const data = await api.get<any>(`/admin/users/${staff.id}`)
+      setStaffDetailsData(data)
+    } catch (error) {
+      console.error('Failed to load staff details', error)
+      setStaffDetailsError('Could not load full details. Showing limited info.')
+    } finally {
+      setStaffDetailsLoading(false)
+    }
+  }
 
   // Combine env-configured staff (shown as locked) + super admin created staff
  
@@ -163,14 +216,21 @@ useEffect(() => {
                     <td className="px-5 py-4"><span className={`text-xs font-medium px-2 py-1 rounded-full ${u.status==='active'?'bg-green-50 text-green-600':'bg-gray-100 text-gray-500'}`}>{u.status}</span></td>
                     <td className="px-5 py-4"><span className="text-xs text-gray-400">{u.id==='SA001'?'ENV config':'Super Admin'}</span></td>
                     <td className="px-5 py-4">
-                      {isSuperAdmin && u.id!=='SA001' && (
-                        <div className="flex gap-1">
-                          <button onClick={()=>updateStaffStatus(u.id,u.status==='active'?'inactive':'active')} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-800" title={u.status==='active'?'Deactivate':'Activate'}>
-                            {u.status==='active'?<UserX size={14}/>:<UserCheck size={14}/>}
+                      <div className="flex gap-1">
+                        {isSuperAdmin && (
+                          <button onClick={()=>openStaffDetails(u)} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-[#0D0700] hover:text-[#C9A84C] hover:border-[#0D0700] transition-colors">
+                            <Eye size={13}/>View Details
                           </button>
-                          <button onClick={()=>setConfirmDelete(u.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-red-600"><Trash2 size={14}/></button>
-                        </div>
-                      )}
+                        )}
+                        {isSuperAdmin && u.id!=='SA001' && (
+                          <>
+                            <button onClick={()=>updateStaffStatus(u.id,u.status==='active'?'inactive':'active')} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-800" title={u.status==='active'?'Deactivate':'Activate'}>
+                              {u.status==='active'?<UserX size={14}/>:<UserCheck size={14}/>}
+                            </button>
+                            <button onClick={()=>setConfirmDelete(u.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-red-600"><Trash2 size={14}/></button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -200,7 +260,8 @@ useEffect(() => {
                     <td className="px-5 py-4 text-xs font-semibold text-gray-700">{c.orders}</td>
                   </tr>
                 ))}
-                {filteredCustomers.length===0&&<tr><td colSpan={6} className="px-5 py-10 text-center text-gray-400 text-sm">No customers yet</td></tr>}
+                {loading.customers && <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-400 text-sm">Loading customers...</td></tr>}
+                {!loading.customers && filteredCustomers.length===0&&<tr><td colSpan={6} className="px-5 py-10 text-center text-gray-400 text-sm">No customers yet</td></tr>}
               </tbody>
             </table>
           </div>
@@ -272,11 +333,97 @@ useEffect(() => {
             <p className="text-sm text-gray-500">This will permanently remove this staff account.</p>
             <div className="flex gap-3">
               <button onClick={()=>setConfirmDelete(null)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600 hover:bg-gray-50">Cancel</button>
-              <button onClick={()=>{deleteStaff(confirmDelete!);setConfirmDelete(null);toast.success('Staff account deleted')}} className="flex-1 bg-red-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-red-600">Delete</button>
+              <button
+  onClick={async () => {
+    if (!confirmDelete) return
+
+    const result = await deleteStaff(confirmDelete)
+
+    if (result.success) {
+      await fetchUsers()
+      toast.success('Staff account deleted')
+    } else {
+      toast.error(result.error || 'Failed to delete staff account')
+    }
+
+    setConfirmDelete(null)
+  }}
+  className="flex-1 bg-red-500 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-red-600"
+>
+  Delete
+</button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Staff Details Modal — Super Admin only */}
+      {staffDetailsTarget && isSuperAdmin && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-[fadeIn_0.15s_ease-out]"
+          onClick={()=>setStaffDetailsTarget(null)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto animate-[scaleIn_0.18s_ease-out]"
+            onClick={(e)=>e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 sticky top-0 bg-white z-10">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-full ${avatarColors[0]} flex items-center justify-center text-white text-xs font-bold`}>
+                  {staffDetailsTarget.name.split(' ').map((n:string)=>n[0]).join('').slice(0,2).toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="font-bold text-gray-900 text-sm">{staffDetailsTarget.name}</h2>
+                  <p className="text-xs text-gray-400">Staff Details</p>
+                </div>
+              </div>
+              <button onClick={()=>setStaffDetailsTarget(null)} className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100">
+                <X size={18}/>
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-3">
+              {staffDetailsLoading && (
+                <div className="py-8 text-center text-sm text-gray-400">Loading details...</div>
+              )}
+
+              {!staffDetailsLoading && staffDetailsError && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 mb-2">{staffDetailsError}</div>
+              )}
+
+              {!staffDetailsLoading && [
+                { icon: Mail, label: 'Email', value: displayVal(staffDetailsData?.email ?? staffDetailsTarget.email) },
+                { icon: Phone, label: 'Phone Number', value: displayVal(staffDetailsData?.phone) },
+                { icon: Wallet, label: 'Total Spend', value: displayCurrency(staffDetailsData?.totalSpend ?? staffDetailsData?.totalPurchases) },
+                { icon: Star, label: 'Loyalty Points', value: displayVal(staffDetailsData?.loyaltyPoints) },
+                { icon: Tag, label: 'Customer Segment', value: displayVal(staffDetailsData?.segment) },
+                { icon: Cake, label: 'Birthday', value: displayDate(staffDetailsData?.birthday ?? staffDetailsData?.dateOfBirth) },
+                { icon: FileText, label: 'Notes', value: displayVal(staffDetailsData?.notes) },
+                { icon: CalendarDays, label: 'Joined Date', value: displayDate(staffDetailsData?.createdAt) },
+              ].map(({icon: Icon, label, value})=>(
+                <div key={label} className="flex items-start gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                  <Icon size={15} className="text-[#C9A84C] mt-0.5 flex-shrink-0"/>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</div>
+                    <div className={`text-sm mt-0.5 break-words ${value==='Not Available'?'text-gray-400 italic':'text-gray-900 font-medium'}`}>{value}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-100 sticky bottom-0 bg-white">
+              <button onClick={()=>setStaffDetailsTarget(null)} className="w-full border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600 hover:bg-gray-50">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx global>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.96) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+      `}</style>
     </div>
   )
 }
