@@ -48,7 +48,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type','Authorization'],
 }));
 app.use('/api/',      rateLimit({ windowMs: 15*60*1000, max: 100, standardHeaders: true, legacyHeaders: false }));
-app.use('/api/auth/', rateLimit({ windowMs: 15*60*1000, max: 10 }));
+app.use('/api/auth/', rateLimit({ windowMs: 15*60*1000, max: process.env.NODE_ENV === 'development' ? 1000 : 20 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(requestLogger);

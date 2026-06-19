@@ -23,7 +23,7 @@ interface AuthStore {
   deleteStaff: (id: string) => void
 }
 
-const API = () => (typeof window !== 'undefined' && (window as any).__NEXT_PUBLIC_API_URL__) || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+const API = () => 'http://localhost:5000/api'
 
 export const useAuthStore = create<AuthStore>()(
   persist(
@@ -34,25 +34,59 @@ export const useAuthStore = create<AuthStore>()(
       // ── Login — calls Express backend ─────────────────────────────────
       login: async (identifier, password) => {
         try {
-          const res  = await fetch(`${API()}/auth/admin/login`, {
+          console.log('🔐 Starting login process...', { identifier, apiUrl: API() })
+          
+          const res = await fetch(`${API()}/auth/admin/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ identifier: identifier.trim(), password: password.trim() }),
           })
+          
+          console.log('📡 API Response status:', res.status)
           const data = await res.json()
-          if (!data.success) return { success: false, error: data.message || 'Invalid credentials' }
+          console.log('📊 API Response data:', data)
+          
+          if (!data.success) {
+            console.log('❌ Login failed:', data.message)
+            return { success: false, error: data.message || 'Invalid credentials' }
+          }
 
           const { user, accessToken, refreshToken } = data.data
+          console.log('✅ Login successful, storing tokens...', { 
+            userId: user.id, 
+            userRole: user.role,
+            tokenLength: accessToken?.length 
+          })
+          
           if (typeof window !== 'undefined') {
-           localStorage.setItem('accessToken', accessToken)
-localStorage.setItem('refreshToken', refreshToken)
-
-localStorage.setItem('adminAccessToken', accessToken)
-localStorage.setItem('adminRefreshToken', refreshToken)
+            localStorage.setItem('accessToken', accessToken)
+            localStorage.setItem('refreshToken', refreshToken)
+            localStorage.setItem('adminAccessToken', accessToken)
+            localStorage.setItem('adminRefreshToken', refreshToken)
+            console.log('💾 Tokens stored in localStorage')
           }
-          set({ currentUser: { id:user.id, name:user.name, email:user.email, phone:user.phone, role:user.role.toLowerCase() as AdminRole, avatar:user.avatar, status:'active' }, accessToken, isLoggedIn:true, viewAsRole:null })
+          
+          const userAccount = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role.toLowerCase() as AdminRole,
+            avatar: user.avatar || user.name.split(' ').map(n => n[0]).join('').toUpperCase(),
+            status: 'active' as const
+          }
+          
+          set({ 
+            currentUser: userAccount, 
+            accessToken, 
+            isLoggedIn: true, 
+            viewAsRole: null 
+          })
+          
+          console.log('🎉 Login process completed successfully!')
           return { success: true }
-        } catch {
+        } catch (error) {
+          console.error('💥 Login error:', error)
           return { success: false, error: 'Could not reach server. Check your connection.' }
         }
       },

@@ -38,7 +38,7 @@ function VerifyEmailInner() {
     if (code.length !== 6) { toast.error('Enter the complete 6-digit code'); return }
     setLoading(true)
     try {
-      const res = await api.post<{success:boolean;data:any}>('/auth/verify-otp', { email, otp: code })
+      const res = (await api.post<any>('/auth/verify-otp', { email, otp: code })) as any
       const { user, accessToken, refreshToken } = res.data
       setAuth(user, accessToken, refreshToken)
       toast.success('Email verified! Welcome to Ratan Jewellers.')
@@ -51,8 +51,8 @@ function VerifyEmailInner() {
   const handleResend = async () => {
     setResending(true)
     try {
-      await api.post('/auth/send-otp', { email })
-      toast.success('New OTP sent to your email')
+      const res = await api.post<any>('/auth/send-otp', { email })
+      toast.success(res?.data?.message || 'New OTP sent to your email', { duration: 6000 })
       setCooldown(60)
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Failed to resend OTP')
@@ -69,7 +69,7 @@ function VerifyEmailInner() {
 
         <div className="flex gap-2 sm:gap-3 justify-center mb-6">
           {otp.map((d, i) => (
-            <input key={i} ref={el => inputs.current[i]=el} value={d} onChange={e=>handleChange(i,e.target.value)} onKeyDown={e=>handleKeyDown(i,e)}
+            <input key={i} ref={el => { inputs.current[i]=el }} value={d} onChange={e=>handleChange(i,e.target.value)} onKeyDown={e=>handleKeyDown(i,e)}
               maxLength={1} inputMode="numeric" autoFocus={i===0}
               className="w-11 h-13 sm:w-12 sm:h-14 text-center text-xl font-sans font-bold border-2 border-[#E0D5B8] focus:border-[#C9A84C] outline-none rounded-lg"/>
           ))}
