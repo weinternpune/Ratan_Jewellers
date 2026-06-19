@@ -60,7 +60,7 @@ export default function OrdersPage() {
   const statusCfg = (status: string) => STATUS_CONFIG[status] || STATUS_CONFIG.PENDING
 
   return (
-    <main className="min-h-screen bg-[#FAF6EE]">
+    <main className="min-h-screen bg-[#FAF6EE] pt-16 md:pt-20 xl:pt-[124px]">
       <Navbar /><CartDrawer />
 
       {/* Header */}

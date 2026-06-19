@@ -23,6 +23,8 @@ interface AuthStore {
   deleteStaff: (id: string) => void
 }
 
+const API = () => 'http://localhost:5000/api'
+
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
@@ -32,18 +34,60 @@ export const useAuthStore = create<AuthStore>()(
       // ── Login — calls Express backend via the shared apiClient ────────
       login: async (identifier, password) => {
         try {
-          const result = await api.post<{ user: any; accessToken: string; refreshToken: string }>(
-            '/auth/admin/login',
-            { identifier: identifier.trim(), password: password.trim() }
-          )
-          const { user, accessToken, refreshToken } = result.data
-          // accessToken / refreshToken are the ONLY token keys in the app —
-          // written here so the shared apiClient interceptor can read/refresh them.
-          writeTokens(accessToken, refreshToken)
-          set({ currentUser: { id:user.id, name:user.name, email:user.email, phone:user.phone, role:user.role.toLowerCase() as AdminRole, avatar:user.avatar, status:'active' }, isLoggedIn:true, viewAsRole:null })
+          console.log('🔐 Starting login process...', { identifier, apiUrl: API() })
+          
+          const res = await fetch(`${API()}/auth/admin/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: identifier.trim(), password: password.trim() }),
+          })
+          
+          console.log('📡 API Response status:', res.status)
+          const data = await res.json()
+          console.log('📊 API Response data:', data)
+          
+          if (!data.success) {
+            console.log('❌ Login failed:', data.message)
+            return { success: false, error: data.message || 'Invalid credentials' }
+          }
+
+          const { user, accessToken, refreshToken } = data.data
+          console.log('✅ Login successful, storing tokens...', { 
+            userId: user.id, 
+            userRole: user.role,
+            tokenLength: accessToken?.length 
+          })
+          
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('accessToken', accessToken)
+            localStorage.setItem('refreshToken', refreshToken)
+            localStorage.setItem('adminAccessToken', accessToken)
+            localStorage.setItem('adminRefreshToken', refreshToken)
+            console.log('💾 Tokens stored in localStorage')
+          }
+          
+          const userAccount = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role.toLowerCase() as AdminRole,
+            avatar: user.avatar || user.name.split(' ').map(n => n[0]).join('').toUpperCase(),
+            status: 'active' as const
+          }
+          
+          set({ 
+            currentUser: userAccount, 
+            accessToken, 
+            isLoggedIn: true, 
+            viewAsRole: null 
+          })
+          
+          console.log('🎉 Login process completed successfully!')
           return { success: true }
-        } catch (err: any) {
-          return { success: false, error: err?.response?.data?.message || 'Could not reach server. Check your connection.' }
+        } catch (error) {
+          console.error('💥 Login error:', error)
+          return { success: false, error: 'Could not reach server. Check your connection.' }
         }
       },
 

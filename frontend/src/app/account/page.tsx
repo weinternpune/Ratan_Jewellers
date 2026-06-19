@@ -108,7 +108,7 @@ export default function AccountPage() {
   const cfg = (s: string) => STATUS[s] ?? STATUS.CONFIRMED
 
   return (
-    <main className="min-h-screen bg-[#FAF6EE]">
+    <main className="min-h-screen bg-[#FAF6EE] pt-16 md:pt-20 xl:pt-[124px]">
       <Navbar /><CartDrawer />
 
       {/* Header */}
