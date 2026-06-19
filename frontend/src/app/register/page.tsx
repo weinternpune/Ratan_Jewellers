@@ -36,11 +36,24 @@ export default function RegisterPage() {
         password: form.password,
       }
 
-      // ── Backend only — no local fallback. Auth is 100% backend. ─────────
       await api.post('/auth/register', payload)
-      await api.post('/auth/send-otp', { email: payload.email })
 
-      toast.success('Account created! Check your email for the verification code.')
+      let otpSendFailed = false
+      let otpErrorMessage = ''
+      let otpRes: any;
+      try {
+        otpRes = await api.post('/auth/send-otp', { email: payload.email })
+      } catch (err: any) {
+        otpSendFailed = true
+        otpErrorMessage = err?.response?.data?.message || 'Unable to send verification email.'
+      }
+
+      if (otpSendFailed) {
+        toast.error(`Account created, but verification email could not be sent: ${otpErrorMessage}`)
+      } else {
+        toast.success(otpRes?.data?.message || 'Account created! Check your email for the verification code.', { duration: 6000 })
+      }
+
       router.push(`/verify-email?email=${encodeURIComponent(payload.email)}`)
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Registration failed. Please try again.'

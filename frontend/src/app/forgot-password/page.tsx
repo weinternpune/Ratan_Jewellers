@@ -24,14 +24,14 @@ export default function ForgotPasswordPage() {
     if (!email.trim()) { toast.error('Please enter your email'); return }
     setLoading(true)
     try {
-      const checkRes = await api.post<{success:boolean;exists:boolean}>('/auth/check-account', { email: email.trim().toLowerCase() })
-      if (!checkRes.data.exists) {
+      const checkRes = (await api.post<any>('/auth/check-account', { email: email.trim().toLowerCase() })) as any
+      if (!checkRes.exists) {
         toast.error('No account found with this email. Please register first.')
         setLoading(false)
         return
       }
-      await api.post('/auth/forgot-password/send-otp', { email: email.trim().toLowerCase() })
-      toast.success('Reset code sent to your email')
+      const sendRes = (await api.post<any>('/auth/forgot-password/send-otp', { email: email.trim().toLowerCase() })) as any
+      toast.success(sendRes?.data?.message || 'Reset code sent to your email', { duration: 6000 })
       setStep('otp')
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Something went wrong')
@@ -92,7 +92,7 @@ export default function ForgotPasswordPage() {
           <p className="text-sm text-gray-500 font-sans mb-7">Sent to <strong className="text-gray-700">{email}</strong></p>
           <div className="flex gap-2 sm:gap-3 justify-center mb-6">
             {otp.map((d,i) => (
-              <input key={i} ref={el=>inputs.current[i]=el} value={d} onChange={e=>handleOtpChange(i,e.target.value)} onKeyDown={e=>handleKeyDown(i,e)} maxLength={1} inputMode="numeric" autoFocus={i===0}
+              <input key={i} ref={el=>{inputs.current[i]=el}} value={d} onChange={e=>handleOtpChange(i,e.target.value)} onKeyDown={e=>handleKeyDown(i,e)} maxLength={1} inputMode="numeric" autoFocus={i===0}
                 className="w-11 h-13 sm:w-12 sm:h-14 text-center text-xl font-sans font-bold border-2 border-[#E0D5B8] focus:border-[#C9A84C] outline-none rounded-lg"/>
             ))}
           </div>
