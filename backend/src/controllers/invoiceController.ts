@@ -7,10 +7,26 @@ import { sendWhatsAppMessage } from '../services/whatsappService';
 import { sendEmail } from '../services/emailService';
 
 const generateInvoiceNumber = async (): Promise<string> => {
-  const year = new Date().getFullYear(), month = String(new Date().getMonth()+1).padStart(2,'0');
-  const count = await Invoice.countDocuments({ createdAt: { $gte: new Date(`${year}-${month}-01`) } });
-  return `RJ-${year}${month}-${String(count+1).padStart(4,'0')}`;
-};
+  const year = new Date().getFullYear()
+  const month = String(new Date().getMonth() + 1).padStart(2, '0')
+
+  const prefix = `RJ-${year}${month}-`
+
+  const lastInvoice = await Invoice
+    .findOne({
+      invoiceNumber: { $regex: `^${prefix}` }
+    })
+    .sort({ invoiceNumber: -1 })
+
+  let nextNumber = 1
+
+  if (lastInvoice) {
+    const parts = lastInvoice.invoiceNumber.split('-')
+    nextNumber = parseInt(parts[2], 10) + 1
+  }
+
+  return `${prefix}${String(nextNumber).padStart(4, '0')}`
+}
 
 export const createInvoice = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

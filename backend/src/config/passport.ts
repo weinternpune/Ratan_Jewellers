@@ -5,29 +5,14 @@ import { Customer } from '../models/Customer';
 import { v4 as uuidv4 } from 'uuid';
 
 export function configurePassport() {
-  const googleConfigured =
-    process.env.GOOGLE_CLIENT_ID &&
-    process.env.GOOGLE_CLIENT_ID !== 'your_google_client_id' &&
-    process.env.GOOGLE_CLIENT_SECRET &&
-    process.env.GOOGLE_CLIENT_SECRET !== 'your_google_client_secret';
-
-  if (!googleConfigured) {
-    console.warn('⚠️  Google OAuth not configured — /api/auth/google will return 503 until you add GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET to .env');
-    // Register a dummy strategy so passport doesn't throw "Unknown strategy"
-    passport.use('google', new (require('passport-local').Strategy)(
-      { usernameField: 'noop', passwordField: 'noop', passReqToCallback: false },
-      (_u: any, _p: any, done: any) => done(null, false)
-    ));
-    return;
-  }
-
-  passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID!,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    callbackURL: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/google/callback`,
+  // Always register the Google strategy — it reads env at request time
+  passport.use('google', new GoogleStrategy({
+    clientID:     process.env.GOOGLE_CLIENT_ID     || 'placeholder',
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'placeholder',
+    callbackURL:  `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/google/callback`,
   }, async (accessToken, refreshToken, profile, done) => {
     try {
-      const email = profile.emails?.[0]?.value;
+      const email  = profile.emails?.[0]?.value;
       const avatar = profile.photos?.[0]?.value;
 
       let user = await User.findOne({ googleId: profile.id });
@@ -41,7 +26,11 @@ export function configurePassport() {
         }
       }
 
-      user = await User.create({ googleId: profile.id, email, name: profile.displayName || 'Google User', avatar, isVerified: true, isActive: true });
+      user = await User.create({
+        googleId: profile.id, email,
+        name: profile.displayName || 'Google User',
+        avatar, isVerified: true, isActive: true,
+      });
       await Customer.create({ userId: user._id, referralCode: uuidv4().substring(0, 8).toUpperCase() });
       return done(null, user);
     } catch (err) { return done(err as Error, undefined); }

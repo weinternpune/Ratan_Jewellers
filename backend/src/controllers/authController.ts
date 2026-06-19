@@ -10,6 +10,11 @@ import { Session } from "../models/index";
 import { AppError } from "../middleware/errorHandler";
 import { AuthRequest } from "../middleware/auth";
 
+const JWT_SECRET         = process.env.JWT_SECRET         || '8kX92@mnP#qL7zV$Rt!2BxPq2026'
+const JWT_REFRESH_SECRET  = process.env.JWT_REFRESH_SECRET  || '9uY#72Lm@vQx!P4sKd2026Refresh'
+const JWT_EXPIRE          = process.env.JWT_EXPIRE          || '15m'
+const JWT_REFRESH_EXPIRE  = process.env.JWT_REFRESH_EXPIRE  || '7d'
+
 const generateTokens = (userId: string) => ({
   accessToken: jwt.sign({ userId }, process.env.JWT_SECRET as string, {
     expiresIn: (process.env.JWT_EXPIRE || "15m") as any,

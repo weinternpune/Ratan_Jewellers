@@ -51,15 +51,7 @@ export default function Navbar() {
   // }, [isAuthenticated])
 
 
-if (typeof window !== 'undefined') {
-    const adminToken = localStorage.getItem('adminAccessToken') ||
-                       localStorage.getItem('adminToken') ||
-                       localStorage.getItem('admin_token')
-    if (adminToken) {
-      router.replace('/admin/dashboard')  // ← just redirect, no clearAuth()
-      return
-    }
-  }
+
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 20)
