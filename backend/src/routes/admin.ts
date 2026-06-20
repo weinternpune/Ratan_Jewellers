@@ -3,6 +3,7 @@ import {
   clearAllBillingData,
   getDashboardStats,
   getAllUsers,
+  createStaffUser,
   getUserById,
   deleteUser,
 } from "../controllers/adminController";
@@ -17,6 +18,7 @@ router.delete('/clear-billing-data', authorize('ADMIN','SUPER_ADMIN','STORE_MANA
 router.get('/dashboard-stats', authorize('ADMIN','SUPER_ADMIN','STORE_MANAGER','SALES_STAFF'), getDashboardStats);
 
 router.get("/users", authorize("SUPER_ADMIN", "ADMIN"), getAllUsers);
+router.post("/users", authorize("SUPER_ADMIN"), createStaffUser);
 router.get("/users/:id", authorize("SUPER_ADMIN", "ADMIN"), getUserById);
 
 //delete route

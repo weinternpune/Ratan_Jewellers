@@ -19,7 +19,7 @@ interface AuthStore {
   logout: () => Promise<void>
   setViewAsRole: (role: AdminRole | null) => void
   getEffectiveRole: () => AdminRole
-  createStaff: (data: { name: string; email: string; phone?: string; password: string; role: AdminRole }) => Promise<{ success: boolean; error?: string; staff?: StaffAccount }>
+  createStaff: (data: { name: string; email: string; phone?: string; password: string; role: AdminRole }) => Promise<{ success: boolean; error?: string; staff?: StaffAccount; wasConverted?: boolean; message?: string }>
   updateStaffStatus: (id: string, status: 'active' | 'inactive') => void
   deleteStaff: (id: string) => Promise<{ success: boolean; error?: string }>
   initializeAuth: () => void
@@ -74,7 +74,7 @@ export const useAuthStore = create<AuthStore>()(
             email: user.email,
             phone: user.phone,
             role: user.role.toLowerCase() as AdminRole,
-            avatar: user.avatar || user.name.split(' ').map(n => n[0]).join('').toUpperCase(),
+            avatar: user.avatar || user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
             status: 'active' as const
           }
           
@@ -214,13 +214,18 @@ export const useAuthStore = create<AuthStore>()(
       getEffectiveRole: () => { const { currentUser, viewAsRole } = get(); if (!currentUser) return 'customer'; if (currentUser.role === 'super_admin' && viewAsRole) return viewAsRole; return currentUser.role },
 
       // ── Create Staff — calls Express backend via the shared apiClient ──
+      // ── Create Staff — calls the dedicated admin-only endpoint ─────────
       createStaff: async (data) => {
         if (get().currentUser?.role !== 'super_admin') return { success: false, error: 'Only Super Admin can create staff accounts' }
         try {
-          const result = await api.post<{ user: any }>('/auth/register', { ...data, role: data.role.toUpperCase() })
-          const staff: StaffAccount = { id:result.data.user.id, name:result.data.user.name, email:result.data.user.email, role:data.role, status:'active' }
+          const result = await api.post<{ id: string; name: string; email: string; phone?: string; role: string; isActive: boolean }>(
+            '/admin/users',
+            { ...data, role: data.role.toUpperCase() }
+          )
+          const staff: StaffAccount = { id:result.data.id, name:result.data.name, email:result.data.email, role:data.role, status:'active' }
           set(s => ({ managedStaff: [staff, ...s.managedStaff] }))
-          return { success: true, staff }
+          const wasConverted = (result.message || '').toLowerCase().includes('converted')
+          return { success: true, staff, wasConverted, message: result.message }
         } catch (err: any) {
           return { success: false, error: err?.response?.data?.message || 'Server error. Try again.' }
         }

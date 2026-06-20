@@ -67,8 +67,8 @@ export default function CheckOut() {
         couponCode: couponApplied ? coupon : undefined,
       })
       clearCart()
-      setPlacedOrder(res)
-      toast.success(`Order ${res.orderNumber} placed successfully!`)
+      setPlacedOrder(res.data)
+      toast.success(`Order ${res.data.orderNumber} placed successfully!`)
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Failed to place order. Please try again.')
     } finally { setPlacing(false) }

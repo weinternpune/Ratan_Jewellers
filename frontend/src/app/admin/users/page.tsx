@@ -150,7 +150,11 @@ useEffect(() => {
     if (result.success) {
   await fetchUsers()
 
-  toast.success(`${roleLabels[form.role]} "${form.name}" created`)
+  toast.success(
+    result.wasConverted
+      ? `${roleLabels[form.role]} "${form.name}" created (an old unused account with this email was reused)`
+      : `${roleLabels[form.role]} "${form.name}" created`
+  )
 
   setShowModal(false)
 

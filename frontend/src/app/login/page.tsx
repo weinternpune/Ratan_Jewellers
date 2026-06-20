@@ -39,7 +39,7 @@ export default function LoginPage() {
     if (!email || !password) { toast.error('Please enter your email and password'); return }
     setLoading(true)
     try {
-      const res = await api.post<{success:boolean;data:LoginResponse}>('/auth/login', { email: email.trim().toLowerCase(), password })
+      const res = await api.post<LoginResponse>('/auth/login', { email: email.trim().toLowerCase(), password })
       const { user, accessToken, refreshToken } = res.data
       
       console.log('👤 User logged in:', { role: user.role, name: user.name, email: user.email })

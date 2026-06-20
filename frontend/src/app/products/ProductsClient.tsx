@@ -21,9 +21,9 @@ interface Product {
 
 
 
-const normalizeFilterValue = (param, list) => {
+const normalizeFilterValue = (param: string | null | undefined, list: string[]): string => {
   if (!param) return ''
-  const m = list.find(i => i.toLowerCase() === param.toLowerCase())
+  const m = list.find((i: string) => i.toLowerCase() === param.toLowerCase())
   return m || ''
 }
 const METALS = ['Gold', 'Diamond', 'Silver']

@@ -342,7 +342,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [isLoggedIn, currentUser, pathname])
 
   // Loading spinner while Zustand rehydrates from localStorage
-  if (!hydrated) return (
+  if (!hydrated || !isLoggedIn || !currentUser) return (
     <div className="flex items-center justify-center h-screen bg-[#0D0700]">
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
@@ -350,6 +350,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
     </div>
   )
+
+  // Re-bind to a fresh const so TypeScript carries the non-null narrowing
+  // from the guard above through the rest of the component (JSX included).
+  const user = currentUser
 
   const navItems = allNavItems.filter(item => item.roles.includes(effectiveRole))
 
@@ -411,7 +415,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // All props for SidebarContent — shared between desktop and mobile instances
   const sidebarProps: SidebarProps = {
-    currentUser,
+    currentUser: user,
     effectiveRole,
     viewAsRole,
     pathname,
@@ -497,10 +501,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </button>
             <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
               <div className="w-7 h-7 rounded-full bg-[#C9A84C]/20 flex items-center justify-center text-[#C9A84C] font-bold text-xs">
-                {currentUser.avatar}
+               {user.avatar}
               </div>
               <div className="hidden sm:block">
-                <div className="text-xs font-semibold text-gray-800">{currentUser.name}</div>
+                <div className="text-xs font-semibold text-gray-800">{user.name}</div>
                 <div className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${roleColors[effectiveRole]}`}>
                   {roleLabels[effectiveRole]}
                 </div>

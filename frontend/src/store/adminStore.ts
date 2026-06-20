@@ -62,6 +62,7 @@ export interface Invoice {
   id: string
   order?: string
   customer: string
+  email?: string
   phone?: string
   category?: string
   metal?: string
@@ -148,6 +149,7 @@ interface BackendInvoice {
   invoiceNumber?: string
   _id: string
   customerName?: string
+  customerEmail?: string
   customerPhone?: string
   subtotal?: number
   cgst?: number
@@ -422,6 +424,7 @@ export const useAdminStore = create<AdminStore>()(
           const frontendInvoices: Invoice[] = (result.invoices || []).map((invoice: BackendInvoice) => ({
             id: invoice.invoiceNumber || invoice._id,
             customer: invoice.customerName || 'Unknown Customer',
+            email: invoice.customerEmail || '',
             phone: invoice.customerPhone || '',
             amount: invoice.subtotal || 0,
             gst: (invoice.cgst || 0) + (invoice.sgst || 0),
@@ -477,6 +480,7 @@ export const useAdminStore = create<AdminStore>()(
           const frontendInvoice: Invoice = {
             id: newInvoice.invoiceNumber,
             customer: newInvoice.customerName,
+            email: newInvoice.customerEmail || '',
             phone: newInvoice.customerPhone,
             amount: newInvoice.subtotal,
             gst: (newInvoice.cgst || 0) + (newInvoice.sgst || 0),
@@ -591,9 +595,9 @@ export const useAdminStore = create<AdminStore>()(
       },
     }))
 
-    const customers = await customerApi.getAll()
+    const customersResponse = await customerApi.getAll()
 
-    const frontendCustomers: Customer[] = (customers || []).map(
+    const frontendCustomers: Customer[] = (customersResponse?.customers || []).map(
       (customer: any) => ({
         id: customer.id || customer._id || "",
         name: customer.name || "Unknown Customer",

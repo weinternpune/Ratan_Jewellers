@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from "express";
+import bcrypt from "bcryptjs";
 import { Invoice } from "../models/Invoice";
 import { Order } from "../models/Order";
 import { Customer } from "../models/Customer";
 import { AppError } from "../middleware/errorHandler";
 import { AuthRequest } from "../middleware/auth";
-import { User } from "../models/User";
+import { User, UserRole } from "../models/User";
 
 export const clearAllBillingData = async (
   req: AuthRequest,
@@ -118,6 +119,138 @@ export const getAllUsers = async (
       data: users,
     });
   } catch (err) {
+    next(err);
+  }
+};
+
+const STAFF_ROLES: UserRole[] = [
+  "SALES_STAFF",
+  "INVENTORY_MANAGER",
+  "STORE_MANAGER",
+  "ADMIN",
+  "SUPER_ADMIN",
+];
+
+// Dedicated admin-only path for creating staff accounts.
+// Deliberately separate from the public /auth/register endpoint so that
+// staff creation always persists the chosen role and never collides with
+// public customer signups that happen to use the same email.
+export const createStaffUser = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { name, email, phone, password, role } = req.body;
+
+    if (!name || !email || !password || !role) {
+      throw new AppError("Name, email, password and role are required", 400);
+    }
+    if (password.length < 8) {
+      throw new AppError("Password must be at least 8 characters", 400);
+    }
+
+    const normalizedRole = String(role).toUpperCase() as UserRole;
+    if (!STAFF_ROLES.includes(normalizedRole)) {
+      throw new AppError(
+        `Invalid role. Must be one of: ${STAFF_ROLES.join(", ")}`,
+        400,
+      );
+    }
+
+    // Only an existing Super Admin may create another Super Admin.
+    if (normalizedRole === "SUPER_ADMIN" && req.user?.role !== "SUPER_ADMIN") {
+      throw new AppError("Only a Super Admin can create another Super Admin", 403);
+    }
+
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const existing = await User.findOne({
+      $or: [{ email: normalizedEmail }, ...(phone ? [{ phone }] : [])],
+    });
+
+    if (existing) {
+      const matchedByEmail = existing.email === normalizedEmail;
+
+      // Auto-heal: if this is a CUSTOMER-role account that has never placed
+      // a real order, it's almost certainly a leftover from someone
+      // accidentally going through the public registration flow while
+      // trying to create a staff account — a bug that existed before this
+      // endpoint did. Rather than reject and force a manual DB cleanup
+      // every time, upgrade it in place to the requested staff role.
+      if (existing.role === "CUSTOMER") {
+        const orderCount = await Order.countDocuments({ userId: existing._id });
+        if (orderCount === 0) {
+          if (normalizedRole === "SUPER_ADMIN" && req.user?.role !== "SUPER_ADMIN") {
+            throw new AppError("Only a Super Admin can create another Super Admin", 403);
+          }
+
+          const passwordHash = await bcrypt.hash(password, 12);
+          existing.name = name;
+          existing.passwordHash = passwordHash;
+          existing.role = normalizedRole;
+          existing.isVerified = true;
+          existing.isActive = true;
+          if (phone) existing.phone = phone;
+          await existing.save();
+
+          // The original public-registration flow auto-creates a matching
+          // Customer document; it no longer makes sense once this account
+          // is a staff account, so remove it.
+          await Customer.deleteOne({ userId: existing._id });
+
+          return res.status(200).json({
+            success: true,
+            message:
+              "An unused customer account with this email was found and converted to a staff account.",
+            data: {
+              id: existing._id,
+              name: existing.name,
+              email: existing.email,
+              phone: existing.phone,
+              role: existing.role,
+              isActive: existing.isActive,
+            },
+          });
+        }
+      }
+
+      throw new AppError(
+        matchedByEmail
+          ? "An account with this email already exists"
+          : "An account with this phone number already exists",
+        409,
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await User.create({
+      name,
+      email: normalizedEmail,
+      phone: phone || undefined,
+      passwordHash,
+      role: normalizedRole,
+      isVerified: true, // admin-issued credentials don't need email verification
+      isActive: true,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Staff account created successfully",
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        isActive: user.isActive,
+      },
+    });
+  } catch (err: any) {
+    // Guard against a duplicate-key race (two requests at once with the
+    // same email) that slips past the findOne pre-check above.
+    if (err?.code === 11000) {
+      return next(new AppError("An account with this email already exists", 409));
+    }
     next(err);
   }
 };

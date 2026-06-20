@@ -186,7 +186,7 @@ export default function BillingPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100"><tr>{['Invoice #','Order','Customer','Amount','GST (3%)','Total','Date','Due','Status','Actions'].map(h=><th key={h} className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>)}</tr></thead>
+              <thead className="bg-gray-50 border-b border-gray-100"><tr>{['Invoice #','Order','Customer','Phone','Category','Metal','Purity','Net Weight','Price','Gold Rate','Making Charges','Amount','GST (3%)','Total','Date','Due','Status','Actions'].map(h=><th key={h} className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>)}</tr></thead>
               <tbody className="divide-y divide-gray-50">
               {filtered.map(inv=>{
                 const cfg=statusConfig[inv.status]
@@ -194,10 +194,18 @@ export default function BillingPage() {
                   <tr key={inv.id} className="hover:bg-gray-50/60 transition-colors group">
                     <td className="px-5 py-4 font-mono text-sm font-semibold text-[#C9A84C]">{inv.id}</td>
                     <td className="px-5 py-4 font-mono text-xs text-gray-500">{inv.order||'—'}</td>
-                    <td className="px-5 py-4"><div className="font-medium text-gray-900">{inv.customer}</div>{inv.phone&&<div className="text-[10px] text-gray-400">{inv.phone}</div>}</td>
-                    <td className="px-5 py-4 text-gray-700">₹{inv.amount.toLocaleString('en-IN')}</td>
-                    <td className="px-5 py-4 text-gray-500 text-xs">₹{inv.gst.toLocaleString('en-IN')}</td>
-                    <td className="px-5 py-4 font-bold text-gray-900">₹{inv.total.toLocaleString('en-IN')}</td>
+                    <td className="px-5 py-4"><div className="font-medium text-gray-900">{inv.customer}</div></td>
+                    <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.phone||'—'}</td>
+                    <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.category||'—'}</td>
+                    <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.metal||'—'}</td>
+                    <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.purity||'—'}</td>
+                    <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.netWeight?`${inv.netWeight}g`:'—'}</td>
+                    <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.price?`₹${inv.price.toLocaleString('en-IN')}`:'—'}</td>
+                    <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.goldRate?`₹${inv.goldRate.toLocaleString('en-IN')}/g`:'—'}</td>
+                    <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.makingCharges?`${inv.makingCharges}%`:'—'}</td>
+                    <td className="px-5 py-4 text-gray-700 whitespace-nowrap">₹{inv.amount.toLocaleString('en-IN')}</td>
+                    <td className="px-5 py-4 text-gray-500 text-xs whitespace-nowrap">₹{inv.gst.toLocaleString('en-IN')}</td>
+                    <td className="px-5 py-4 font-bold text-gray-900 whitespace-nowrap">₹{inv.total.toLocaleString('en-IN')}</td>
                     <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.date}</td>
                     <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.due}</td>
                     <td className="px-5 py-4">
@@ -238,7 +246,7 @@ export default function BillingPage() {
             <div className="p-6">
               <div className="flex items-start justify-between mb-6">
                 <div><div className="text-lg font-bold text-[#0D0700]">RATAN JEWELLERS</div><div className="text-xs text-gray-500">123 Gold Market, Bhubaneswar, Odisha</div><div className="text-xs text-gray-500">GSTIN: 21AAAAA0000A1Z5</div></div>
-                <div className="text-right"><div className="text-[#C9A84C] font-mono font-bold text-base">{previewInvoice.id}</div><div className="text-xs text-gray-500">{previewInvoice.date}</div><span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusConfig[previewInvoice.status].color}`}>{statusConfig[previewInvoice.status].label}</span></div>
+                <div className="text-right"><div className="text-[#C9A84C] font-mono font-bold text-base">{previewInvoice.id}</div><div className="text-xs text-gray-500">{previewInvoice.date}</div>{previewInvoice.due && previewInvoice.due !== '—' ? <div className="text-xs text-gray-400">Due: {previewInvoice.due}</div> : null}<span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusConfig[previewInvoice.status].color}`}>{statusConfig[previewInvoice.status].label}</span></div>
               </div>
               <div className="bg-gray-50 rounded-xl p-4 mb-6">
                 <div className="text-xs font-semibold text-gray-400 uppercase mb-2">Bill To</div>
