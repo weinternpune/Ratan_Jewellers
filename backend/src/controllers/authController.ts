@@ -345,3 +345,152 @@ export const getMe = async (
     next(err);
   }
 };
+
+// ─── Email OTP (post-registration email verification) ─────────────────────
+// Used by /register → /send-otp → /verify-otp on the storefront.
+export const sendEmailOTP = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email } = req.body;
+    if (!email) throw new AppError("Email is required", 400);
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) throw new AppError("No account found for this email", 404);
+
+    const result = await sendOTP(email.toLowerCase().trim(), "email", "register");
+    if (!result.success) throw new AppError(result.message, 429);
+
+    res.json({ success: true, message: result.message });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const verifyEmailOTP = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) throw new AppError("Email and OTP are required", 400);
+
+    const result = await verifyOTP(email.toLowerCase().trim(), otp, "register");
+    if (!result.success) throw new AppError(result.message, 400);
+
+    const user = await User.findOneAndUpdate(
+      { email: email.toLowerCase().trim() },
+      { isVerified: true, lastLogin: new Date() },
+      { new: true },
+    );
+    if (!user) throw new AppError("No account found for this email", 404);
+
+    const tokens = generateTokens(user._id.toString());
+    await Session.create({
+      userId: user._id,
+      token: tokens.refreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
+
+    res.json({
+      success: true,
+      message: "Email verified successfully!",
+      data: { user: formatUser(user), ...tokens },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Forgot Password ────────────────────────────────────────────────────────
+export const checkAccountExists = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email } = req.body;
+    if (!email) throw new AppError("Email is required", 400);
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    res.json({ success: true, exists: !!user });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const sendPasswordResetOTP = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email } = req.body;
+    if (!email) throw new AppError("Email is required", 400);
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) throw new AppError("No account found with this email", 404);
+
+    const result = await sendOTP(email.toLowerCase().trim(), "email", "reset_password");
+    if (!result.success) throw new AppError(result.message, 429);
+
+    res.json({ success: true, message: result.message });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resetPasswordWithOTP = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword)
+      throw new AppError("Email, OTP and new password are required", 400);
+    if (newPassword.length < 6)
+      throw new AppError("Password must be at least 6 characters", 400);
+
+    const result = await verifyOTP(email.toLowerCase().trim(), otp, "reset_password");
+    if (!result.success) throw new AppError(result.message, 400);
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) throw new AppError("No account found with this email", 404);
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await User.findByIdAndUpdate(user._id, { passwordHash, isVerified: true });
+    await Session.deleteMany({ userId: user._id });
+
+    res.json({
+      success: true,
+      message: "Password reset successfully. Please sign in with your new password.",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── Debug — temporary diagnostic endpoint ─────────────────────────────────
+// Deliberately returns no sensitive fields (no password hash, no secrets).
+export const debugCheckUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { identifier } = req.body;
+    if (!identifier) throw new AppError("Identifier is required", 400);
+
+    const user = await User.findOne({
+      $or: [{ email: identifier.toLowerCase().trim() }, { phone: identifier.trim() }],
+    }).select("email phone role isActive isVerified createdAt");
+
+    res.json({ success: true, exists: !!user, data: user || null });
+  } catch (err) {
+    next(err);
+  }
+};

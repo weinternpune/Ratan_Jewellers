@@ -23,12 +23,7 @@ export const authenticate: RequestHandler = async (req, res, next) => {
 
     const jwtSecret = process.env.JWT_SECRET || "8kX92@mnP#qL7zV$Rt!2BxPq2026";
 
-    console.log("VERIFY SECRET:", jwtSecret);
-    console.log("TOKEN RECEIVED:", token);
-
     const decoded = jwt.verify(token, jwtSecret) as { userId: string };
-
-    console.log("DECODED:", decoded);
 
     const dbUser = await User.findById(decoded.userId).select(
       "_id email role name isActive",
@@ -47,7 +42,9 @@ export const authenticate: RequestHandler = async (req, res, next) => {
 
     next();
   } catch (err) {
-    console.error("JWT VERIFY ERROR:", err);
+    if (err instanceof jwt.TokenExpiredError) {
+      return next(new AppError("Token expired", 401));
+    }
 
     if (err instanceof jwt.JsonWebTokenError) {
       return next(new AppError("Invalid token", 401));
