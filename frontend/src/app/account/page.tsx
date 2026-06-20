@@ -42,20 +42,29 @@ export default function AccountPage() {
     // Wait for Zustand to rehydrate from localStorage before doing anything
     if (!hasHydrated) return
 
+    console.log('🔍 Account Page Check:', { isAuthenticated, user, hasHydrated })
+
     // Redirect admin to admin dashboard
     if (isAuthenticated && user) {
-      if (user.role === 'ADMIN' || user.role === 'admin') {
+      const userRole = user.role?.toUpperCase()
+      console.log('👤 User role:', userRole)
+      
+      if (userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || 
+          userRole === 'STORE_MANAGER' || userRole === 'SALES_STAFF' || 
+          userRole === 'INVENTORY_MANAGER') {
+        console.log('✅ Admin user detected, redirecting to admin dashboard')
         router.replace('/admin/dashboard')
         return
       }
     }
 
-    // Fallback: check admin localStorage token
-    if (typeof window !== 'undefined') {
+    // Fallback: check admin localStorage token ONLY if no user in main auth store
+    if (!user && typeof window !== 'undefined') {
       const adminToken = localStorage.getItem('adminAccessToken') ||
                          localStorage.getItem('adminToken') ||
                          localStorage.getItem('admin_token')
       if (adminToken) {
+        console.log('✅ Admin token found, redirecting to admin dashboard')
         router.replace('/admin/dashboard')
         return
       }
@@ -63,25 +72,61 @@ export default function AccountPage() {
 
     // Not logged in → send to login
     if (!isAuthenticated) {
+      console.log('❌ Not authenticated, redirecting to login')
       toast.error('Please sign in first.')
       router.push('/login')
       return
     }
 
     // Logged in as customer → load profile and orders
+    console.log('📦 Loading customer profile and orders')
+    
+    setLoading(true)
+    
     Promise.all([
-      api.get<UserProfile>('/auth/me'),
-      api.get<{ data: Order[] }>('/orders/my-orders?page=1&limit=3').catch(() => ({ data: [] as Order[] })),
+      api.get<UserProfile>('/auth/me').catch((err) => {
+        console.error('❌ Failed to load profile:', err)
+        console.error('Error details:', {
+          status: err?.response?.status,
+          message: err?.response?.data?.message,
+          data: err?.response?.data
+        })
+        throw err
+      }),
+      api.get<{ data: Order[] }>('/orders/my-orders?page=1&limit=3').catch((err) => {
+        console.log('⚠️ No orders found or error loading orders:', err)
+        return { data: [] as Order[] }
+      }),
     ]).then(([p, o]) => {
-      if (p.role === 'ADMIN' || p.role === 'admin') {
+      console.log('✅ Profile loaded:', p)
+      console.log('✅ Orders loaded:', o)
+      
+      const profileRole = p.role?.toUpperCase()
+      if (profileRole === 'ADMIN' || profileRole === 'SUPER_ADMIN' || 
+          profileRole === 'STORE_MANAGER' || profileRole === 'SALES_STAFF' || 
+          profileRole === 'INVENTORY_MANAGER') {
+        console.log('✅ Profile shows admin role, redirecting')
         router.replace('/admin/dashboard')
         return
       }
+      
       setProfile(p)
       setRecentOrders((o as any).data ?? [])
+      setLoading(false)
     }).catch((err) => {
-      if (err?.response?.status === 401) { clearAuth(); router.push('/login') }
-    }).finally(() => setLoading(false))
+      console.error('💥 Error loading account data:', err)
+      
+      if (err?.response?.status === 401) { 
+        console.log('❌ 401 Unauthorized - clearing auth and redirecting to login')
+        clearAuth()
+        toast.error('Your session has expired. Please login again.')
+        router.push('/login')
+      } else {
+        console.error('❌ Other error:', err?.message || err)
+        toast.error('Failed to load your profile. Please refresh the page.')
+        setLoading(false)
+      }
+    })
 
   }, [isAuthenticated, user, hasHydrated])
 
@@ -108,7 +153,7 @@ export default function AccountPage() {
   const cfg = (s: string) => STATUS[s] ?? STATUS.CONFIRMED
 
   return (
-    <main className="min-h-screen bg-[#FAF6EE]">
+    <main className="min-h-screen bg-[#FAF6EE] pt-16 md:pt-20 xl:pt-[124px]">
       <Navbar /><CartDrawer />
 
       {/* Header */}

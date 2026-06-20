@@ -104,7 +104,7 @@ const handleProfileClick = (e: React.MouseEvent) => {
   return (
     <>
       {/* Top Bar */}
-      <div className={`hidden xl:block bg-white border-b border-gray-200 py-2.5 fixed top-0 left-0 right-0 z-[99] w-full max-w-full overflow-x-hidden transition-transform duration-300 ${scrolled ? '-translate-y-full' : 'translate-y-0'}`}>
+      <div className={`hidden xl:block bg-white border-gray-200 py-3.5 fixed top-0 left-0 right-0 z-[99] w-full max-w-full overflow-x-hidden transition-transform duration-300 ${scrolled ? '-translate-y-full' : 'translate-y-0'}`}>
         <div className="w-full max-w-full px-2 sm:px-4 md:px-6 lg:px-6 xl:px-8 2xl:px-12 flex justify-between items-center overflow-x-hidden">
           <div className="hidden lg:flex items-center gap-8 text-xs text-gray-700">
             <span className="flex items-center gap-2">
@@ -134,7 +134,7 @@ const handleProfileClick = (e: React.MouseEvent) => {
       </div>
 
       {/* Main Navbar */}
-      <nav className={`fixed left-0 right-0 z-[100] bg-white border-b border-gray-200 shadow-md w-full transition-all duration-300 ${scrolled ? 'top-0' : 'top-0 xl:top-[44px]'}`}>
+      <nav className={`fixed left-0 right-0 z-[100] bg-white border-b border-gray-200 shadow-md w-full transition-all duration-300 ${scrolled ? 'top-0' : 'top-0 xl:top-[35px]'}`}>
         <div className="w-full max-w-full px-1.5 xs:px-2 sm:px-3 md:px-3 lg:px-4 xl:px-8 2xl:px-12">
           <div className="flex items-center justify-between h-16 md:h-20 w-full max-w-full gap-0.5 xs:gap-1 sm:gap-1 md:gap-1 lg:gap-2">
             {/* Logo */}
@@ -209,7 +209,7 @@ const handleProfileClick = (e: React.MouseEvent) => {
               <Link href="/custom-jewellery" className="px-0.5 lg:px-1 xl:px-2 2xl:px-4 py-2 text-[7.5px] lg:text-[9px] xl:text-[11px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-tight xl:tracking-normal 2xl:tracking-wide text-gray-700 hover:text-[#C9A84C] transition-colors whitespace-nowrap">
                 CUSTOM
               </Link>
-              <Link href="/about" className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors whitespace-nowrap ${pathname === '/about' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'}`}>
+              <Link href="/about" className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-3 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors whitespace-nowrap ${pathname === '/about' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'}`}>
                 ABOUT
               </Link>
               <Link href="/contact" className={`px-0.5 lg:px-1.5 xl:px-3 2xl:px-4 py-2 text-[8.5px] lg:text-[10px] xl:text-[12px] 2xl:text-[13px] font-bold tracking-tighter lg:tracking-normal xl:tracking-wide transition-colors ${pathname === '/contact' ? 'text-[#C9A84C]' : 'text-gray-700 hover:text-[#C9A84C]'}`}>

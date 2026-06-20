@@ -3,12 +3,15 @@ import bcrypt from "bcryptjs";
 
 import jwt from "jsonwebtoken";
 
-import { v4 as uuidv4 } from "uuid";
-import { User } from "../models/User";
-import { Customer } from "../models/Customer";
-import { Session } from "../models/index";
-import { AppError } from "../middleware/errorHandler";
-import { AuthRequest } from "../middleware/auth";
+import jwt from 'jsonwebtoken';
+
+import { v4 as uuidv4 } from 'uuid';
+import { User } from '../models/User';
+import { Customer } from '../models/Customer';
+import { Session } from '../models/index';
+import { AppError } from '../middleware/errorHandler';
+import { logger } from '../utils/logger';
+import { AuthRequest } from '../middleware/auth';
 
 const JWT_SECRET         = process.env.JWT_SECRET         || '8kX92@mnP#qL7zV$Rt!2BxPq2026'
 const JWT_REFRESH_SECRET  = process.env.JWT_REFRESH_SECRET  || '9uY#72Lm@vQx!P4sKd2026Refresh'
@@ -40,17 +43,28 @@ export const register = async (
   next: NextFunction,
 ) => {
   try {
-    const { email, phone, password, name } = req.body;
-    const exists = await User.findOne({
-      $or: [{ email }, ...(phone ? [{ phone }] : [])],
-    });
-    if (exists) throw new AppError("User already exists", 409);
+    const { email, phone, password, name, role } = req.body;
+    if (!name || !password) throw new AppError('Name and password are required', 400);
+    const orConditions: any[] = [];
+    if (email) orConditions.push({ email });
+    if (phone) orConditions.push({ phone });
+    if (!orConditions.length) throw new AppError('Email or phone is required', 400);
+    const exists = await User.findOne({ $or: orConditions });
     const passwordHash = await bcrypt.hash(password, 12);
-    const user = await User.create({ email, phone, passwordHash, name });
-    await Customer.create({
-      userId: user._id,
-      referralCode: uuidv4().substring(0, 8).toUpperCase(),
-    });
+    let user;
+    if (exists) {
+      if (exists.isVerified) {
+        throw new AppError('Account already exists with this email or phone', 409);
+      }
+      exists.name = name;
+      exists.passwordHash = passwordHash;
+      if (email) exists.email = email;
+      if (phone) exists.phone = phone;
+      user = await exists.save();
+    } else {
+      user = await User.create({ email, phone, passwordHash, name, isVerified: false });
+      await Customer.create({ userId: user._id, referralCode: uuidv4().substring(0, 8).toUpperCase() });
+    }
     const { accessToken, refreshToken } = generateTokens(user._id.toString());
     await Session.create({
       userId: user._id,
@@ -138,14 +152,10 @@ export const sendOTPHandler = async (
         throw new AppError("No account found. Please register first.", 404);
     }
 
-    if (purpose === "register") {
-      const field =
-        type === "phone" ? { phone: identifier } : { email: identifier };
-      if (await User.findOne(field))
-        throw new AppError(
-          "Account already exists. Please login instead.",
-          409,
-        );
+    if (purpose === 'register') {
+      const field = type === 'phone' ? { phone: identifier } : { email: identifier };
+      const exists = await User.findOne(field);
+      if (exists && exists.isVerified) throw new AppError('Account already exists. Please login instead.', 409);
     }
     const result = await sendOTP(
       identifier,
@@ -363,23 +373,77 @@ export const sendEmailOTP = async (
     const result = await sendOTP(email.toLowerCase().trim(), "email", "register");
     if (!result.success) throw new AppError(result.message, 429);
 
-    res.json({ success: true, message: result.message });
-  } catch (err) {
-    next(err);
-  }
-};
+    logger.info(`🔑 [OTP] Generated OTP for ${email}: ${otp}`);
 
-export const verifyEmailOTP = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+    await User.findByIdAndUpdate(user._id, {
+      emailOTP: otp,
+      emailOTPExpiry: otpExpiry,
+    })
+
+    // Send via nodemailer
+    const transporter = require('nodemailer').createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: false,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    })
+
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || '"Ratan Jewellers" <noreply@ratanjewellers.com>',
+        to: email,
+        subject: 'Your Ratan Jewellers Verification Code',
+        html: `
+        <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;border:1px solid #e0d5b8;padding:0">
+          <div style="background:#1a0004;padding:24px;text-align:center">
+            <h2 style="color:#C9A84C;margin:0;font-size:22px">RATAN JEWELLERS</h2>
+            <p style="color:#e8d5a3;margin:4px 0;font-size:12px">Email Verification</p>
+          </div>
+          <div style="padding:32px;background:#fff">
+            <p style="color:#333;font-size:14px">Hello ${user.name},</p>
+            <p style="color:#555;font-size:13px">Your verification code is:</p>
+            <div style="background:#f9f5e7;border:2px solid #C9A84C;border-radius:8px;padding:20px;text-align:center;margin:20px 0">
+              <span style="font-size:36px;font-weight:bold;letter-spacing:12px;color:#1a0004">${otp}</span>
+            </div>
+            <p style="color:#888;font-size:12px">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+          </div>
+          <div style="padding:16px;background:#f5f5f5;text-align:center;font-size:11px;color:#999">
+            Ratan Jewellers &bull; Est. 1985 &bull; BIS Hallmarked
+          </div>
+        </div>`,
+      })
+      return res.json({ success: true, message: 'OTP sent to your email' })
+    } catch (sendErr: any) {
+      logger.error('Failed to send verification email', sendErr)
+      
+      // Development bypass - return OTP in response when email fails
+      console.log('📧 EMAIL FAILED - Development OTP Code:', otp)
+      console.log('📧 For user:', email)
+      
+      return res.json({ 
+        success: true, 
+        message: 'Email service unavailable. Check console for OTP code.',
+        devNote: process.env.NODE_ENV === 'development' ? `OTP Code: ${otp}` : undefined
+      })
+    }
+  } catch (err) { next(err) }
+}
+
+// ── Verify Email OTP ──────────────────────────────────────────────────────
+export const verifyEmailOTP = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, otp } = req.body;
     if (!email || !otp) throw new AppError("Email and OTP are required", 400);
 
-    const result = await verifyOTP(email.toLowerCase().trim(), otp, "register");
-    if (!result.success) throw new AppError(result.message, 400);
+    const user = await User.findOne({ email: email.toLowerCase() })
+    if (!user) throw new AppError('Account not found', 404)
+
+    const isDevFallback = process.env.NODE_ENV === 'development' && otp.toString().trim() === '123456';
+    if (!isDevFallback) {
+      if (!user.emailOTP || !user.emailOTPExpiry) throw new AppError('No OTP requested. Please request a new one.', 400)
+      if (new Date() > user.emailOTPExpiry) throw new AppError('OTP has expired. Please request a new one.', 400)
+      if (user.emailOTP !== otp.toString().trim()) throw new AppError('Invalid OTP', 400)
+    }
 
     const user = await User.findOneAndUpdate(
       { email: email.toLowerCase().trim() },
@@ -397,8 +461,123 @@ export const verifyEmailOTP = async (
 
     res.json({
       success: true,
-      message: "Email verified successfully!",
-      data: { user: formatUser(user), ...tokens },
+      message: 'Email verified successfully',
+      data: {
+        user: { id: user._id, name: user.name, email: user.email, role: user.role },
+        accessToken,
+        refreshToken,
+      }
+    })
+  } catch (err) { next(err) }
+}
+
+// ── Check if account exists (for forgot password) ─────────────────────────
+export const checkAccountExists = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body
+    if (!email) throw new AppError('Email is required', 400)
+    const user = await User.findOne({ email: email.toLowerCase() })
+    res.json({ success: true, exists: !!user, name: user?.name })
+  } catch (err) { next(err) }
+}
+
+// ── Send Password Reset OTP ───────────────────────────────────────────────
+export const sendPasswordResetOTP = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email } = req.body
+    if (!email) throw new AppError('Email is required', 400)
+    const user = await User.findOne({ email: email.toLowerCase() })
+    if (!user) throw new AppError('No account found with this email. Please register first.', 404)
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    const otpExpiry = new Date(Date.now() + 15 * 60 * 1000)
+
+    logger.info(`🔑 [OTP] Generated Password Reset OTP for ${email}: ${otp}`);
+
+    await User.findByIdAndUpdate(user._id, { emailOTP: otp, emailOTPExpiry: otpExpiry })
+
+    const transporter = require('nodemailer').createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: false,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    })
+
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || '"Ratan Jewellers" <noreply@ratanjewellers.com>',
+        to: email,
+        subject: 'Reset Your Ratan Jewellers Password',
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;border:1px solid #e0d5b8">
+            <div style="background:#1a0004;padding:24px;text-align:center">
+              <h2 style="color:#C9A84C;margin:0">RATAN JEWELLERS</h2>
+              <p style="color:#e8d5a3;margin:4px 0;font-size:12px">Password Reset</p>
+            </div>
+            <div style="padding:32px;background:#fff">
+              <p style="color:#333;font-size:14px">Hello ${user.name},</p>
+              <p style="color:#555;font-size:13px">Your password reset code is:</p>
+              <div style="background:#fff3cd;border:2px solid #C9A84C;border-radius:8px;padding:20px;text-align:center;margin:20px 0">
+                <span style="font-size:36px;font-weight:bold;letter-spacing:12px;color:#1a0004">${otp}</span>
+              </div>
+              <p style="color:#888;font-size:12px">Expires in <strong>15 minutes</strong>. If you didn't request this, ignore this email.</p>
+            </div>
+          </div>`,
+      })
+      res.json({ success: true, message: 'Password reset OTP sent to your email' })
+    } catch (sendErr: any) {
+      logger.error('Failed to send password reset email', sendErr)
+      if (process.env.NODE_ENV === 'development') {
+        return res.json({ success: true, message: 'Email delivery failed. Dev bypass OTP code: 123456' })
+      }
+      throw new AppError('Email delivery failed.', 500)
+    }
+  } catch (err) { next(err) }
+}
+
+// ── Reset Password with OTP ───────────────────────────────────────────────
+export const resetPasswordWithOTP = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, otp, newPassword } = req.body
+    if (!email || !otp || !newPassword) throw new AppError('Email, OTP and new password are required', 400)
+    if (newPassword.length < 6) throw new AppError('Password must be at least 6 characters', 400)
+
+    const user = await User.findOne({ email: email.toLowerCase() })
+    if (!user) throw new AppError('Account not found', 404)
+
+    const isDevFallback = process.env.NODE_ENV === 'development' && otp.toString().trim() === '123456';
+    if (!isDevFallback) {
+      if (!user.emailOTP || !user.emailOTPExpiry) throw new AppError('No OTP requested', 400)
+      if (new Date() > user.emailOTPExpiry) throw new AppError('OTP expired. Please request a new one.', 400)
+      if (user.emailOTP !== otp.toString().trim()) throw new AppError('Invalid OTP', 400)
+    }
+
+    const hash = await bcrypt.hash(newPassword, 12)
+    await User.findByIdAndUpdate(user._id, { passwordHash: hash, emailOTP: null, emailOTPExpiry: null })
+
+    res.json({ success: true, message: 'Password reset successfully. You can now sign in.' })
+  } catch (err) { next(err) }
+}
+
+// ── TEMPORARY DIAGNOSTIC — remove after debugging ──────────────────────────
+export const debugCheckUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) {
+      return res.json({ found: false, message: 'No user document exists with this email at all.' });
+    }
+    const hasHash = !!user.passwordHash;
+    const matches = hasHash ? await bcrypt.compare(password, user.passwordHash as string) : false;
+    res.json({
+      found: true,
+      email: user.email,
+      role: user.role,
+      isActive: user.isActive,
+      isVerified: user.isVerified,
+      hasPasswordHash: hasHash,
+      passwordHashPrefix: hasHash ? user.passwordHash!.substring(0, 10) : null,
+      passwordMatches: matches,
     });
   } catch (err) {
     next(err);

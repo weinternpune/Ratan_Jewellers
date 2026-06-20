@@ -29,7 +29,8 @@ export default function LoginPage() {
     if (ADMIN_ROLES.includes(role.toUpperCase())) {
       router.push('/admin/dashboard')
     } else {
-      router.push('/')
+      // Customer should go to their account page
+      router.push('/account')
     }
   }
 
@@ -40,19 +41,67 @@ export default function LoginPage() {
     try {
       const res = await api.post<{success:boolean;data:LoginResponse}>('/auth/login', { email: email.trim().toLowerCase(), password })
       const { user, accessToken, refreshToken } = res.data
+      
+      console.log('👤 User logged in:', { role: user.role, name: user.name, email: user.email })
+      
+      // Store tokens in localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('accessToken', accessToken)
+        localStorage.setItem('refreshToken', refreshToken)
+        
+        // Only store admin tokens if user is admin
+        if (ADMIN_ROLES.includes(user.role.toUpperCase())) {
+          localStorage.setItem('adminAccessToken', accessToken)
+          localStorage.setItem('adminRefreshToken', refreshToken)
+          console.log('💾 Admin tokens stored in localStorage')
+        } else {
+          console.log('💾 Customer tokens stored in localStorage')
+        }
+      }
+      
       setAuth(user, accessToken, refreshToken)
 
       if (ADMIN_ROLES.includes(user.role.toUpperCase())) {
         const { useAuthStore: useAdminAuth } = await import('@/store/authStore')
-        const roleMap: Record<string,any> = { SUPER_ADMIN:'super_admin',ADMIN:'admin',STORE_MANAGER:'store_manager',INVENTORY_MANAGER:'inventory_manager',SALES_STAFF:'sales_staff' }
+        const roleMap: Record<string,any> = { 
+          SUPER_ADMIN:'super_admin',
+          ADMIN:'admin',
+          STORE_MANAGER:'store_manager',
+          INVENTORY_MANAGER:'inventory_manager',
+          SALES_STAFF:'sales_staff' 
+        }
+        const adminUser = {
+          id: user.id, 
+          name: user.name, 
+          email: user.email, 
+          phone: '', 
+          role: roleMap[user.role.toUpperCase()] || 'admin', 
+          avatar: user.name.split(' ').map((n:string)=>n[0]).join('').toUpperCase().slice(0,2), 
+          status: 'active' as const
+        }
+        
+        console.log('🔐 Setting admin auth store:', adminUser)
+        
         useAdminAuth.setState({
-          currentUser: { id:user.id, name:user.name, email:user.email, phone:'', role:roleMap[user.role.toUpperCase()]||'admin', avatar:user.name.split(' ').map((n:string)=>n[0]).join('').toUpperCase().slice(0,2), status:'active' },
-          isLoggedIn: true, viewAsRole: null,
+          currentUser: adminUser,
+          isLoggedIn: true, 
+          accessToken,
+          viewAsRole: null,
         })
+        
+        console.log('✅ Admin auth store updated')
       }
 
       toast.success(`Welcome back, ${user.name}!`)
-      redirect(user.role)
+      
+      // Route based on user role
+      if (ADMIN_ROLES.includes(user.role.toUpperCase())) {
+        console.log('🔄 Admin user - redirecting to admin dashboard with reload')
+        window.location.href = '/admin/dashboard'
+      } else {
+        console.log('🔄 Customer user - redirecting to account page')
+        router.push('/account')
+      }
     } catch (err: any) {
       const msg = err?.response?.data?.message || 'Invalid email or password'
       toast.error(msg)

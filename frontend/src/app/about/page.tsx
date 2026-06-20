@@ -5,16 +5,16 @@ import Image from "next/image";
 
 export default function AboutPage() {
   return (
-    <main className="bg-[#f8f4ed] text-[#2d241f]">
+    <main className="bg-[#f8f4ed] text-[#2d241f]  pt-24">
       <Navbar />
       {/* HERO */}
-      <section className="relative h-[500px] md:h-[650px]">
+      <section className="relative h-[500px] md:h-[650px] ">
         <Image
           src="/images/craftsmanship.jpg"
           alt="Craftsmanship"
           fill
           priority
-          className="object-cover"
+          className="object-cover "
         />
         <div className="absolute inset-0 bg-black/40" />
         <div className="absolute inset-0 flex items-center">

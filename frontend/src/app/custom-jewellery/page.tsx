@@ -172,7 +172,7 @@ export default function CustomJewelleryPage() {
     : allGallery.filter(item => item.category === selectedFilter)
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white pt-24">
       <Navbar />
       
       {/* Background Design Elements - Lower z-index */}
@@ -188,7 +188,7 @@ export default function CustomJewelleryPage() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(201,168,76,0.1),transparent_50%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,rgba(201,168,76,0.08),transparent_50%)]" />
         </div>
-        <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
+        <div className="relative h-full max-w-7xl mx-auto px-4 py-0 sm:px-6 lg:px-8 flex items-center">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold/10 backdrop-blur-sm rounded-full mb-6">
               <Sparkles className="text-gold" size={16} />

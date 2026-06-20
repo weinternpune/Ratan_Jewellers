@@ -1,12 +1,24 @@
 import { Router, RequestHandler } from 'express';
 import passport from 'passport';
+
 import {
-  register, login, refreshToken, logout, getMe,
-  sendOTPHandler, verifyOTPHandler, resetPassword, googleCallback,
-  sendEmailOTP, verifyEmailOTP, checkAccountExists,
-  sendPasswordResetOTP, resetPasswordWithOTP, debugCheckUser,
+  register,
+  login,
+  refreshToken,
+  logout,
+  getMe,
+  sendOTPHandler,
+  verifyOTPHandler,
+  resetPassword,
+  sendEmailOTP,
+  verifyEmailOTP,
+  checkAccountExists,
+  sendPasswordResetOTP,
+  resetPasswordWithOTP,
+  debugCheckUser,
+  googleCallback
 } from '../controllers/authController';
-import { adminLogin } from '../controllers/adminAuthController';
+
 import { authenticate } from '../middleware/auth';
 const router = Router();
 const auth = authenticate as unknown as RequestHandler;
@@ -33,7 +45,7 @@ router.post('/forgot-password/send-otp', sendPasswordResetOTP as RequestHandler)
 router.post('/forgot-password/reset', resetPasswordWithOTP as RequestHandler);
 
 // ── Admin Login ─────────────────────────────────────────────────────────────
-router.post('/admin/login', adminLogin as RequestHandler);
+// router.post('/admin/login', adminLogin as RequestHandler);
 
 // TEMPORARY — remove after debugging
 router.post('/debug-check', debugCheckUser as RequestHandler);

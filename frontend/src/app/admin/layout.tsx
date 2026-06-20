@@ -253,7 +253,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const router   = useRouter()
 
-  const { currentUser, isLoggedIn, logout, viewAsRole, setViewAsRole, getEffectiveRole } = useAuthStore()
+  const { currentUser, isLoggedIn, logout, viewAsRole, setViewAsRole, getEffectiveRole, initializeAuth } = useAuthStore()
   const { setCurrentRole } = useAdminStore()
   const { requests: cjRequests } = useCustomJewelleryStore()
 
@@ -262,30 +262,69 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [roleDropOpen, setRoleDropOpen] = useState(false)
   const [hydrated,     setHydrated]     = useState(false)
 
-  useEffect(() => { setHydrated(true) }, [])
+  // Initialize auth on mount and listen to storage changes
+  useEffect(() => { 
+    setHydrated(true)
+    
+    // Call initializeAuth and wait for it
+    const init = async () => {
+      await initializeAuth()
+    }
+    init()
+    
+    // Listen for storage changes (when login happens in another component)
+    const handleStorageChange = () => {
+      console.log('📦 Storage changed, reinitializing auth')
+      init()
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [])
 
   const unreadCJ      = cjRequests.filter(r => !r.readByManager && r.status === 'new').length
   const effectiveRole = getEffectiveRole()
   const perms         = RBAC[effectiveRole]
 
-  useEffect(() => { setCurrentRole(effectiveRole) }, [effectiveRole])
+  // Sync effective role with admin store
+  useEffect(() => { 
+    if (currentUser) {
+      setCurrentRole(effectiveRole) 
+    }
+  }, [effectiveRole, currentUser])
 
-  // Auth guard — waits for Zustand to rehydrate before redirecting
+  // Auth guard — only redirects if no valid session exists
   useEffect(() => {
     if (!hydrated) return
-    if (!isLoggedIn || !currentUser) { router.replace('/login'); return }
-    try {
-      const raw = localStorage.getItem('ratan-auth')
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (parsed?.state?.isAuthenticated) {
-          parsed.state.isAuthenticated = false
-          parsed.state.user = null
-          localStorage.setItem('ratan-auth', JSON.stringify(parsed))
-        }
-      }
-    } catch {}
-  }, [hydrated, isLoggedIn, currentUser, pathname])
+    
+    // Check tokens in localStorage
+    const hasAccessToken = typeof window !== 'undefined' && localStorage.getItem('accessToken')
+    const hasRefreshToken = typeof window !== 'undefined' && localStorage.getItem('refreshToken')
+    
+    console.log('🔍 Auth Guard Check:', { 
+      hydrated, 
+      isLoggedIn, 
+      hasCurrentUser: !!currentUser,
+      hasAccessToken: !!hasAccessToken,
+      hasRefreshToken: !!hasRefreshToken,
+      pathname 
+    })
+    
+    // If we have tokens, we're good - don't redirect
+    if (hasAccessToken && hasRefreshToken) {
+      console.log('✅ Valid tokens found - allowing access')
+      return
+    }
+    
+    // Only redirect if NO tokens at all
+    if (!hasAccessToken && !hasRefreshToken && !isLoggedIn) {
+      console.log('❌ No authentication found - redirecting to login')
+      router.replace('/login')
+    }
+  }, [hydrated, pathname])
 
   // Close mobile sidebar whenever route changes
   useEffect(() => { setMobileOpen(false) }, [pathname])
@@ -303,7 +342,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [isLoggedIn, currentUser, pathname])
 
   // Loading spinner while Zustand rehydrates from localStorage
-  if (!hydrated || !isLoggedIn || !currentUser) return (
+  if (!hydrated) return (
     <div className="flex items-center justify-center h-screen bg-[#0D0700]">
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
@@ -313,6 +352,48 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   )
 
   const navItems = allNavItems.filter(item => item.roles.includes(effectiveRole))
+
+  // Show loading while checking authentication
+  if (!currentUser && hydrated) {
+    const hasTokens = typeof window !== 'undefined' && 
+                      localStorage.getItem('accessToken') && 
+                      localStorage.getItem('refreshToken')
+    
+    if (!hasTokens) {
+      // Will redirect via auth guard useEffect
+      return (
+        <div className="flex items-center justify-center h-screen bg-[#0D0700]">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs text-white/40">Redirecting to login...</p>
+          </div>
+        </div>
+      )
+    }
+    
+    // Has tokens but currentUser not loaded
+    console.log('⚠️ Has tokens but no currentUser, waiting for API fetch...')
+    
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#0D0700]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-[#C9A84C] border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs text-white/40">Loading your session...</p>
+          <p className="text-xs text-white/30 mt-2">Fetching user data from server...</p>
+          <button 
+            onClick={() => {
+              console.log('🔄 Manual redirect to login')
+              localStorage.clear()
+              window.location.href = '/login'
+            }}
+            className="mt-4 text-[10px] text-[#C9A84C] hover:underline"
+          >
+            Having trouble? Click here to login again
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const handleLogout = async () => {
     await logout()
