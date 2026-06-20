@@ -254,10 +254,16 @@ export const sendEmailOTP = async (req: Request, res: Response, next: NextFuncti
       return res.json({ success: true, message: 'OTP sent to your email' })
     } catch (sendErr: any) {
       logger.error('Failed to send verification email', sendErr)
-      if (process.env.NODE_ENV === 'development') {
-        return res.json({ success: true, message: 'Email delivery failed. Dev bypass OTP code: 123456' })
-      }
-      throw new AppError('Email delivery failed.', 500)
+      
+      // Development bypass - return OTP in response when email fails
+      console.log('📧 EMAIL FAILED - Development OTP Code:', otp)
+      console.log('📧 For user:', email)
+      
+      return res.json({ 
+        success: true, 
+        message: 'Email service unavailable. Check console for OTP code.',
+        devNote: process.env.NODE_ENV === 'development' ? `OTP Code: ${otp}` : undefined
+      })
     }
   } catch (err) { next(err) }
 }

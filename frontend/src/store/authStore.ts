@@ -13,6 +13,7 @@ interface AuthStore {
   currentUser: StaffAccount | null
   viewAsRole: AdminRole | null
   isLoggedIn: boolean
+  accessToken: string | null
   managedStaff: StaffAccount[]
   login: (identifier: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
@@ -21,6 +22,7 @@ interface AuthStore {
   createStaff: (data: { name: string; email: string; phone?: string; password: string; role: AdminRole }) => Promise<{ success: boolean; error?: string; staff?: StaffAccount }>
   updateStaffStatus: (id: string, status: 'active' | 'inactive') => void
   deleteStaff: (id: string) => Promise<{ success: boolean; error?: string }>
+  initializeAuth: () => void
 }
 
 const API = () => 'http://localhost:5000/api'
@@ -29,7 +31,7 @@ export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
       currentUser: null, viewAsRole: null,
-      isLoggedIn: false, managedStaff: [],
+      isLoggedIn: false, accessToken: null, managedStaff: [],
 
       // ── Login — calls Express backend via the shared apiClient ────────
       login: async (identifier, password) => {
@@ -91,6 +93,101 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
+      // ── Initialize Auth on App Load ───────────────────────────────────
+      initializeAuth: async () => {
+        if (typeof window === 'undefined') return
+        
+        const accessToken = localStorage.getItem('accessToken')
+        const refreshToken = localStorage.getItem('refreshToken')
+        
+        console.log('🔄 Initializing auth...', { hasAccessToken: !!accessToken, hasRefreshToken: !!refreshToken })
+        
+        if (!accessToken || !refreshToken) {
+          console.log('❌ No tokens found')
+          set({ isLoggedIn: false, currentUser: null, accessToken: null })
+          return
+        }
+        
+        // Check if we already have user in state
+        const currentState = get()
+        if (currentState.currentUser) {
+          console.log('✅ User already in state, restoring session')
+          set({ isLoggedIn: true, accessToken })
+          return
+        }
+        
+        // Try to restore from localStorage backup
+        try {
+          const authStore = localStorage.getItem('ratan-auth-store')
+          if (authStore) {
+            const parsed = JSON.parse(authStore)
+            if (parsed?.state?.currentUser) {
+              console.log('✅ Restored user from localStorage backup')
+              set({ 
+                currentUser: parsed.state.currentUser,
+                isLoggedIn: true, 
+                accessToken 
+              })
+              return
+            }
+          }
+        } catch (e) {
+          console.error('Failed to parse auth store:', e)
+        }
+        
+        // Last resort: fetch user from API
+        try {
+          console.log('📡 Fetching user from API...')
+          const response = await fetch('http://localhost:5000/api/auth/me', {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          })
+          
+          if (response.ok) {
+            const data = await response.json()
+            const user = data.data || data.user || data
+            
+            console.log('✅ Fetched user from API:', user)
+            
+            // Convert to admin user format
+            const roleMap: Record<string, any> = {
+              'SUPER_ADMIN': 'super_admin',
+              'ADMIN': 'admin',
+              'STORE_MANAGER': 'store_manager',
+              'INVENTORY_MANAGER': 'inventory_manager',
+              'SALES_STAFF': 'sales_staff'
+            }
+            
+            const adminUser = {
+              id: user.id || user._id,
+              name: user.name,
+              email: user.email,
+              phone: user.phone || '',
+              role: roleMap[user.role?.toUpperCase()] || 'admin',
+              avatar: user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
+              status: 'active' as const
+            }
+            
+            set({ 
+              currentUser: adminUser,
+              isLoggedIn: true, 
+              accessToken 
+            })
+            
+            console.log('✅ Auth initialized successfully')
+          } else {
+            console.log('❌ Failed to fetch user, status:', response.status)
+            set({ isLoggedIn: false, currentUser: null, accessToken: null })
+            localStorage.removeItem('accessToken')
+            localStorage.removeItem('refreshToken')
+          }
+        } catch (error) {
+          console.error('❌ Error fetching user:', error)
+          set({ isLoggedIn: false, currentUser: null, accessToken: null })
+        }
+      },
+
       // ── Logout ────────────────────────────────────────────────────────
      logout: async () => {
   try {
@@ -109,6 +206,7 @@ export const useAuthStore = create<AuthStore>()(
     currentUser: null,
     isLoggedIn: false,
     viewAsRole: null,
+    accessToken: null,
   })
 },
 
@@ -148,6 +246,15 @@ export const useAuthStore = create<AuthStore>()(
   }
 },
     }),
-    { name: 'ratan-auth-store', partialize: (s) => ({ currentUser:s.currentUser, viewAsRole:s.viewAsRole, isLoggedIn:s.isLoggedIn, managedStaff:s.managedStaff }) }
+    { 
+      name: 'ratan-auth-store', 
+      partialize: (s) => ({ 
+        currentUser: s.currentUser, 
+        viewAsRole: s.viewAsRole, 
+        isLoggedIn: s.isLoggedIn, 
+        accessToken: s.accessToken,
+        managedStaff: s.managedStaff 
+      }) 
+    }
   )
 )

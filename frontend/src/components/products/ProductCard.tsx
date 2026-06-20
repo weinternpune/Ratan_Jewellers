@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Heart, ShoppingBag, Star } from 'lucide-react'
@@ -29,10 +29,15 @@ interface Product {
 
 export default function ProductCard({ product }: { product: Product }) {
   const [imgIdx, setImgIdx] = useState(0)
+  const [mounted, setMounted] = useState(false)
   const { toggleItem, isInWishlist } = useWishlistStore()
   const addItem = useCartStore(s => s.addItem)
   const toggleCart = useCartStore(s => s.toggleCart)
-  const isWishlisted = isInWishlist(product.id)
+  const isWishlisted = mounted ? isInWishlist(product.id) : false
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault()
