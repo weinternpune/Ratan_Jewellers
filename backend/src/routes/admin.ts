@@ -5,6 +5,7 @@ import {
   getAllUsers,
   createStaffUser,
   getUserById,
+  resetStaffPassword,
   deleteUser,
 } from "../controllers/adminController";
 import { authenticate, authorize } from '../middleware/auth';
@@ -20,6 +21,7 @@ router.get('/dashboard-stats', authorize('ADMIN','SUPER_ADMIN','STORE_MANAGER','
 router.get("/users", authorize("SUPER_ADMIN", "ADMIN"), getAllUsers);
 router.post("/users", authorize("SUPER_ADMIN"), createStaffUser);
 router.get("/users/:id", authorize("SUPER_ADMIN", "ADMIN"), getUserById);
+router.post("/users/:id/reset-password", authorize("SUPER_ADMIN"), resetStaffPassword);
 
 //delete route
 router.delete("/users/:id", authorize("SUPER_ADMIN"), deleteUser);

@@ -23,6 +23,7 @@ interface AuthStore {
   updateStaffStatus: (id: string, status: 'active' | 'inactive') => void
   deleteStaff: (id: string) => Promise<{ success: boolean; error?: string }>
   initializeAuth: () => void
+  resetStaffPassword: (id: string) => Promise<{ success: boolean; error?: string; tempPassword?: string; email?: string; name?: string }>
 }
 
 const API = () => 'http://localhost:5000/api'
@@ -250,6 +251,19 @@ export const useAuthStore = create<AuthStore>()(
     }
   }
 },
+      resetStaffPassword: async (id) => {
+        try {
+          const result = await api.post<{ id: string; name: string; email: string; tempPassword: string }>(
+            `/admin/users/${id}/reset-password`
+          )
+          return { success: true, tempPassword: result.data.tempPassword, email: result.data.email, name: result.data.name }
+        } catch (err: any) {
+          return {
+            success: false,
+            error: err?.response?.data?.message || 'Failed to reset password',
+          }
+        }
+      },
     }),
     { 
       name: 'ratan-auth-store', 

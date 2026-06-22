@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Search, Plus, Edit2, Trash2, Eye, Shield, X, UserCheck, UserX, Mail, Phone, Wallet, Star, Tag, Cake, FileText, CalendarDays } from 'lucide-react'
+import { Search, Plus, Edit2, Trash2, Eye, Shield, X, UserCheck, UserX, Mail, Phone, Wallet, Star, Tag, Cake, FileText, CalendarDays, Copy, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { useAuthStore, AdminRole, StaffAccount } from '@/store/authStore'
 import { useAuthStore as useCustomerAuthStore } from '@/store'
 import { useAdminStore } from '@/store/adminStore'
@@ -51,7 +51,7 @@ const displayCurrency = (val: any): string => {
 }
 
 export default function UsersPage() {
-  const { currentUser, managedStaff, createStaff, updateStaffStatus, deleteStaff, getEffectiveRole } = useAuthStore()
+  const { currentUser, managedStaff, createStaff, updateStaffStatus, deleteStaff, resetStaffPassword, getEffectiveRole } = useAuthStore()
   const { hasHydrated } = useCustomerAuthStore()
   const { customers, fetchCustomers, loading } = useAdminStore()
   const role = getEffectiveRole()
@@ -68,11 +68,18 @@ export default function UsersPage() {
   const [formError, setFormError] = useState('')
   const [dbUsers, setDbUsers] = useState<StaffAccount[]>([])
 
+  // Shown once, immediately after a staff account is created — the only
+  // moment the plaintext password is ever available, since it's hashed
+  // server-side and never stored or returned afterward.
+  const [newCredentials, setNewCredentials] = useState<{ name: string; email: string; password: string; role?: AdminRole; isReset?: boolean } | null>(null)
+  const [copiedField, setCopiedField] = useState<'email' | 'password' | null>(null)
+
   // Staff details modal state (Super Admin only)
   const [staffDetailsTarget, setStaffDetailsTarget] = useState<StaffAccount|null>(null)
   const [staffDetailsData, setStaffDetailsData] = useState<any|null>(null)
   const [staffDetailsLoading, setStaffDetailsLoading] = useState(false)
   const [staffDetailsError, setStaffDetailsError] = useState('')
+  const [resettingPassword, setResettingPassword] = useState(false)
 
   const modules = ['Website','E-Commerce','Billing','Inventory','CRM','Analytics','Admin']
 
@@ -128,6 +135,18 @@ useEffect(() => {
     }
   }
 
+  const handleResetPassword = async (staff: StaffAccount) => {
+    setResettingPassword(true)
+    const result = await resetStaffPassword(staff.id)
+    setResettingPassword(false)
+    if (result.success && result.tempPassword) {
+      setStaffDetailsTarget(null)
+      setNewCredentials({ name: result.name || staff.name, email: result.email || staff.email, password: result.tempPassword, isReset: true })
+    } else {
+      toast.error(result.error || 'Failed to reset password')
+    }
+  }
+
   // Combine env-configured staff (shown as locked) + super admin created staff
  
   const allStaff = dbUsers
@@ -138,6 +157,16 @@ useEffect(() => {
   const filteredCustomers = customers.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase())||c.email.toLowerCase().includes(search.toLowerCase())
   )
+
+  const copyToClipboard = async (text: string, field: 'email' | 'password') => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedField(field)
+      setTimeout(() => setCopiedField(prev => prev === field ? null : prev), 1500)
+    } catch {
+      toast.error('Could not copy — please select and copy manually')
+    }
+  }
 
   const handleCreate = async () => {
     setFormError('')
@@ -157,6 +186,7 @@ useEffect(() => {
   )
 
   setShowModal(false)
+  setNewCredentials({ name: form.name, email: form.email, password: form.password, role: form.role })
 
   setForm({
     name:'',
@@ -330,6 +360,55 @@ useEffect(() => {
         </div>
       )}
 
+      {/* One-time credentials modal — shown right after a staff account is created.
+          This is the ONLY moment the password is ever visible: it's hashed
+          server-side immediately and never stored or returned again. */}
+      {newCredentials && isSuperAdmin && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+              <h2 className="font-bold text-gray-900 flex items-center gap-2">
+                <CheckCircle2 size={18} className="text-green-500"/>{newCredentials.isReset ? 'Password Reset' : 'Account Created'}
+              </h2>
+              <button onClick={()=>setNewCredentials(null)} className="text-gray-400 hover:text-gray-600"><X size={18}/></button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700 flex items-start gap-2">
+                <AlertTriangle size={14} className="flex-shrink-0 mt-0.5"/>
+                <span>{newCredentials.isReset ? "This is the new password — the previous one no longer works." : "Save these credentials now"} — the password is hashed for security and <strong>cannot be viewed again</strong> after you close this window. Share it with {newCredentials.name} through a secure channel.</span>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Email</label>
+                <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2.5">
+                  <span className="flex-1 text-sm text-gray-800 font-mono truncate">{newCredentials.email}</span>
+                  <button onClick={()=>copyToClipboard(newCredentials.email,'email')} className="text-gray-400 hover:text-gray-700 flex-shrink-0" title="Copy email">
+                    {copiedField==='email' ? <CheckCircle2 size={15} className="text-green-500"/> : <Copy size={15}/>}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-600 mb-1.5 block">{newCredentials.isReset ? 'New Password' : 'Temporary Password'}</label>
+                <div className="flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2.5 bg-gray-50">
+                  <span className="flex-1 text-sm text-gray-800 font-mono truncate">{newCredentials.password}</span>
+                  <button onClick={()=>copyToClipboard(newCredentials.password,'password')} className="text-gray-400 hover:text-gray-700 flex-shrink-0" title="Copy password">
+                    {copiedField==='password' ? <CheckCircle2 size={15} className="text-green-500"/> : <Copy size={15}/>}
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-400">Recommend they change this password after their first login.</p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100">
+              <button onClick={()=>setNewCredentials(null)} className="w-full bg-[#0D0700] text-[#C9A84C] rounded-xl py-2.5 text-sm font-semibold hover:bg-[#1a0e00]">
+                I've Saved These — Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 space-y-4">
@@ -415,9 +494,16 @@ useEffect(() => {
               ))}
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-100 sticky bottom-0 bg-white">
-              <button onClick={()=>setStaffDetailsTarget(null)} className="w-full border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600 hover:bg-gray-50">
+            <div className="px-6 py-4 border-t border-gray-100 sticky bottom-0 bg-white flex gap-3">
+              <button onClick={()=>setStaffDetailsTarget(null)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600 hover:bg-gray-50">
                 Close
+              </button>
+              <button
+                onClick={()=>handleResetPassword(staffDetailsTarget)}
+                disabled={resettingPassword}
+                className="flex-1 bg-[#0D0700] text-[#C9A84C] rounded-xl py-2.5 text-sm font-semibold hover:bg-[#1a0e00] disabled:opacity-60"
+              >
+                {resettingPassword ? 'Resetting...' : 'Reset Password'}
               </button>
             </div>
           </div>

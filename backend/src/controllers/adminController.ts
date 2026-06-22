@@ -292,6 +292,67 @@ export const getUserById = async (
   }
 };
 
+// Generates a fresh temporary password for an existing staff account and
+// returns it once, in this response only. There is no way to retrieve a
+// previously-set password — it's bcrypt-hashed the instant it's saved and
+// cannot be reversed by this server, this database, or anyone with access
+// to either. This is the only safe path to recover access to an account
+// whose original password was lost or never recorded.
+function generateTempPassword(): string {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // no I/O to avoid visual ambiguity
+  const lower = "abcdefghijkmnpqrstuvwxyz";
+  const digits = "23456789";
+  const symbols = "!@#$%&*";
+  const all = upper + lower + digits + symbols;
+
+  const pick = (chars: string) => chars[Math.floor(Math.random() * chars.length)];
+
+  const required = [pick(upper), pick(lower), pick(digits), pick(symbols)];
+  const rest = Array.from({ length: 8 }, () => pick(all));
+
+  return [...required, ...rest].sort(() => Math.random() - 0.5).join("");
+}
+
+export const resetStaffPassword = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      throw new AppError("Staff member not found", 404);
+    }
+    if (user.role === "CUSTOMER") {
+      throw new AppError("This endpoint is for staff accounts only", 400);
+    }
+    // A Super Admin may reset their own password this way, but not another
+    // Super Admin's, to prevent one admin from silently locking out another.
+    if (user.role === "SUPER_ADMIN" && String(user._id) !== req.user?.id) {
+      throw new AppError("Cannot reset another Super Admin's password", 403);
+    }
+
+    const tempPassword = generateTempPassword();
+    user.passwordHash = await bcrypt.hash(tempPassword, 12);
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Temporary password generated. It will not be shown again after you close this window.",
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        tempPassword,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const deleteUser = async (
   req: AuthRequest,
   res: Response,
