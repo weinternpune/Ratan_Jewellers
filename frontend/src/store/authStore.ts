@@ -26,7 +26,7 @@ interface AuthStore {
   resetStaffPassword: (id: string) => Promise<{ success: boolean; error?: string; tempPassword?: string; email?: string; name?: string }>
 }
 
-const API = () => 'http://localhost:5000/api'
+const API = () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
 
 export const useAuthStore = create<AuthStore>()(
   persist(
@@ -39,10 +39,10 @@ export const useAuthStore = create<AuthStore>()(
         try {
           console.log('🔐 Starting login process...', { identifier, apiUrl: API() })
           
-          const res = await fetch(`${API()}/auth/admin/login`, {
+          const res = await fetch(`${API()}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ identifier: identifier.trim(), password: password.trim() }),
+            body: JSON.stringify({ email: identifier.trim(), password: password.trim() }),
           })
           
           console.log('📡 API Response status:', res.status)
@@ -139,7 +139,7 @@ export const useAuthStore = create<AuthStore>()(
         // Last resort: fetch user from API
         try {
           console.log('📡 Fetching user from API...')
-          const response = await fetch('http://localhost:5000/api/auth/me', {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/me`, {
             headers: {
               'Authorization': `Bearer ${accessToken}`
             }

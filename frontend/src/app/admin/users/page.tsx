@@ -51,7 +51,7 @@ const displayCurrency = (val: any): string => {
 }
 
 export default function UsersPage() {
-  const { currentUser, managedStaff, createStaff, updateStaffStatus, deleteStaff, resetStaffPassword, getEffectiveRole } = useAuthStore()
+  const { currentUser, managedStaff, createStaff, updateStaffStatus, deleteStaff, getEffectiveRole, resetStaffPassword } = useAuthStore()
   const { hasHydrated } = useCustomerAuthStore()
   const { customers, fetchCustomers, loading } = useAdminStore()
   const role = getEffectiveRole()
@@ -67,6 +67,7 @@ export default function UsersPage() {
   const [form, setForm] = useState({ name:'', email:'', phone:'', password:'', confirmPassword:'', role:'sales_staff' as AdminRole })
   const [formError, setFormError] = useState('')
   const [dbUsers, setDbUsers] = useState<StaffAccount[]>([])
+  const [resettingPassword, setResettingPassword] = useState(false)
 
   // Shown once, immediately after a staff account is created — the only
   // moment the plaintext password is ever available, since it's hashed
@@ -79,7 +80,6 @@ export default function UsersPage() {
   const [staffDetailsData, setStaffDetailsData] = useState<any|null>(null)
   const [staffDetailsLoading, setStaffDetailsLoading] = useState(false)
   const [staffDetailsError, setStaffDetailsError] = useState('')
-  const [resettingPassword, setResettingPassword] = useState(false)
 
   const modules = ['Website','E-Commerce','Billing','Inventory','CRM','Analytics','Admin']
 
