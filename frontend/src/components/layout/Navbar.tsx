@@ -136,10 +136,10 @@ const handleProfileClick = (e: React.MouseEvent) => {
       {/* Main Navbar */}
       <nav className={`fixed left-0 right-0 z-[100] bg-white border-b border-gray-200 shadow-md w-full transition-all duration-300 ${scrolled ? 'top-0' : 'top-0 xl:top-[35px]'}`}>
         <div className="w-full max-w-full px-1.5 xs:px-2 sm:px-3 md:px-3 lg:px-4 xl:px-8 2xl:px-12">
-          <div className="flex items-center justify-between h-24 md:h-28 w-full max-w-full gap-0.5 xs:gap-1 sm:gap-1 md:gap-1 lg:gap-2">
+          <div className="flex items-center justify-between h-16 md:h-20 w-full max-w-full gap-0.5 xs:gap-1 sm:gap-1 md:gap-1 lg:gap-2">
             {/* Logo */}
             <Link href="/" className="flex items-center flex-shrink-0 min-w-0">
-              <img src="/logo.png" alt="Ratan Jewellers" style={{ height: "96px", width: "auto", objectFit: "contain", maxWidth: "240px" }} />
+              <img src="/logo.jpg" alt="Ratan Jewellers" className="h-20 sm:h-24 md:h-28 lg:h-36 xl:h-40 w-auto object-contain" style={{ filter: "brightness(0.9)" }} />
             </Link>
 
             {/* Desktop Navigation */}

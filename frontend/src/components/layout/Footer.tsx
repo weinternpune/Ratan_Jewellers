@@ -141,7 +141,7 @@ export default function Footer() {
 }
 
 function LogoMark() {
-  return <img src="/logo.png" alt="Ratan Jewellers" style={{ height: "100px", width: "auto", objectFit: "contain", maxWidth: "240px" }} />
+  return <img src="/logo.jpg" alt="Ratan Jewellers" style={{ height: "240px", width: "auto", objectFit: "contain", maxWidth: "550px", marginLeft: "-40px" }} />
 }
 
 function FooterColumn({

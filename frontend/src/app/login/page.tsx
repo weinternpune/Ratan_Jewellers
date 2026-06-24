@@ -123,7 +123,7 @@ export default function LoginPage() {
           </svg>
         </div>
         <div className="relative z-10 flex items-center gap-3">
-          <img src="/logo.png" alt="Ratan Jewellers" style={{ height: "80px", width: "auto", objectFit: "contain", maxWidth: "220px" }} />
+          <img src="/logo.jpg" alt="Ratan Jewellers" style={{ height: "300px", width: "auto", objectFit: "contain", maxWidth: "650px" }} />
         </div>
         <div className="relative z-10">
           <div className="text-[#C9A84C] text-[11px] tracking-[0.4em] font-sans mb-5">YOUR ACCOUNT</div>

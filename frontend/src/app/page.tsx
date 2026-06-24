@@ -12,7 +12,7 @@ import WhyChooseUs from '@/components/home/WhyChooseUs'
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen pt-16 md:pt-20 xl:pt-[124px]">
+    <main className="min-h-screen pt-16 md:pt-20">
       <Navbar />
       <CartDrawer />
       <HeroSection />

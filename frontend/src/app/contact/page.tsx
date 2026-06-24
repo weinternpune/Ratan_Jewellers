@@ -306,7 +306,7 @@ export default function ContactPage() {
             </p>
 
             <div className="mt-8 grid gap-4">
-              <InfoRow icon={MapPin} title="Showroom" text="Main Road, Bhubaneswar, Odisha 751001" />
+              <InfoRow icon={MapPin} title="Showroom" text="Arjuni, Maharashtra 441911" />
               <InfoRow icon={Clock} title="Timings" text="Monday to Sunday, 10:00 AM - 8:30 PM" />
               <InfoRow icon={CalendarDays} title="Appointments" text="Priority slots available for bridal and custom design consultations" />
               <InfoRow icon={ShieldCheck} title="Assurance" text="BIS hallmarked gold and certified diamond guidance" />
