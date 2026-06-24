@@ -123,13 +123,7 @@ export default function LoginPage() {
           </svg>
         </div>
         <div className="relative z-10 flex items-center gap-3">
-          <div className="w-9 h-9 border border-[#C9A84C]/40 flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#C9A84C" strokeWidth="1.5" strokeLinejoin="round"/></svg>
-          </div>
-          <div>
-            <div className="text-[#F0E0B0] text-[11px] tracking-[0.3em] font-sans font-bold">RATAN JEWELLERS</div>
-            <div className="text-[#C9A84C]/50 text-[9px] tracking-[0.2em] font-sans">EST. 1985</div>
-          </div>
+          <img src="/logo.png" alt="Ratan Jewellers" style={{ height: "80px", width: "auto", objectFit: "contain", maxWidth: "220px" }} />
         </div>
         <div className="relative z-10">
           <div className="text-[#C9A84C] text-[11px] tracking-[0.4em] font-sans mb-5">YOUR ACCOUNT</div>

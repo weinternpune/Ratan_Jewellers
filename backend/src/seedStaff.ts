@@ -7,7 +7,7 @@ import { User } from './models/User';
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ratan_jewellers';
 
 const STAFF = [
-  { name:'Uttam Kumar',   email:'uttamkumar86830@gmail.com', phone:'+919876543210', password:'SuperAdmin@2025#RJ', role:'SUPER_ADMIN'       },
+  { name:'Uttam Kumar',   email:'uttamkumar86830@gmail.com', phone:'+917507510948', password:'SuperAdmin@2025#RJ', role:'SUPER_ADMIN'       },
   { name:'Priya Mehta',   email:'priya@ratanjewellers.com',  phone:'+918765432109', password:'Admin@2025#RJ',      role:'ADMIN'             },
   { name:'Suresh Patel',  email:'suresh@ratanjewellers.com', phone:'+917654321098', password:'Manager@2025#RJ',    role:'STORE_MANAGER'     },
   { name:'Anita Das',     email:'anita@ratanjewellers.com',  phone:'+916543210987', password:'Inventory@2025#RJ',  role:'INVENTORY_MANAGER' },

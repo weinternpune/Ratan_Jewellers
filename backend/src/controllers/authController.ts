@@ -97,6 +97,8 @@ export const register = async (
   }
 };
 
+const STAFF_ROLES = ['ADMIN','SUPER_ADMIN','STORE_MANAGER','SALES_STAFF','INVENTORY_MANAGER'];
+
 export const login = async (
   req: Request,
   res: Response,
@@ -104,12 +106,26 @@ export const login = async (
 ) => {
   try {
     const { email, password } = req.body;
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email?.toLowerCase?.()?.trim() || email });
     if (!user || !user.passwordHash)
       throw new AppError("Invalid credentials", 401);
     if (!user.isActive) throw new AppError("Account is deactivated", 401);
     if (!(await bcrypt.compare(password, user.passwordHash)))
       throw new AppError("Invalid credentials", 401);
+
+    // Staff first-time login: email not verified → send OTP
+    if (STAFF_ROLES.includes(user.role?.toUpperCase?.()) && !user.isVerified) {
+      const { sendOTP: sendStaffOTP } = await import("../services/otpService");
+      const result = await sendStaffOTP(user.email, "email", "login");
+      if (!result.success) throw new AppError(result.message, 429);
+      return res.status(200).json({
+        success: true,
+        requiresVerification: true,
+        email: user.email,
+        message: `A verification code has been sent to ${user.email}. Please verify to continue.`,
+      });
+    }
+
     const { accessToken, refreshToken } = generateTokens(user._id.toString());
     await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
     await Session.create({
@@ -119,6 +135,7 @@ export const login = async (
     });
     res.json({
       success: true,
+      requiresVerification: false,
       message: "Login successful",
       data: {
         user: {
@@ -488,27 +505,6 @@ export const resetPasswordWithOTP = async (
       success: true,
       message: "Password reset successfully. Please sign in with your new password.",
     });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ─── Debug — temporary diagnostic endpoint ─────────────────────────────────
-// Deliberately returns no sensitive fields (no password hash, no secrets).
-export const debugCheckUser = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    const { identifier } = req.body;
-    if (!identifier) throw new AppError("Identifier is required", 400);
-
-    const user = await User.findOne({
-      $or: [{ email: identifier.toLowerCase().trim() }, { phone: identifier.trim() }],
-    }).select("email phone role isActive isVerified createdAt");
-
-    res.json({ success: true, exists: !!user, data: user || null });
   } catch (err) {
     next(err);
   }

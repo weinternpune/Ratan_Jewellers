@@ -136,28 +136,10 @@ const handleProfileClick = (e: React.MouseEvent) => {
       {/* Main Navbar */}
       <nav className={`fixed left-0 right-0 z-[100] bg-white border-b border-gray-200 shadow-md w-full transition-all duration-300 ${scrolled ? 'top-0' : 'top-0 xl:top-[35px]'}`}>
         <div className="w-full max-w-full px-1.5 xs:px-2 sm:px-3 md:px-3 lg:px-4 xl:px-8 2xl:px-12">
-          <div className="flex items-center justify-between h-16 md:h-20 w-full max-w-full gap-0.5 xs:gap-1 sm:gap-1 md:gap-1 lg:gap-2">
+          <div className="flex items-center justify-between h-24 md:h-28 w-full max-w-full gap-0.5 xs:gap-1 sm:gap-1 md:gap-1 lg:gap-2">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-1 sm:gap-1.5 md:gap-2 lg:gap-2 xl:gap-3 group flex-shrink-0 min-w-0">
-              <div className="relative flex-shrink-0">
-                <svg width="36" height="36" viewBox="0 0 48 48" fill="none" className="sm:w-9 sm:h-9 md:w-10 md:h-10 lg:w-11 lg:h-11 xl:w-12 xl:h-12 drop-shadow-md">
-                  <path d="M8 28L12 16L18 22L24 12L30 22L36 16L40 28H8Z" fill="#C9A84C" stroke="#9D7A2E" strokeWidth="1" />
-                  <rect x="8" y="28" width="32" height="4" fill="#C9A84C" stroke="#9D7A2E" strokeWidth="1" />
-                  <circle cx="12" cy="16" r="2" fill="#E8D5A3" />
-                  <circle cx="24" cy="12" r="2" fill="#E8D5A3" />
-                  <circle cx="36" cy="16" r="2" fill="#E8D5A3" />
-                  <circle cx="24" cy="24" r="10" fill="white" stroke="#C9A84C" strokeWidth="1.5" />
-                  <text x="24" y="29" textAnchor="middle" fill="#C9A84C" fontSize="14" fontWeight="bold" fontFamily="serif">R</text>
-                </svg>
-              </div>
-              <div className="flex flex-col min-w-0">
-                <div className="font-serif text-xs sm:text-sm md:text-sm lg:text-base xl:text-xl font-bold text-[#C9A84C] tracking-wide leading-none whitespace-nowrap truncate">
-                  RATAN JEWELLERS
-                </div>
-                <div className="text-[7px] sm:text-[7px] md:text-[7px] lg:text-[8px] xl:text-[9px] text-gray-500 tracking-[0.1em] sm:tracking-[0.12em] md:tracking-[0.13em] lg:tracking-[0.15em] uppercase leading-none mt-1 hidden sm:block truncate">
-                  Timeless Elegance. Trusted Since Generations.
-                </div>
-              </div>
+            <Link href="/" className="flex items-center flex-shrink-0 min-w-0">
+              <img src="/logo.png" alt="Ratan Jewellers" style={{ height: "96px", width: "auto", objectFit: "contain", maxWidth: "240px" }} />
             </Link>
 
             {/* Desktop Navigation */}

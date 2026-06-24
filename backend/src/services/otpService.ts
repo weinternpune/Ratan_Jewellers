@@ -178,7 +178,7 @@ export async function sendOTP(
 
   await OTP.create({ identifier, type, purpose, code, expiresAt });
 
-  logger.info(`🔑 [OTP SERVICE] Generated OTP for ${identifier} (${purpose}): ${code}`);
+  logger.info(`[OTP SERVICE] OTP generated for ${identifier} (${purpose})`);  // code never logged
 
   const purposeLabel =
     purpose === 'reset_password' ? 'reset your password' :
@@ -193,10 +193,9 @@ export async function sendOTP(
     }
     return { success: true, message: `OTP sent successfully to your ${type === 'phone' ? 'mobile number' : 'email address'}.` };
   } catch (err: any) {
-    // Remove the OTP record if sending failed so user can retry
-    await OTP.deleteMany({ identifier, purpose, verified: false });
-    console.error(`[OTP] Send failed:`, err.message);
-    return { success: false, message: err.message || 'Failed to send OTP. Please check your configuration.' };
+    console.error(`[OTP] Send failed - FULL ERROR:`, err);
+    // Do NOT delete OTP so user can still use it
+    return { success: false, message: err.message || 'Failed to send OTP.' };
   }
 }
 

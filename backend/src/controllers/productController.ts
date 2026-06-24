@@ -111,14 +111,14 @@ export const getProducts = async (
         .sort(sort)
         .skip((pageNum - 1) * limitNum)
         .limit(limitNum)
-        .lean<any[]>(),
+        .lean(),
       Product.countDocuments(filter),
     ]);
 
     // ── inventory map ─────────────────────────────────────────────────────────
     const inventories = await Inventory.find({
       productId: { $in: products.map((p: any) => p._id) },
-    }).lean<any[]>();
+    }).lean();
 
     const invMap = Object.fromEntries(
       inventories.map((i: any) => [i.productId.toString(), i]),
@@ -128,7 +128,7 @@ export const getProducts = async (
     const reviews = await Review.find({
       productId: { $in: products.map((p: any) => p._id) },
       isApproved: true,
-    }).lean<any[]>();
+    }).lean();
 
     const reviewMap: Record<string, any[]> = {};
     reviews.forEach((r: any) => {
@@ -206,7 +206,7 @@ export const getProductBySlug = async (
         isActive: true,
       })
         .limit(8)
-        .lean<any[]>(),
+        .lean(),
     ]);
 
     const revs: any[] = reviews as any[];

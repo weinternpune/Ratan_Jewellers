@@ -14,4 +14,4 @@ const OTPSchema = new Schema<IOTP>({
   attempts:   { type: Number, default: 0 },
 }, { timestamps: true });
 OTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-export const OTP = mongoose.models.OTP || mongoose.model<IOTP>('OTP', OTPSchema);
+export const OTP = (mongoose.models.OTP || mongoose.model<IOTP>('OTP', OTPSchema)) as mongoose.Model<IOTP>;

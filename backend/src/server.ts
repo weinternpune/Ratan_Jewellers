@@ -4,6 +4,8 @@ dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import passport from 'passport';
+import { configurePassport } from './config/passport';
 import rateLimit from 'express-rate-limit';
 import { connectDB } from './lib/db';
 import { logger } from './utils/logger';
@@ -33,6 +35,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 connectDB();
+
+configurePassport();
+app.use(passport.initialize());
 
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 const allowedOrigin = process.env.FRONTEND_URL;

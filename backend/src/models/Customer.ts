@@ -22,4 +22,4 @@ const CustomerSchema = new Schema<ICustomer>({
   notes:          { type: String },
 }, { timestamps: true });
 
-export const Customer = mongoose.models.Customer || mongoose.model<ICustomer>('Customer', CustomerSchema);
+export const Customer = (mongoose.models.Customer || mongoose.model<ICustomer>('Customer', CustomerSchema)) as mongoose.Model<ICustomer>;

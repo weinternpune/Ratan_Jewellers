@@ -48,8 +48,8 @@ async function seed() {
   await mongoose.connect(MONGO_URI)
   console.log(`✅  MongoDB connected: ${MONGO_URI}\n`)
 
-  const UserModel     = mongoose.models.User     || mongoose.model('User',     UserSchema)
-  const CustomerModel = mongoose.models.Customer || mongoose.model('Customer', CustomerSchema)
+  const UserModel     = (mongoose.models.User     || mongoose.model('User',     UserSchema)) as any
+  const CustomerModel = (mongoose.models.Customer || mongoose.model('Customer', CustomerSchema)) as any
 
   let created = 0, skipped = 0, updated = 0
 

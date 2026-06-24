@@ -86,4 +86,4 @@ OrderSchema.pre('save', async function(next) {
   next();
 });
 
-export const Order = mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
+export const Order = (mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema)) as mongoose.Model<IOrder>;

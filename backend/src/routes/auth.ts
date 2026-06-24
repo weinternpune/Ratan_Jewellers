@@ -15,7 +15,6 @@ import {
   checkAccountExists,
   sendPasswordResetOTP,
   resetPasswordWithOTP,
-  debugCheckUser,
   googleCallback
 } from '../controllers/authController';
 
@@ -48,7 +47,6 @@ router.post('/forgot-password/reset', resetPasswordWithOTP as RequestHandler);
 // router.post('/admin/login', adminLogin as RequestHandler);
 
 // TEMPORARY — remove after debugging
-router.post('/debug-check', debugCheckUser as RequestHandler);
 
 // ── Google OAuth ────────────────────────────────────────────────────────────
 const googleGuard: RequestHandler = (req, res, next) => {

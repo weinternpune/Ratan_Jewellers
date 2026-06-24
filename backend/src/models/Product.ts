@@ -40,4 +40,4 @@ ProductSchema.index({ slug: 1 });
 ProductSchema.index({ metal: 1, purity: 1 });
 ProductSchema.index({ name: 'text', description: 'text' });
 
-export const Product = mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
+export const Product = (mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema)) as mongoose.Model<IProduct>;

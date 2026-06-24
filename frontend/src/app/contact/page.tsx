@@ -24,14 +24,14 @@ import CartDrawer from '@/components/cart/CartDrawer'
 const contactMethods = [
   {
     label: 'Call Our Store',
-    value: '+91 98765 43210',
-    href: 'tel:+919876543210',
+    value: '+917507510948',
+    href: 'tel:+917507510948',
     icon: Phone,
   },
   {
     label: 'WhatsApp Concierge',
     value: '+91 98765 43210',
-    href: 'https://wa.me/919876543210',
+    href: 'https://wa.me/917507510948',
     icon: MessageCircle,
   },
   {
@@ -107,14 +107,14 @@ export default function ContactPage() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
-                href="tel:+919876543210"
+                href="tel:+917507510948"
                 className="btn-gold inline-flex items-center gap-2 px-6 py-3 text-sm uppercase"
               >
                 <Phone size={17} />
                 Call Now
               </Link>
               <Link
-                href="https://wa.me/919876543210"
+                href="https://wa.me/917507510948"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 border border-[#C9A84C]/60 bg-white/8 px-6 py-3 text-sm font-semibold uppercase tracking-[0.05em] text-[#E8D5A3] transition hover:bg-[#C9A84C] hover:text-[#181310]"

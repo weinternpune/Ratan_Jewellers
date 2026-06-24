@@ -111,12 +111,14 @@ function SidebarContent({
                            the desktop has no X button so pr-12 is harmless there too
                            (sidebar is wide enough that Crown+text never gets clipped) */}
       <div className={`flex-shrink-0 flex items-center gap-2 px-3 py-3 border-b border-[#C9A84C]/20 ${collapsed ? 'justify-center' : 'pr-12'}`}>
-        <div className="flex-shrink-0 w-9 h-9 rounded-full bg-[#C9A84C]/10 border border-[#C9A84C]/40 flex items-center justify-center">
-          <Crown size={18} className="text-[#C9A84C]" />
-        </div>
+         {/* <Link href="/" className="flex items-center flex-shrink-0 min-w-0">
+              <img src="/logo.png" alt="Ratan Jewellers" style={{ height: "96px", width: "auto", objectFit: "contain", maxWidth: "240px" }} />
+            </Link> */}
         {!collapsed && (
           <div>
-            <div className="text-[#C9A84C] font-bold text-sm tracking-wider leading-none">RATAN</div>
+             <Link href="/" className="flex items-center flex-shrink-0 min-w-0">
+              <img src="/logo.png" alt="Ratan Jewellers" style={{ height: "96px", width: "auto", objectFit: "contain", maxWidth: "240px" }} />
+            </Link>
             <div className="text-white/40 text-[9px] tracking-widest leading-none mt-0.5">ADMIN PANEL</div>
           </div>
         )}

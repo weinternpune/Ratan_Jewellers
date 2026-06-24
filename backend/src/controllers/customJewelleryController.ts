@@ -17,7 +17,7 @@ const CJSchema = new Schema({
   requestId: { type: String },
 }, { timestamps: true });
 
-const CJRequest = mongoose.models.CustomJewellery || mongoose.model('CustomJewellery', CJSchema);
+const CJRequest = (mongoose.models.CustomJewellery || mongoose.model('CustomJewellery', CJSchema)) as any;
 
 export const createRequest = async (req: Request, res: Response, next: NextFunction) => {
   try {

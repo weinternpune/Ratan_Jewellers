@@ -47,7 +47,7 @@ const socialLinks = [
   { label: 'Facebook', href: '#', icon: Globe },
   { label: 'Instagram', href: '#', icon: Camera },
   { label: 'YouTube', href: '#', icon: Play },
-  { label: 'WhatsApp', href: 'https://wa.me/919876543210', icon: MessageCircle },
+  { label: 'WhatsApp', href: 'https://wa.me/917507510948', icon: MessageCircle },
 ]
 
 export default function Footer() {
@@ -60,9 +60,6 @@ export default function Footer() {
           <div>
             <Link href="/" className="flex items-center gap-4">
               <LogoMark />
-              <span className="font-display text-[1.8rem] font-semibold leading-none tracking-normal text-[#d6a84f]">
-                RATAN JEWELLERS
-              </span>
             </Link>
             <p className="mt-5 max-w-[230px] text-sm font-medium leading-6 text-white/85">
               Timeless Elegance, Trusted Since Generations.
@@ -144,22 +141,7 @@ export default function Footer() {
 }
 
 function LogoMark() {
-  return (
-    <span
-      aria-hidden="true"
-      className="relative flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full border-2 border-[#d6a84f] bg-[#340008] shadow-[0_0_22px_rgba(214,168,79,0.28)]"
-    >
-      <span className="absolute inset-1.5 rounded-full border border-[#d6a84f]/45" />
-      <Crown
-        size={19}
-        strokeWidth={2}
-        className="absolute -top-1.5 left-1/2 -translate-x-1/2 fill-[#d6a84f]/20 text-[#d6a84f]"
-      />
-      <span className="font-display text-[2.35rem] font-semibold leading-none text-[#d6a84f]">
-        R
-      </span>
-    </span>
-  )
+  return <img src="/logo.png" alt="Ratan Jewellers" style={{ height: "100px", width: "auto", objectFit: "contain", maxWidth: "240px" }} />
 }
 
 function FooterColumn({

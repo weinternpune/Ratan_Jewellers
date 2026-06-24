@@ -131,7 +131,7 @@ export default function HeroSection() {
         <div className="flex flex-col gap-3 md:gap-4">
           {/* WhatsApp */}
           <a
-            href="https://wa.me/919876543210"
+            href="https://wa.me/917507510948"
             target="_blank"
             rel="noopener noreferrer"
             className="flex flex-col items-center justify-center text-white hover:scale-105 transition-transform"
@@ -147,7 +147,7 @@ export default function HeroSection() {
 
           {/* Call */}
           <a
-            href="tel:+919876543210"
+            href="tel:+917507510948"
             className="flex flex-col items-center justify-center text-white hover:scale-105 transition-transform"
             aria-label="Call us"
           >

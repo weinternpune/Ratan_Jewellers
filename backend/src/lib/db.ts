@@ -5,7 +5,7 @@ let isConnected = false;
 
 export const connectDB = async (): Promise<void> => {
   if (isConnected) return;
-  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/ratan_jewellers';
+  const uri = process.env.MONGODB_URI || process.env.DATABASE_URL || 'mongodb://localhost:27017/ratan_jewellers';
   try {
     mongoose.set('strictQuery', false);
     await mongoose.connect(uri);

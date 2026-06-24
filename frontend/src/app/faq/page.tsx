@@ -326,7 +326,7 @@ export default function FAQPage() {
                   icon: Phone,
                   title: 'Call Us',
                   desc: 'Mon–Sat, 10 AM – 7 PM IST',
-                  action: 'tel:+919876543210',
+                  action: 'tel:+917507510948',
                   cta: '+91 98765 43210',
                 },
                 {
@@ -340,7 +340,7 @@ export default function FAQPage() {
                   icon: HelpCircle,
                   title: 'Live Chat',
                   desc: 'Chat with us on WhatsApp',
-                  action: 'https://wa.me/919876543210',
+                  action: 'https://wa.me/917507510948',
                   cta: 'Start Chat',
                 },
               ].map(({ icon: Icon, title, desc, action, cta }) => (

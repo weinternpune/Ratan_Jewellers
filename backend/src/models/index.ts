@@ -13,7 +13,7 @@ const CategorySchema = new Schema<ICategory>({
   isActive:    { type: Boolean, default: true },
   sortOrder:   { type: Number, default: 0 },
 }, { timestamps: true });
-export const Category = mongoose.models.Category || mongoose.model<ICategory>('Category', CategorySchema);
+export const Category = (mongoose.models.Category || mongoose.model<ICategory>('Category', CategorySchema)) as mongoose.Model<ICategory>;
 
 // ── GoldRate ──────────────────────────────────────────────────────
 export interface IGoldRate extends Document {
@@ -26,7 +26,7 @@ const GoldRateSchema = new Schema<IGoldRate>({
   source:      { type: String, default: 'MANUAL' },
 }, { timestamps: true });
 GoldRateSchema.index({ purity: 1, date: -1 });
-export const GoldRate = mongoose.models.GoldRate || mongoose.model<IGoldRate>('GoldRate', GoldRateSchema);
+export const GoldRate = (mongoose.models.GoldRate || mongoose.model<IGoldRate>('GoldRate', GoldRateSchema)) as mongoose.Model<IGoldRate>;
 
 // ── Inventory ─────────────────────────────────────────────────────
 export interface IInventory extends Document {
@@ -42,7 +42,7 @@ const InventorySchema = new Schema<IInventory>({
   supplierId:    { type: Schema.Types.ObjectId, ref: 'Supplier' },
   lastRestocked: { type: Date },
 }, { timestamps: true });
-export const Inventory = mongoose.models.Inventory || mongoose.model<IInventory>('Inventory', InventorySchema);
+export const Inventory = (mongoose.models.Inventory || mongoose.model<IInventory>('Inventory', InventorySchema)) as mongoose.Model<IInventory>;
 
 // ── Session ───────────────────────────────────────────────────────
 export interface ISession extends Document {
@@ -55,7 +55,7 @@ const SessionSchema = new Schema<ISession>({
 }, { timestamps: true });
 SessionSchema.index({ token: 1 });
 SessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-export const Session = mongoose.models.Session || mongoose.model<ISession>('Session', SessionSchema);
+export const Session = (mongoose.models.Session || mongoose.model<ISession>('Session', SessionSchema)) as mongoose.Model<ISession>;
 
 // ── Supplier ──────────────────────────────────────────────────────
 export interface ISupplier extends Document {
@@ -69,4 +69,4 @@ const SupplierSchema = new Schema<ISupplier>({
   gstin:    { type: String },
   isActive: { type: Boolean, default: true },
 }, { timestamps: true });
-export const Supplier = mongoose.models.Supplier || mongoose.model<ISupplier>('Supplier', SupplierSchema);
+export const Supplier = (mongoose.models.Supplier || mongoose.model<ISupplier>('Supplier', SupplierSchema)) as mongoose.Model<ISupplier>;

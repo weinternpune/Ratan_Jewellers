@@ -35,7 +35,7 @@ const OrderSchema = new Schema<IOrder>({
   items:             [OrderItemSchema],
 }, { timestamps: true });
 OrderSchema.index({ orderNumber: 1 }); OrderSchema.index({ userId: 1 }); OrderSchema.index({ status: 1 });
-export const Order = mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
+export const Order = (mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema)) as mongoose.Model<IOrder>;
 
 // ── Invoice ───────────────────────────────────────────────────────
 const InvoiceItemSchema = new Schema({
@@ -75,7 +75,7 @@ const InvoiceSchema = new Schema<IInvoice>({
   items:           [InvoiceItemSchema],
 }, { timestamps: true });
 InvoiceSchema.index({ invoiceNumber: 1 }); InvoiceSchema.index({ customerPhone: 1 }); InvoiceSchema.index({ createdAt: -1 });
-export const Invoice = mongoose.models.Invoice || mongoose.model<IInvoice>('Invoice', InvoiceSchema);
+export const Invoice = (mongoose.models.Invoice || mongoose.model<IInvoice>('Invoice', InvoiceSchema)) as mongoose.Model<IInvoice>;
 
 // ── Review ────────────────────────────────────────────────────────
 const ReviewSchema = new Schema({
@@ -86,7 +86,7 @@ const ReviewSchema = new Schema({
   isVerified: { type: Boolean, default: false }, isApproved: { type: Boolean, default: false },
 }, { timestamps: true });
 ReviewSchema.index({ productId: 1 });
-export const Review = mongoose.models.Review || mongoose.model('Review', ReviewSchema);
+export const Review = (mongoose.models.Review || mongoose.model('Review', ReviewSchema)) as any;
 
 // ── Coupon ────────────────────────────────────────────────────────
 const CouponSchema = new Schema({

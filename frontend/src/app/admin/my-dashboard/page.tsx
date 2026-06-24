@@ -133,7 +133,7 @@ function CustomerDash() {
       <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex items-center gap-4">
         <MessageCircle size={20} className="text-green-600 flex-shrink-0"/>
         <div className="flex-1"><div className="font-semibold text-gray-800 text-sm">Need Help?</div><div className="text-xs text-gray-500">Contact us on WhatsApp for order support</div></div>
-        <a href="https://wa.me/919876543210" target="_blank" rel="noreferrer" className="bg-green-500 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-green-600 whitespace-nowrap">WhatsApp Us</a>
+        <a href="https://wa.me/917507510948" target="_blank" rel="noreferrer" className="bg-green-500 text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-green-600 whitespace-nowrap">WhatsApp Us</a>
       </div>
     </div>
   )

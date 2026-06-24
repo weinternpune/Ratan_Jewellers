@@ -61,8 +61,8 @@ const productSchema = new mongoose.Schema(
 );
 
 const Product =
-  (mongoose.models.Product as mongoose.Model<any>) ||
-  mongoose.model("Product", productSchema);
+  ((mongoose.models.Product as mongoose.Model<any>) ||
+  (mongoose.model("Product", productSchema) as any)) as mongoose.Model<any>;
 
 // ─── Pool 1: Real catalogue (mirrors src/lib/products.ts exactly) ─────────────
 const CATALOGUE_PRODUCTS = [
