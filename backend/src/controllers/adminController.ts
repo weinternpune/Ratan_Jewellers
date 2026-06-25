@@ -367,16 +367,17 @@ export const deleteUser = async (
       throw new AppError("User not found", 404);
     }
 
-    // Prevent deleting Super Admin
-    if (user.role === "SUPER_ADMIN") {
-      throw new AppError("Super Admin account cannot be deleted", 403);
+    // Prevent Super Admin from deleting their own account
+    const requesterId = (req as any).user?._id?.toString() || (req as any).user?.id?.toString();
+    if (user.role === "SUPER_ADMIN" && requesterId === id) {
+      throw new AppError("You cannot delete your own Super Admin account", 403);
     }
 
     await User.findByIdAndDelete(id);
 
     res.json({
       success: true,
-      message: "Staff account deleted successfully",
+      message: "Account deleted successfully",
     });
   } catch (err) {
     next(err);

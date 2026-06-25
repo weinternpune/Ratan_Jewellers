@@ -31,100 +31,71 @@ async function sendSMS(to: string, code: string, purposeLabel: string): Promise<
 function buildEmailHTML(code: string, purposeLabel: string, expiryMinutes = 10): string {
   const digits = code.split('');
   const digitBoxes = digits.map(d =>
-    `<td style="padding:0 4px;"><div style="width:48px;height:60px;background:#FFFBF0;border:1.5px solid #C9A84C;display:inline-flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;font-family:'Georgia',serif;color:#1a0004;letter-spacing:0;">${d}</div></td>`
+    `<td style="padding:0 6px;">
+      <div style="width:58px;height:72px;background:transparent;border:1.5px solid #C9A84C;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;font-family:'Georgia',Georgia,serif;color:#ffffff;box-shadow:0 0 12px rgba(201,168,76,0.25);">${d}</div>
+    </td>`
   ).join('');
+
+  const actionLabel = purposeLabel.includes('reset') ? 'reset your password' :
+                      purposeLabel.includes('sign in') ? 'sign in to your account' :
+                      purposeLabel.includes('register') ? 'complete your registration' :
+                      purposeLabel;
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Your Ratan Jewellers OTP</title>
+  <title>Your Ratan Jewellers Verification Code</title>
 </head>
-<body style="margin:0;padding:0;background:#F5F0E8;font-family:'Helvetica Neue',Arial,sans-serif;">
-
-  <!-- Wrapper -->
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F5F0E8;padding:40px 16px;">
+<body style="margin:0;padding:0;background:#111111;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#111111;padding:40px 16px;">
     <tr><td align="center">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border:1px solid #E8D5A3;">
-
-        <!-- Header -->
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;border-radius:16px;overflow:hidden;border:1px solid #C9A84C;box-shadow:0 0 40px rgba(201,168,76,0.15);">
         <tr>
-          <td style="background:linear-gradient(135deg,#2D0A0F 0%,#1a0004 100%);padding:36px 40px;text-align:center;">
-            <!-- Logo mark -->
-            <table cellpadding="0" cellspacing="0" style="margin:0 auto 16px;">
-              <tr><td align="center">
-                <div style="width:48px;height:48px;border:1px solid rgba(201,168,76,0.5);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#C9A84C" stroke-width="1.5" stroke-linejoin="round"/>
-                  </svg>
-                </div>
+          <td style="background:#2D0A0F;padding:36px 40px 32px;text-align:center;border-bottom:2px solid #C9A84C;">
+            <div style="margin-bottom:16px;">
+              <img src="${process.env.FRONTEND_URL || 'https://ratanjeweller.in'}/logo.jpg" alt="Ratan Jewellers" width="220" style="height:auto;max-height:110px;object-fit:contain;display:inline-block;" />
+            </div>
+            <p style="margin:0;font-size:10px;letter-spacing:0.3em;color:#C9A84C;text-transform:uppercase;">EST. 1985 &nbsp;·&nbsp; BIS HALLMARKED</p>
+            <div style="margin-top:20px;text-align:center;">
+              <span style="display:inline-block;height:1px;width:80px;background:linear-gradient(90deg,transparent,#C9A84C);vertical-align:middle;"></span>
+              <span style="display:inline-block;width:6px;height:6px;background:#C9A84C;transform:rotate(45deg);margin:0 10px;vertical-align:middle;"></span>
+              <span style="display:inline-block;height:1px;width:80px;background:linear-gradient(90deg,#C9A84C,transparent);vertical-align:middle;"></span>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#1C1C1C;padding:44px 40px 40px;text-align:center;">
+            <p style="margin:0 0 6px;font-size:11px;letter-spacing:0.35em;color:#C9A84C;text-transform:uppercase;font-weight:600;">Verification Code</p>
+            <div style="width:6px;height:6px;background:#C9A84C;transform:rotate(45deg);margin:0 auto 20px;"></div>
+            <h1 style="margin:0 0 4px;font-size:36px;font-weight:300;color:#ffffff;font-family:'Georgia',serif;">Your one-time</h1>
+            <h1 style="margin:0 0 24px;font-size:36px;font-weight:400;color:#C9A84C;font-family:'Georgia',serif;font-style:italic;">password</h1>
+            <p style="margin:0 0 36px;font-size:14px;color:#BBBBBB;line-height:1.75;">
+              Use the code below to <strong style="color:#ffffff;">${actionLabel}</strong>.<br/>
+              This code is valid for <strong style="color:#ffffff;">${expiryMinutes} minutes</strong> only.
+            </p>
+            <table cellpadding="0" cellspacing="0" style="margin:0 auto 40px;"><tr>${digitBoxes}</tr></table>
+            <table cellpadding="0" cellspacing="0" style="width:100%;max-width:440px;margin:0 auto 40px;background:#252525;border-radius:8px;border-left:3px solid #C9A84C;">
+              <tr><td style="padding:18px 20px;text-align:left;">
+                <p style="margin:0 0 10px;font-size:13px;color:#CCCCCC;line-height:1.6;">&#9711; &nbsp;Expires in <strong style="color:#ffffff;">${expiryMinutes} minutes</strong> from the time of request.</p>
+                <div style="height:1px;background:#333333;margin-bottom:10px;"></div>
+                <p style="margin:0;font-size:13px;color:#CCCCCC;line-height:1.6;">&#128274; &nbsp;Never share this code — Ratan Jewellers will <strong style="color:#C9A84C;">never</strong> ask for your OTP.</p>
               </td></tr>
             </table>
-            <div style="color:#F0E0B0;font-size:13px;letter-spacing:0.35em;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Ratan Jewellers</div>
-            <div style="color:rgba(201,168,76,0.55);font-size:10px;letter-spacing:0.25em;text-transform:uppercase;">Est. 1985 · BIS Hallmarked</div>
           </td>
         </tr>
-
-        <!-- Gold divider -->
-        <tr><td style="height:3px;background:linear-gradient(90deg,transparent,#C9A84C,transparent);"></td></tr>
-
-        <!-- Body -->
         <tr>
-          <td style="padding:44px 40px 36px;">
-
-            <p style="margin:0 0 8px;font-size:11px;letter-spacing:0.3em;color:#C9A84C;text-transform:uppercase;font-weight:600;">Verification Code</p>
-            <h1 style="margin:0 0 16px;font-size:28px;font-weight:300;color:#1a0004;line-height:1.2;font-family:'Georgia',serif;">
-              Your one-time<br/><em style="font-style:italic;color:#9D7A2E;">password</em>
-            </h1>
-            <p style="margin:0 0 32px;font-size:14px;color:#666;line-height:1.7;">
-              Use the code below to <strong style="color:#1a0004;">${purposeLabel}</strong>. This code is valid for <strong style="color:#1a0004;">${expiryMinutes} minutes</strong> only.
+          <td style="background:#141414;border-top:1px solid #2A2A2A;padding:28px 40px;text-align:center;">
+            <p style="margin:0 0 14px;font-size:12px;color:#888888;line-height:1.8;">
+              If you didn&apos;t request this code, please ignore this email.<br/>Your account remains secure.
             </p>
-
-            <!-- OTP digit boxes -->
-            <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
-              <tr>${digitBoxes}</tr>
-            </table>
-
-            <!-- Timer info -->
-            <table cellpadding="0" cellspacing="0" width="100%" style="background:#FAF7F0;border-left:3px solid #C9A84C;margin-bottom:32px;">
-              <tr>
-                <td style="padding:14px 18px;">
-                  <p style="margin:0;font-size:13px;color:#555;line-height:1.6;">
-                    ⏱ &nbsp;Expires in <strong style="color:#1a0004;">${expiryMinutes} minutes</strong> from the time of request.<br/>
-                    🔒 &nbsp;Never share this code with anyone — Ratan Jewellers will <strong>never</strong> ask for your OTP.
-                  </p>
-                </td>
-              </tr>
-            </table>
-
-            <!-- Divider -->
-            <div style="height:1px;background:linear-gradient(90deg,transparent,#E8D5A3,transparent);margin-bottom:28px;"></div>
-
-            <p style="margin:0;font-size:12px;color:#999;line-height:1.8;text-align:center;">
-              If you didn't request this code, please ignore this email.<br/>
-              Your account remains secure.
-            </p>
+            <div style="height:1px;background:linear-gradient(90deg,transparent,#333333,transparent);margin-bottom:14px;"></div>
+            <p style="margin:0;font-size:11px;color:#555555;">&copy; ${new Date().getFullYear()} Ratan Jewellers. All rights reserved.</p>
           </td>
         </tr>
-
-        <!-- Footer -->
-        <tr>
-          <td style="background:#FAF7F0;border-top:1px solid #E8D5A3;padding:24px 40px;text-align:center;">
-            <p style="margin:0 0 8px;font-size:11px;color:#C9A84C;letter-spacing:0.2em;text-transform:uppercase;font-weight:600;">Ratan Jewellers</p>
-            <p style="margin:0;font-size:11px;color:#AAA;line-height:1.7;">
-              BIS Hallmarked · Since 1985 · Trusted by 50,000+ families<br/>
-              <a href="#" style="color:#9D7A2E;text-decoration:none;">Unsubscribe</a> &nbsp;·&nbsp; <a href="#" style="color:#9D7A2E;text-decoration:none;">Privacy Policy</a>
-            </p>
-          </td>
-        </tr>
-
       </table>
-
-      <!-- Bottom note -->
-      <p style="margin:20px 0 0;font-size:11px;color:#AAA;text-align:center;">
-        This is an automated message. Please do not reply to this email.
-      </p>
+      <p style="margin:20px 0 0;font-size:11px;color:#555555;text-align:center;">This is an automated message. Please do not reply.</p>
     </td></tr>
   </table>
 </body>
