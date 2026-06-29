@@ -50,19 +50,23 @@ export default function StoreLocatorPage() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative h-[300px] bg-gradient-to-br from-[#1C1917] via-[#292524] to-[#2D1810] overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(201,168,76,0.1),transparent_70%)]" />
-        <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
-          <div className="text-center w-full">
-            <h1 className="font-serif text-4xl md:text-5xl text-[#C9A84C] mb-4">
-              Visit Our Showrooms
-            </h1>
-            <p className="text-lg text-[#E8D5A3] max-w-2xl mx-auto">
-              Experience the finest collection of jewellery at our exclusive showrooms across the country
-            </p>
-          </div>
-        </div>
-      </section>
+      <section className="relative min-h-[340px] lg:min-h-[380px] xl:min-h-[420px] pt-24 lg:pt-28 bg-gradient-to-br from-[#1C1917] via-[#292524] to-[#2D1810] overflow-hidden">
+  {/* Background Glow */}
+  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(201,168,76,0.12),transparent_70%)]" />
+
+  <div className="relative max-w-7xl mx-auto px-6 lg:px-8 h-full flex items-center justify-center">
+    <div className="text-center py-14 lg:py-16">
+      <h1 className="font-serif text-4xl lg:text-5xl xl:text-6xl leading-tight text-[#C9A84C] mb-6">
+        Visit Our Showrooms
+      </h1>
+
+      <p className="text-lg lg:text-xl leading-relaxed text-[#E8D5A3] max-w-3xl mx-auto">
+        Experience the finest collection of jewellery at our exclusive
+        showrooms across the country.
+      </p>
+    </div>
+  </div>
+</section>
 
       {/* Main Content */}
       <section className="py-12 md:py-16">

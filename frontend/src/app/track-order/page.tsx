@@ -135,22 +135,27 @@ export default function TrackOrderPage() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative h-[300px] bg-gradient-to-br from-[#1C1917] via-[#292524] to-[#2D1810] overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(201,168,76,0.1),transparent_70%)]" />
-        <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
-          <div className="text-center w-full">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-[#C9A84C]/10 rounded-full mb-4">
-              <Package className="w-8 h-8 text-[#C9A84C]" />
-            </div>
-            <h1 className="font-serif text-4xl md:text-5xl text-[#C9A84C] mb-4">
-              Track Your Order
-            </h1>
-            <p className="text-lg text-[#E8D5A3] max-w-2xl mx-auto">
-              Enter your order number to track your jewellery delivery in real-time
-            </p>
-          </div>
-        </div>
-      </section>
+     <section className="relative min-h-[340px] lg:min-h-[380px] xl:min-h-[420px] pt-24 lg:pt-28 bg-gradient-to-br from-[#1C1917] via-[#292524] to-[#2D1810] overflow-hidden">
+  {/* Background Glow */}
+  <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(201,168,76,0.12),transparent_70%)]" />
+
+  <div className="relative max-w-7xl mx-auto px-6 lg:px-8 h-full flex items-center justify-center">
+    <div className="text-center py-14 lg:py-16">
+      <div className="inline-flex items-center justify-center w-16 h-16 lg:w-20 lg:h-20 bg-[#C9A84C]/10 rounded-full mb-6">
+        <Package className="w-8 h-8 lg:w-10 lg:h-10 text-[#C9A84C]" />
+      </div>
+
+      <h1 className="font-serif text-4xl lg:text-5xl xl:text-6xl leading-tight text-[#C9A84C] mb-6">
+        Track Your Order
+      </h1>
+
+      <p className="text-lg lg:text-xl leading-relaxed text-[#E8D5A3] max-w-3xl mx-auto">
+        Enter your order number to track your jewellery delivery in
+        real-time.
+      </p>
+    </div>
+  </div>
+</section>
 
       {/* Main Content */}
       <section className="py-12 md:py-16">
