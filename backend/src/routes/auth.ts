@@ -47,6 +47,42 @@ router.post('/forgot-password/reset', resetPasswordWithOTP as RequestHandler);
 // router.post('/admin/login', adminLogin as RequestHandler);
 
 // TEMPORARY — remove after debugging
+router.get('/create-test-user', (async (req, res) => {
+  try {
+    const bcrypt = require('bcryptjs');
+    const { User } = require('../models/User');
+    
+    const testEmail = 'uttamkumar86830@gmail.com';
+    const testPassword = 'SuperAdmin@2025#RJ';
+    
+    // Check if user already exists
+    const existing = await User.findOne({ email: testEmail });
+    if (existing) {
+      return res.json({ success: true, message: 'User already exists! You can login now.', email: testEmail, password: testPassword });
+    }
+    
+    // Create new user
+    const hash = await bcrypt.hash(testPassword, 12);
+    const user = await User.create({
+      name: 'Uttam Kumar',
+      email: testEmail,
+      phone: '+917507510948',
+      passwordHash: hash,
+      role: 'SUPER_ADMIN',
+      isActive: true,
+      isVerified: true
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'Test user created successfully!', 
+      user: { id: user._id, email: user.email, role: user.role },
+      credentials: { email: testEmail, password: testPassword }
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+}) as RequestHandler);
 
 // ── Google OAuth ────────────────────────────────────────────────────────────
 const googleGuard: RequestHandler = (req, res, next) => {

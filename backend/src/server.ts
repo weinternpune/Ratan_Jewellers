@@ -42,15 +42,11 @@ app.use(passport.initialize());
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 const allowedOrigin = process.env.FRONTEND_URL;
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // curl, server-to-server, etc.
-    if (process.env.NODE_ENV === 'production') return callback(null, origin === allowedOrigin);
-    const isLocalDev = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
-    callback(null, isLocalDev || origin === allowedOrigin);
-  },
+  origin: true, // Allow all origins in development
   credentials: true,
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type','Authorization'],
+  allowedHeaders: ['Content-Type','Authorization','X-Requested-With','Accept','Origin'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
 app.use('/api/',      rateLimit({ windowMs: 15*60*1000, max: 100, standardHeaders: true, legacyHeaders: false }));
 app.use('/api/auth/', rateLimit({ windowMs: 15*60*1000, max: process.env.NODE_ENV === 'development' ? 1000 : 20 }));
