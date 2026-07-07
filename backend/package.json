@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node src/server.ts",
-    "build": "tsc",
+    "build": "npx tsup src/server.ts --format cjs --out-dir dist --no-dts",
     "start": "node dist/server.js",
     "seed": "ts-node src/scripts/seed.ts",
     "create-admin": "ts-node src/models/CreateAdmin.ts",
@@ -30,6 +30,7 @@
     "passport-google-oauth20": "^2.0.0",
     "passport-local": "^1.0.0",
     "razorpay": "^2.9.2",
+    "tsup": "^8.5.1",
     "twilio": "^5.3.0",
     "uuid": "^9.0.1",
     "winston": "^3.12.0"
@@ -49,5 +50,8 @@
     "@types/uuid": "^9.0.8",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
