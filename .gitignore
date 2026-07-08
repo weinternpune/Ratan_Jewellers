@@ -1,36 +1,40 @@
-# Dependencies
+# ── Dependencies ──────────────────────────────────────────────────────────────
 node_modules/
-.npm/
+**/node_modules/
 
-# Environment — NEVER commit
+# ── Environment files ─────────────────────────────────────────────────────────
 .env
 .env.local
+.env.development
 .env.production
-.env*.local
+.env.test
+**/.env
+**/.env.local
+**/.env.production
+**/.env.development
 
-# Build outputs
-dist/
-.next/
-out/
-build/
+# ── Build outputs ─────────────────────────────────────────────────────────────
+backend/dist/
+frontend/.next/
+frontend/out/
 
-# Logs
-logs/
+# ── Logs ──────────────────────────────────────────────────────────────────────
 *.log
+logs/
+backend/logs/
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# OS
+# ── OS files ──────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+.qodo/
 
-# IDE
-.vscode/settings.json
-.idea/
-*.swp
+# ── Misc ──────────────────────────────────────────────────────────────────────
+.vercel
+*.zip
 
-# Uploads/Generated
-uploads/
-public/uploads/
-
-# Prisma generated (keep schema, ignore generated)
-backend/node_modules/
+.env
+node_modules/
+dist/
