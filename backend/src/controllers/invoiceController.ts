@@ -47,12 +47,19 @@ export const createInvoice = async (req: AuthRequest, res: Response, next: NextF
     // Calculate balance if not provided
     const finalBalanceDue = balanceDue !== undefined ? balanceDue : (totalAmount - amountPaid);
     
+    // Auto-determine status based on balance
+    let invoiceStatus = 'pending';
+    if (finalBalanceDue <= 0) {
+      invoiceStatus = 'paid';
+    }
+    
     const invoice = await Invoice.create({ 
       invoiceNumber, userId: req.user!.id, customerId: customerId||undefined, 
       customerName, customerPhone, customerEmail, customerAddress, customerGstin, 
       paymentMode, subtotal, discountAmount, cgst: totalCgst, sgst: totalSgst, 
       totalAmount, oldGoldExchange, 
       amountPaid, balanceDue: finalBalanceDue, paymentHistory, // Partial payment fields
+      status: invoiceStatus, // Auto-set status based on balance
       notes, items: processedItems 
     });
     
@@ -141,6 +148,15 @@ export const updateInvoice = async (req: AuthRequest, res: Response, next: NextF
           notes: req.body.paymentNotes || 'Additional payment'
         };
         updateData.paymentHistory = [...(invoice.paymentHistory || []), newPayment];
+      }
+    }
+    
+    // Auto-update status based on balance
+    if (updateData.balanceDue !== undefined) {
+      if (updateData.balanceDue <= 0) {
+        updateData.status = 'paid';
+      } else if (!updateData.status || updateData.status === 'paid') {
+        updateData.status = 'pending';
       }
     }
     

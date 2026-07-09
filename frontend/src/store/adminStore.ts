@@ -208,7 +208,7 @@ const initialInvoices: Invoice[] = [
 const initialInventory: InventoryItem[] = []
 
 const initialCustomers: Customer[] = [
-  { id: 'CRM-001', name: 'Demo Customer', phone: '+91 98765 43210', email: 'demo@example.com', city: 'Bhubaneswar', totalSpend: 50000, orders: 1, tier: 'gold', lastVisit: '13 Jun 2026', birthday: '15 May 1990', tags: ['VIP'] },
+  { id: 'CRM-001', name: 'Demo Customer', phone: '+91 98765 43210', email: 'demo@example.com', city: 'Pune', totalSpend: 50000, orders: 1, tier: 'gold', lastVisit: '13 Jun 2026', birthday: '15 May 1990', tags: ['VIP'] },
 ]
 
 const initialLogs: AuditLog[] = [
@@ -678,14 +678,213 @@ export const useAdminStore = create<AdminStore>()(
       exportInvoicePDF: (id) => {
         const inv = get().invoices.find(i => i.id === id)
         if (!inv) return
-        const html = `<html><head><title>${inv.id}</title></head><body><h1>RATAN JEWELLERS</h1><p>Invoice: ${inv.id}</p><p>Customer: ${inv.customer}</p><p>Total: ₹${inv.total}</p></body></html>`
+        
+        // Calculate balance and format amounts
+        const amountPaid = inv.amountPaid || 0
+        const balanceDue = inv.balanceDue !== undefined ? inv.balanceDue : (inv.total - amountPaid)
+        
+        // Create detailed HTML for print/PDF (matching preview design)
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice ${inv.id} - Ratan Jewellers</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; padding: 40px; color: #0D0700; }
+    .invoice-container { max-width: 800px; margin: 0 auto; border: 1px solid #E5E7EB; border-radius: 12px; overflow: hidden; }
+    .header { display: flex; justify-content: space-between; padding: 24px; background: #FEFCE8; border-bottom: 2px solid #C9A84C; }
+    .company-info { flex: 1; }
+    .company-name { font-size: 20px; font-weight: bold; color: #0D0700; margin-bottom: 8px; }
+    .company-details { font-size: 12px; color: #6B7280; line-height: 1.6; }
+    .invoice-info { text-align: right; }
+    .invoice-number { font-family: monospace; font-weight: bold; font-size: 18px; color: #C9A84C; margin-bottom: 8px; }
+    .invoice-date { font-size: 12px; color: #6B7280; }
+    .status-badge { display: inline-block; margin-top: 8px; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .status-paid { background: #DCFCE7; color: #166534; }
+    .status-pending { background: #FEF3C7; color: #92400E; }
+    .status-overdue { background: #FEE2E2; color: #991B1B; }
+    .customer-section { padding: 24px; background: #F9FAFB; border-bottom: 1px solid #E5E7EB; }
+    .section-title { font-size: 13px; font-weight: 600; color: #6B7280; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px; }
+    .customer-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .detail-item { }
+    .detail-label { font-size: 11px; color: #9CA3AF; margin-bottom: 4px; }
+    .detail-value { font-size: 14px; color: #1F2937; font-weight: 500; }
+    .product-section { padding: 24px; }
+    .product-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+    .amounts-section { padding: 24px; background: #F9FAFB; border-top: 1px solid #E5E7EB; }
+    .amounts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 400px; margin-left: auto; }
+    .amount-row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; }
+    .amount-label { color: #6B7280; }
+    .amount-value { font-weight: 600; color: #1F2937; }
+    .amount-row.total { padding-top: 12px; border-top: 2px solid #C9A84C; margin-top: 8px; }
+    .amount-row.total .amount-label { font-size: 16px; font-weight: 700; color: #0D0700; }
+    .amount-row.total .amount-value { font-size: 18px; font-weight: 700; color: #C9A84C; }
+    .payment-section { padding: 24px; border-top: 1px solid #E5E7EB; }
+    .payment-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .footer { padding: 20px 24px; background: #0D0700; color: #C9A84C; text-align: center; font-size: 11px; }
+    @media print {
+      body { padding: 0; }
+      .invoice-container { border: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="invoice-container">
+    <!-- Header -->
+    <div class="header">
+      <div class="company-info">
+        <div class="company-name">RATAN JEWELLERS</div>
+        <div class="company-details">
+          123 Gold Market, Pune, Maharashtra 411001<br>
+          GSTIN: 27AAAAA0000A1Z5<br>
+          Phone: +91 98765 43210<br>
+          Email: info@ratanjeweller.in
+        </div>
+      </div>
+      <div class="invoice-info">
+        <div class="invoice-number">${inv.id}</div>
+        <div class="invoice-date">Date: ${inv.date}</div>
+        ${inv.due && inv.due !== '—' ? `<div class="invoice-date">Due: ${inv.due}</div>` : ''}
+        <span class="status-badge status-${inv.status}">${inv.status}</span>
+      </div>
+    </div>
+
+    <!-- Customer Info -->
+    <div class="customer-section">
+      <div class="section-title">Customer Information</div>
+      <div class="customer-grid">
+        <div class="detail-item">
+          <div class="detail-label">Customer Name</div>
+          <div class="detail-value">${inv.customer}</div>
+        </div>
+        ${inv.phone ? `
+        <div class="detail-item">
+          <div class="detail-label">Phone Number</div>
+          <div class="detail-value">${inv.phone}</div>
+        </div>` : ''}
+        ${inv.hallmarkId ? `
+        <div class="detail-item">
+          <div class="detail-label">Hallmark ID</div>
+          <div class="detail-value">${inv.hallmarkId}</div>
+        </div>` : ''}
+        ${inv.email ? `
+        <div class="detail-item">
+          <div class="detail-label">Email</div>
+          <div class="detail-value">${inv.email}</div>
+        </div>` : ''}
+      </div>
+    </div>
+
+    <!-- Product Details -->
+    ${inv.category || inv.metal || inv.purity ? `
+    <div class="product-section">
+      <div class="section-title">Product Details</div>
+      <div class="product-grid">
+        ${inv.category ? `
+        <div class="detail-item">
+          <div class="detail-label">Category</div>
+          <div class="detail-value">${inv.category}</div>
+        </div>` : ''}
+        ${inv.metal ? `
+        <div class="detail-item">
+          <div class="detail-label">Metal</div>
+          <div class="detail-value">${inv.metal}</div>
+        </div>` : ''}
+        ${inv.purity ? `
+        <div class="detail-item">
+          <div class="detail-label">Purity</div>
+          <div class="detail-value">${inv.purity}</div>
+        </div>` : ''}
+        ${inv.netWeight ? `
+        <div class="detail-item">
+          <div class="detail-label">Net Weight</div>
+          <div class="detail-value">${inv.netWeight} grams</div>
+        </div>` : ''}
+        ${inv.goldRate ? `
+        <div class="detail-item">
+          <div class="detail-label">Gold Rate</div>
+          <div class="detail-value">₹${inv.goldRate.toLocaleString('en-IN')}/gram</div>
+        </div>` : ''}
+        ${inv.makingCharges ? `
+        <div class="detail-item">
+          <div class="detail-label">Making Charges</div>
+          <div class="detail-value">${inv.makingCharges}%</div>
+        </div>` : ''}
+      </div>
+    </div>` : ''}
+
+    <!-- Amounts -->
+    <div class="amounts-section">
+      <div class="section-title">Amount Breakdown</div>
+      <div class="amounts-grid">
+        <div class="amount-row">
+          <span class="amount-label">Subtotal</span>
+          <span class="amount-value">₹${inv.amount.toLocaleString('en-IN')}</span>
+        </div>
+        <div class="amount-row">
+          <span class="amount-label">GST (3%)</span>
+          <span class="amount-value">₹${inv.gst.toLocaleString('en-IN')}</span>
+        </div>
+        <div class="amount-row total">
+          <span class="amount-label">Total Amount</span>
+          <span class="amount-value">₹${inv.total.toLocaleString('en-IN')}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payment Info -->
+    <div class="payment-section">
+      <div class="section-title">Payment Information</div>
+      <div class="payment-grid">
+        <div class="detail-item">
+          <div class="detail-label">Amount Paid</div>
+          <div class="detail-value" style="color: #059669;">₹${amountPaid.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Balance Due</div>
+          <div class="detail-value" style="color: ${balanceDue > 0 ? '#DC2626' : '#059669'};">₹${balanceDue.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-label">Payment Status</div>
+          <div class="detail-value">${balanceDue <= 0 ? 'Fully Paid ✓' : 'Payment Pending'}</div>
+        </div>
+      </div>
+      ${inv.paymentHistory && inv.paymentHistory.length > 0 ? `
+      <div style="margin-top: 16px;">
+        <div class="detail-label" style="margin-bottom: 8px;">Payment History:</div>
+        ${inv.paymentHistory.map((p: any) => `
+          <div style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">
+            • ₹${p.amount.toLocaleString('en-IN')} paid on ${new Date(p.date).toLocaleDateString('en-IN')} via ${p.mode}
+          </div>
+        `).join('')}
+      </div>` : ''}
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      Thank you for your business! | BIS Hallmarked Jewellery | Lifetime Buyback Guarantee<br>
+      www.ratanjewellers.com | Purity You Can Trust Since 1975
+    </div>
+  </div>
+
+  <script>
+    // Auto-print when page loads
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 500);
+    };
+  </script>
+</body>
+</html>`
+        
         const w = window.open('', '_blank')
         if (w) { 
           w.document.write(html)
           w.document.close()
-          w.print() 
         }
-        toast.success(`PDF opened for ${inv.id}`)
+        toast.success(`Invoice ${inv.id} ready for print`)
       },
 
       // ── Inventory ──────────────────────────────────────────────────────

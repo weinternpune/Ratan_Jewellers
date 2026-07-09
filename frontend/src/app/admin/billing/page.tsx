@@ -14,7 +14,7 @@ const statusConfig: Record<InvoiceStatus,{label:string;color:string}> = {
 
 const emptyInv = { 
   customer:'', phone:'', hallmarkId:'',
-  category:'', metal:'', purity:'', netWeight:'', price:0, goldRate:14525, makingCharges:0,
+  category:'', metal:'', purity:'', netWeight:'', price:0, goldRate:0, makingCharges:0,
   amount:0, gst:0, total:0, amountPaid:0, balanceDue:0, // Partial payment fields
   status:'paid' as InvoiceStatus, 
   date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), due:'—' 
@@ -140,55 +140,9 @@ export default function BillingPage() {
     setForm(p => {
       const updatedForm = {...p, [field]: value}
       
-      // Auto-update purity and gold rate when metal is selected
-      if (field === 'metal') {
-        const metalValue = value as string
-        const metalToPurity: Record<string, string> = {
-          '24K Gold': '24KT',
-          '22K Gold': '22KT',
-          '20K Gold': '20KT',
-          '18K Gold': '18KT',
-          '14K Gold': '14KT',
-          'Silver': 'Silver',
-          'Platinum': 'Platinum'
-        }
-        
-        const purityRates: Record<string, number> = {
-          '24KT': 14525, // 24K Gold - ₹14,525/g
-          '22KT': 13314, // 22K Gold - ₹13,314/g
-          '20KT': 12104, // 20K Gold (estimated)
-          '18KT': 10893, // 18K Gold - ₹10,893/g
-          '14KT': 8349,  // 14K Gold - ₹8,349/g
-          'Silver': 89,  // Silver (estimated)
-          'Platinum': 3500 // Platinum (estimated)
-        }
-        
-        if (metalToPurity[metalValue]) {
-          const purity = metalToPurity[metalValue]
-          updatedForm.purity = purity
-          updatedForm.goldRate = purityRates[purity] || 14525
-          console.log(`Auto-set purity to ${purity} and gold rate to ₹${updatedForm.goldRate}/g for metal ${metalValue}`)
-        }
-      }
-      
-      // Auto-update gold rate when purity is selected
-      if (field === 'purity') {
-        const purityRates: Record<string, number> = {
-          '24KT': 14525, // 24K Gold - ₹14,525/g
-          '22KT': 13314, // 22K Gold - ₹13,314/g
-          '20KT': 12104, // 20K Gold (estimated)
-          '18KT': 10893, // 18K Gold - ₹10,893/g
-          '14KT': 8349,  // 14K Gold - ₹8,349/g
-          'Silver': 89,  // Silver (estimated)
-          'Platinum': 3500 // Platinum (estimated)
-        }
-        
-        const purityValue = value as string
-        if (purityRates[purityValue]) {
-          updatedForm.goldRate = purityRates[purityValue]
-          console.log(`Auto-updated gold rate for ${purityValue}: ₹${purityRates[purityValue]}/g`)
-        }
-      }
+      // NO auto-update for purity - it's manual now!
+      // NO auto-update for gold rate - it's manual now!
+      // Users select metal, purity, and gold rate independently
       
       // Immediately recalculate if weight or rate fields change
       if (['netWeight', 'goldRate', 'makingCharges', 'price', 'purity', 'metal'].includes(field)) {
@@ -507,7 +461,7 @@ export default function BillingPage() {
             </div>
             <div className="p-6">
               <div className="flex items-start justify-between mb-6">
-                <div><div className="text-lg font-bold text-[#0D0700]">RATAN JEWELLERS</div><div className="text-xs text-gray-500">123 Gold Market, Bhubaneswar, Odisha</div><div className="text-xs text-gray-500">GSTIN: 21AAAAA0000A1Z5</div></div>
+                <div><div className="text-lg font-bold text-[#0D0700]">RATAN JEWELLERS</div><div className="text-xs text-gray-500">123 Gold Market, Pune, Maharashtra</div><div className="text-xs text-gray-500">GSTIN: 27AAAAA0000A1Z5</div></div>
                 <div className="text-right"><div className="text-[#C9A84C] font-mono font-bold text-base">{previewInvoice.id}</div><div className="text-xs text-gray-500">{previewInvoice.date}</div>{previewInvoice.due && previewInvoice.due !== '—' ? <div className="text-xs text-gray-400">Due: {previewInvoice.due}</div> : null}<span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusConfig[previewInvoice.status].color}`}>{statusConfig[previewInvoice.status].label}</span></div>
               </div>
               <div className="bg-gray-50 rounded-xl p-4 mb-6">
