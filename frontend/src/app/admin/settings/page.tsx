@@ -22,7 +22,7 @@ export default function SettingsPage() {
   const { goldRates, updateGoldRates } = useAdminStore()
   const [activeGroup, setActiveGroup] = useState('general')
   const [localRates, setLocalRates] = useState(goldRates)
-  const [storeInfo, setStoreInfo] = useState({ name:'Ratan Jewellers', tagline:'Purity You Can Trust Since 1975', email:'info@ratanjewellers.com', phone:'+91 98765 43210', address:'123 Gold Market, Bhubaneswar, Odisha 751001', gstin:'21AAAAA0000A1Z5' })
+  const [storeInfo, setStoreInfo] = useState({ name:'Ratan Jewellers', tagline:'Purity You Can Trust Since 1975', email:'info@ratanjewellers.com', phone:'+91 98765 43210', address:'123 Gold Market, Pune, Maharashtra 411001', gstin:'27AAAAA0000A1Z5' })
   const [toggles, setToggles] = useState({ autoGoldRate:true, emailNotif:true, smsNotif:false, whatsappNotif:true, maintenanceMode:false, guestCheckout:true, twoFactor:false, sessionTimeout:true })
   const toggle = (key: keyof typeof toggles) => setToggles(p=>({...p,[key]:!p[key]}))
 

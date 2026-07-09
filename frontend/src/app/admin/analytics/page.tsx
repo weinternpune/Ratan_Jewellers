@@ -475,9 +475,9 @@ export default function AnalyticsPage() {
           <h3 className="font-semibold text-gray-800 text-sm mb-4">Revenue by City</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[
-              { city: 'Bhubaneswar', revenue: 0, orders: 0, pct: 0 },
-              { city: 'Cuttack', revenue: 0, orders: 0, pct: 0 },
-              { city: 'Puri', revenue: 0, orders: 0, pct: 0 },
+              { city: 'Pune', revenue: 0, orders: 0, pct: 0 },
+              { city: 'Mumbai', revenue: 0, orders: 0, pct: 0 },
+              { city: 'Nagpur', revenue: 0, orders: 0, pct: 0 },
               { city: 'Sambalpur', revenue: 0, orders: 0, pct: 0 },
               { city: 'Rourkela', revenue: 0, orders: 0, pct: 0 },
               { city: 'Others', revenue: 0, orders: 0, pct: 0 }

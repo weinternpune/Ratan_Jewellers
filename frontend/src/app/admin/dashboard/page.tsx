@@ -145,8 +145,8 @@ function exportDashboardPDF(data: {
   <div class="header">
     <div class="brand">
       <h1>RATAN JEWELLERS</h1>
-      <p>123 Gold Market, Bhubaneswar, Odisha 751001</p>
-      <p>GSTIN: 21AAAAA0000A1Z5 | +91 98765 43210</p>
+      <p>123 Gold Market, Pune, Maharashtra 411001</p>
+      <p>GSTIN: 27AAAAA0000A1Z5 | +91 98765 43210</p>
     </div>
     <div class="meta">
       <h2>Analytics Dashboard Report</h2>
