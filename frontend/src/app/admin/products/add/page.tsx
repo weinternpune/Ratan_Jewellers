@@ -15,7 +15,7 @@ const purities   = ['24KT','22KT','20KT','18KT','14KT','9KT','92.5','Sterling Si
 
 const empty = {
   name: '', sku: '', category: 'Necklaces', metal: 'Gold', purity: '22KT',
-  netWeight: '', currentPrice: '', goldRate: '6520', makingCharges: '',
+  netWeight: '', currentPrice: '', goldRate: '14525', makingCharges: '',
   stoneCharges: '0', description: '', isNewArrival: true, isFeatured: false, isTrending: false,
   inStock: true,
 }

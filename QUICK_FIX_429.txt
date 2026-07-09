@@ -1,0 +1,157 @@
+================================================================================
+                    🔧 QUICK FIX: Error 429 (Too Many Requests)
+================================================================================
+
+ERROR:
+------
+Console AxiosError
+Request failed with status code 429
+
+
+WHAT THIS MEANS:
+----------------
+You hit the API rate limit (too many requests in short time).
+The backend was set to allow only 100 requests per 15 minutes.
+
+
+================================================================================
+                            ✅ SOLUTION (2 STEPS)
+================================================================================
+
+STEP 1: Restart Backend Server
+-------------------------------
+The rate limit has been increased from 100 to 1000 requests.
+You MUST restart the backend for this to take effect.
+
+Method A: Using START_SERVERS.bat
+  1. Close the "Ratan Jewellers Backend" terminal window
+  2. Double-click START_SERVERS.bat again
+
+Method B: Manual Restart
+  1. Go to backend terminal
+  2. Press Ctrl + C
+  3. Run: npm run dev
+
+
+STEP 2: Clear Browser Cache & Reload
+-------------------------------------
+  1. Press Ctrl + Shift + R (hard reload)
+  2. Or F12 → Network tab → Check "Disable cache" → Reload
+
+
+================================================================================
+                         WHAT WAS CHANGED
+================================================================================
+
+File: backend/src/server.ts
+
+Before (Too Low):
+  Rate Limit: 100 requests per 15 minutes
+
+After (Fixed):
+  Development:  1000 requests per 15 minutes ✅
+  Production:   100 requests per 15 minutes
+
+
+================================================================================
+                         WHY THIS HAPPENED
+================================================================================
+
+Common causes of hitting rate limit:
+
+1. ✅ Dashboard auto-refreshes every 30 seconds
+2. ✅ Multiple browser tabs open (each makes API calls)
+3. ✅ Real-time calculation on every keystroke
+4. ✅ Multiple form fields updating simultaneously
+5. ✅ Previous limit (100) was too low for development
+
+
+================================================================================
+                         AFTER RESTART
+================================================================================
+
+You will be able to make:
+  • 1000 API requests per 15 minutes (instead of 100)
+  • That's 10x more requests!
+  • Should be more than enough for development
+
+Rate limit resets every 15 minutes automatically.
+
+
+================================================================================
+                         VERIFICATION
+================================================================================
+
+After restarting backend:
+
+1. Go to: http://localhost:3000/admin/billing
+2. Open browser console (F12)
+3. Reload page (Ctrl + Shift + R)
+4. No more 429 errors! ✅
+
+Check rate limit status:
+  • Press F12 → Network tab
+  • Click any API request
+  • Look at Response Headers:
+    - RateLimit-Limit: 1000
+    - RateLimit-Remaining: 995 (shows remaining requests)
+
+
+================================================================================
+                         PREVENTION TIPS
+================================================================================
+
+To avoid hitting rate limit in future:
+
+1. Don't open too many tabs at once
+2. Close billing page tabs when not in use
+3. Dashboard auto-refresh is fine now (limit is higher)
+4. Real-time calculation is fine now (limit is higher)
+
+
+================================================================================
+                    ALTERNATIVE: DISABLE RATE LIMIT (TEMPORARY)
+================================================================================
+
+If you still want to completely disable rate limiting for development:
+
+Edit: backend/src/server.ts
+
+Comment out these lines (around line 68):
+
+// app.use(
+//   '/api/',
+//   rateLimit({
+//     windowMs: 15 * 60 * 1000,
+//     max: process.env.NODE_ENV === 'development' ? 1000 : 100,
+//     standardHeaders: true,
+//     legacyHeaders: false,
+//   })
+// );
+
+Then restart backend.
+
+⚠️ IMPORTANT: Remember to uncomment before production deployment!
+
+
+================================================================================
+                         CHECKLIST
+================================================================================
+
+Before testing:
+  ☐ Backend server restarted (Ctrl+C, then npm run dev)
+  ☐ Browser cache cleared (Ctrl+Shift+R)
+  ☐ No other tabs making excessive requests
+
+After fix:
+  ☐ Billing page loads without errors
+  ☐ No 429 error in console
+  ☐ Can create invoices normally
+  ☐ Dashboard refreshes without errors
+
+
+================================================================================
+Date: July 10, 2026
+Status: Fixed ✅
+Action: RESTART BACKEND SERVER!
+================================================================================

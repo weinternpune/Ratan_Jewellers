@@ -1,4 +1,5 @@
 'use client'
+import { useEffect } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { useAdminStore } from '@/store/adminStore'
 import { ShoppingCart, Receipt, Package, BarChart3, Users, Boxes, Crown, TrendingUp, Clock, CheckCircle2, AlertCircle, IndianRupee, Star, MessageCircle, Gem, LogOut } from 'lucide-react'
@@ -141,7 +142,25 @@ function CustomerDash() {
 
 // ── Sales Staff Dashboard ─────────────────────────────────────────────────
 function SalesStaffDash() {
-  const { orders, invoices, customers } = useAdminStore()
+  const { orders, invoices, customers, fetchInvoices, fetchOrders, fetchCustomers } = useAdminStore()
+  
+  // Fetch fresh data on load
+  useEffect(() => {
+    fetchInvoices()
+    fetchOrders()
+    fetchCustomers()
+  }, [])
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchInvoices()
+      fetchOrders()
+      fetchCustomers()
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
   const todayOrders = orders.filter(o => ['placed', 'confirmed', 'processing'].includes(o.status))
   return (
     <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
@@ -235,8 +254,26 @@ function InventoryManagerDash() {
 
 // ── Store Manager Dashboard ───────────────────────────────────────────────
 function StoreManagerDash() {
-  const { orders, invoices, inventory, customers } = useAdminStore()
+  const { orders, invoices, inventory, customers, fetchInvoices, fetchOrders, fetchCustomers } = useAdminStore()
   const { requests: cjRequests } = useCustomJewelleryStore()
+  
+  // Fetch fresh data on load
+  useEffect(() => {
+    fetchInvoices()
+    fetchOrders()
+    fetchCustomers()
+  }, [])
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchInvoices()
+      fetchOrders()
+      fetchCustomers()
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
   const newCJRequests = cjRequests.filter(r => r.status === 'new').length
   const revenue = orders.filter(o => o.status === 'delivered').reduce((a, o) => a + o.total, 0)
   return (

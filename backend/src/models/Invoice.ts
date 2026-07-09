@@ -55,7 +55,10 @@ export interface IInvoice extends Document {
   customerName: string; customerPhone: string; customerEmail?: string;
   customerAddress?: object; customerGstin?: string; paymentMode: string;
   subtotal: number; discountAmount: number; cgst: number; sgst: number; igst: number;
-  totalAmount: number; oldGoldExchange: number; pdfUrl?: string; notes?: string;
+  totalAmount: number; oldGoldExchange: number; 
+  amountPaid: number; balanceDue: number; // Partial payment fields
+  paymentHistory: Array<{amount: number; date: Date; mode: string; notes?: string}>; // Payment tracking
+  pdfUrl?: string; notes?: string;
   isEdited: boolean; editHistory: object[]; items: any[];
   createdAt: Date; updatedAt: Date;
 }
@@ -70,6 +73,14 @@ const InvoiceSchema = new Schema<IInvoice>({
   subtotal:        { type: Number, required: true }, discountAmount: { type: Number, default: 0 },
   cgst:            { type: Number, default: 0 }, sgst: { type: Number, default: 0 }, igst: { type: Number, default: 0 },
   totalAmount:     { type: Number, required: true }, oldGoldExchange: { type: Number, default: 0 },
+  amountPaid:      { type: Number, default: 0 }, // Amount paid so far
+  balanceDue:      { type: Number }, // Remaining balance (auto-calculated)
+  paymentHistory:  [{ // Track all payments
+    amount: { type: Number, required: true },
+    date: { type: Date, default: Date.now },
+    mode: { type: String, required: true },
+    notes: { type: String }
+  }],
   pdfUrl:          { type: String }, notes: { type: String },
   isEdited:        { type: Boolean, default: false }, editHistory: [{ type: Object }],
   items:           [InvoiceItemSchema],

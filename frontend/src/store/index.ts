@@ -102,7 +102,7 @@ interface UIState {
   setGoldRate: (r: number) => void
 }
 export const useUIStore = create<UIState>((set) => ({
-  isSearchOpen: false, isMobileMenuOpen: false, goldRate: 6500, goldRateUpdatedAt: null,
+  isSearchOpen: false, isMobileMenuOpen: false, goldRate: 14525, goldRateUpdatedAt: null,
   toggleSearch: () => set((s) => ({ isSearchOpen: !s.isSearchOpen })),
   toggleMobileMenu: () => set((s) => ({ isMobileMenuOpen: !s.isMobileMenuOpen })),
   setGoldRate: (rate) => set({ goldRate: rate, goldRateUpdatedAt: new Date().toISOString() }),

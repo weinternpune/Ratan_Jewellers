@@ -68,7 +68,7 @@ app.use(
   '/api/',
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: process.env.NODE_ENV === 'development' ? 1000 : 100, // Increased for development
     standardHeaders: true,
     legacyHeaders: false,
   })
@@ -84,7 +84,10 @@ app.use(
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(requestLogger);
+// Only log requests in production, or comment out completely for cleaner dev logs
+if (process.env.NODE_ENV === 'production') {
+  app.use(requestLogger);
+}
 
 /**
  * Root Route (Added)

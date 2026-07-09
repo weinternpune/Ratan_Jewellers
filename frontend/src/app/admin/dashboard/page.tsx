@@ -246,13 +246,31 @@ function exportDashboardPDF(data: {
 
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function AdminDashboardPage() {
-  const { orders, products, customers, invoices, inventory, auditLogs, resetAll } = useAdminStore()
+  const { orders, products, customers, invoices, inventory, auditLogs, resetAll, fetchInvoices, fetchOrders, fetchCustomers } = useAdminStore()
   const { requests: cjStore } = useCustomJewelleryStore()
 
   const [cjLocal, setCjLocal] = useState<any[]>([])
   const [showResetModal, setShowResetModal] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [activeTab, setActiveTab] = useState<DashType>('Sales')
+
+  // Fetch fresh data when dashboard loads
+  useEffect(() => {
+    fetchInvoices()
+    fetchOrders()
+    fetchCustomers()
+  }, [])
+
+  // Auto-refresh data every 30 seconds to keep dashboard updated
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      fetchInvoices()
+      fetchOrders()
+      fetchCustomers()
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(refreshInterval)
+  }, [])
 
   useEffect(() => {
     const read = () => {
@@ -273,6 +291,8 @@ export default function AdminDashboardPage() {
 
   // ── Computed values ──────────────────────────────────────────────────────
   const totalRevenue    = orders.filter(o => o.status === 'delivered').reduce((a, o) => a + o.total, 0)
+  const invoiceRevenue  = invoices.filter(i => i.status === 'paid').reduce((a, i) => a + i.total, 0)
+  const combinedRevenue = totalRevenue + invoiceRevenue
   const pendingOrders   = orders.filter(o => ['placed','confirmed','processing'].includes(o.status)).length
   const lowStock        = inventory.filter(i => i.stock < i.minStock).length
   const unpaidInvoices  = invoices.filter(i => i.status === 'pending' || i.status === 'overdue').reduce((a, i) => a + i.total, 0)
@@ -285,7 +305,7 @@ export default function AdminDashboardPage() {
 
   // First export PDF
   exportDashboardPDF({
-    totalRevenue,
+    totalRevenue: combinedRevenue,
     pendingOrders,
     lowStock,
     unpaidInvoices,
@@ -315,7 +335,7 @@ export default function AdminDashboardPage() {
     Sales: () => (
       <div className="space-y-6">
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-          <StatCard label="Total Revenue" value={`₹${(totalRevenue/100000).toFixed(1)}L`} trendVal="+12%" trend="up" icon={IndianRupee} color="bg-amber-50" accent="text-amber-600" sub="Delivered orders"/>
+          <StatCard label="Total Revenue" value={`₹${(combinedRevenue/100000).toFixed(1)}L`} trendVal="+12%" trend="up" icon={IndianRupee} color="bg-amber-50" accent="text-amber-600" sub="Orders + Invoices"/>
           <StatCard label="Total Orders" value={orders.length.toString()} trendVal="+8%" trend="up" icon={ShoppingCart} color="bg-blue-50" accent="text-blue-600"/>
           <StatCard label="Pending Orders" value={pendingOrders.toString()} trendVal={pendingOrders>5?"High":"Normal"} trend={pendingOrders>5?"down":"neutral"} icon={Clock} color="bg-orange-50" accent="text-orange-600"/>
           <StatCard label="Customers" value={customers.length.toString()} trendVal="+15%" trend="up" icon={Users} color="bg-purple-50" accent="text-purple-600"/>
@@ -499,10 +519,10 @@ export default function AdminDashboardPage() {
     Profit: () => (
       <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Gross Revenue" value={`₹${(totalRevenue/100000).toFixed(1)}L`} icon={TrendingUp} color="bg-teal-50" accent="text-teal-600"/>
+          <StatCard label="Gross Revenue" value={`₹${(combinedRevenue/100000).toFixed(1)}L`} icon={TrendingUp} color="bg-teal-50" accent="text-teal-600"/>
           <StatCard label="GST Paid Out" value={`₹${(invoices.filter(i=>i.status==='paid').reduce((a,i)=>a+i.gst,0)/1000).toFixed(0)}K`} icon={FileText} color="bg-orange-50" accent="text-orange-500"/>
-          <StatCard label="Net Revenue" value={`₹${((totalRevenue-invoices.filter(i=>i.status==='paid').reduce((a,i)=>a+i.gst,0))/100000).toFixed(1)}L`} icon={IndianRupee} color="bg-green-50" accent="text-green-600"/>
-          <StatCard label="Est. Net Profit" value={`₹${((totalRevenue*0.22)/100000).toFixed(1)}L`} sub="~22% margin" icon={Star} color="bg-purple-50" accent="text-purple-600"/>
+          <StatCard label="Net Revenue" value={`₹${((combinedRevenue-invoices.filter(i=>i.status==='paid').reduce((a,i)=>a+i.gst,0))/100000).toFixed(1)}L`} icon={IndianRupee} color="bg-green-50" accent="text-green-600"/>
+          <StatCard label="Est. Net Profit" value={`₹${((combinedRevenue*0.22)/100000).toFixed(1)}L`} sub="~22% margin" icon={Star} color="bg-purple-50" accent="text-purple-600"/>
         </div>
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
           <h3 className="font-semibold text-gray-800 text-sm mb-4">Profit Trend</h3>
@@ -577,6 +597,19 @@ export default function AdminDashboardPage() {
           <p className="text-sm text-gray-500 mt-0.5">Live data across all modules</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Refresh button */}
+          <button
+            onClick={() => {
+              fetchInvoices()
+              fetchOrders()
+              fetchCustomers()
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50 transition-all"
+            title="Refresh dashboard data"
+          >
+            <RefreshCw size={13}/>
+            Refresh
+          </button>
           {/* Live badge */}
           <div className="flex items-center gap-2 text-xs text-gray-500 bg-white border border-gray-200 rounded-lg px-3 py-2">
             <Clock size={13} className="text-[#C9A84C]"/>

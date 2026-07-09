@@ -11,19 +11,80 @@ const purities = [
   { label: '14K (585)', multiplier: 0.585 }
 ]
 
+// Function to fetch live gold rate from backend API
+async function fetchLiveGoldRate(): Promise<number | null> {
+  try {
+    const response = await fetch('http://localhost:5000/api/gold-rates', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+    
+    if (response.ok) {
+      const result = await response.json()
+      if (result.success && result.data?.rate) {
+        return result.data.rate
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch live gold rate from backend:', error)
+  }
+  
+  return null // Return null if API fails
+}
+
 export default function LiveGoldRate() {
   const { goldRate, setGoldRate } = useUIStore()
 
   const [prevRate, setPrevRate] = useState(goldRate)
   const [isUpdating, setIsUpdating] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(true)
 
-  // FIXED: Added missing ref
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
+  // Fetch live gold rate on component mount
   useEffect(() => {
-    setLastUpdated(new Date())
+    const fetchAndUpdateRate = async () => {
+      setIsUpdating(true)
+      const liveRate = await fetchLiveGoldRate()
+      
+      if (liveRate) {
+        setPrevRate(goldRate)
+        setGoldRate(liveRate)
+        setLastUpdated(new Date())
+      } else {
+        // Fallback to slight variation if API fails
+        const fallbackRate = goldRate + (Math.random() - 0.5) * 20
+        setPrevRate(goldRate)
+        setGoldRate(Math.round(fallbackRate))
+        setLastUpdated(new Date())
+      }
+      
+      setIsUpdating(false)
+    }
+    
+    // Initial fetch
+    fetchAndUpdateRate()
   }, [])
+
+  // Auto-update every 5 minutes (300000ms)
+  useEffect(() => {
+    if (!autoUpdateEnabled) return
+
+    const intervalId = setInterval(async () => {
+      const liveRate = await fetchLiveGoldRate()
+      
+      if (liveRate) {
+        setPrevRate(goldRate)
+        setGoldRate(liveRate)
+        setLastUpdated(new Date())
+      }
+    }, 300000) // 5 minutes
+
+    return () => clearInterval(intervalId)
+  }, [autoUpdateEnabled, goldRate, setGoldRate])
 
   const trend = goldRate >= prevRate ? 'up' : 'down'
   const change = goldRate - prevRate
@@ -37,11 +98,19 @@ export default function LiveGoldRate() {
     setIsUpdating(true)
 
     try {
-      const nr = goldRate + (Math.random() - 0.5) * 20
-
-      setPrevRate(goldRate)
-      setGoldRate(Math.round(nr))
-      setLastUpdated(new Date())
+      const liveRate = await fetchLiveGoldRate()
+      
+      if (liveRate) {
+        setPrevRate(goldRate)
+        setGoldRate(liveRate)
+        setLastUpdated(new Date())
+      } else {
+        // Fallback to slight variation
+        const nr = goldRate + (Math.random() - 0.5) * 20
+        setPrevRate(goldRate)
+        setGoldRate(Math.round(nr))
+        setLastUpdated(new Date())
+      }
     } finally {
       setIsUpdating(false)
     }
@@ -166,7 +235,8 @@ export default function LiveGoldRate() {
             <button
               onClick={refreshRate}
               disabled={isUpdating}
-              className="text-yellow-200 hover:text-white transition-colors"
+              className="text-yellow-200 hover:text-white transition-colors disabled:opacity-50"
+              title="Refresh live rates"
             >
               <RefreshCw
                 size={12}

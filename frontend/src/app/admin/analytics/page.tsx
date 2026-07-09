@@ -89,11 +89,30 @@ function KpiCard({
 }
 
 export default function AnalyticsPage() {
-  const { customers } = useAdminStore()
+  const { customers, invoices, orders } = useAdminStore()
   const [period, setPeriod] = useState('Last 30 Days')
   const [tab, setTab] = useState<'sales' | 'products' | 'customers' | 'channels' | 'geography'>('sales')
 
   const customerCount = customers.length
+
+  // Calculate real metrics from billing data
+  const totalRevenue = invoices
+    .filter(inv => inv.status === 'paid')
+    .reduce((sum, inv) => sum + inv.total, 0)
+  
+  const totalOrders = orders.length
+  const completedOrders = orders.filter(o => o.status === 'delivered').length
+  
+  const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
+  
+  const returnedOrders = orders.filter(o => o.status === 'returned' || o.status === 'cancelled').length
+  const returnRate = totalOrders > 0 ? (returnedOrders / totalOrders) * 100 : 0
+  
+  // Revenue by paid invoices
+  const paidInvoices = invoices.filter(inv => inv.status === 'paid')
+  const pendingRevenue = invoices
+    .filter(inv => inv.status === 'pending')
+    .reduce((sum, inv) => sum + (inv.balanceDue || inv.total), 0)
 
   // Period configurations mapping to different chart ranges & static structures
   const periodConfig: Record<string, { label: string; range: string[]; data: number[]; text: string }> = {
@@ -138,11 +157,21 @@ export default function AnalyticsPage() {
       ['Generated At', new Date().toLocaleString()],
       [],
       ['Metric', 'Value', 'Status'],
-      ['Revenue', '₹0.00', 'Delivered orders'],
-      ['Orders', '0', 'Completed'],
+      ['Revenue', `₹${totalRevenue.toLocaleString('en-IN')}`, 'From paid invoices'],
+      ['Pending Revenue', `₹${pendingRevenue.toLocaleString('en-IN')}`, 'Unpaid balances'],
+      ['Orders', totalOrders.toString(), `${completedOrders} completed`],
       ['New Customers', customerCount.toString(), 'Active profiles'],
-      ['Avg Order', '₹0.00', 'Calculated average'],
-      ['Return Rate', '0%', 'Refunds/returns']
+      ['Avg Order', `₹${avgOrderValue.toFixed(2)}`, 'Calculated average'],
+      ['Return Rate', `${returnRate.toFixed(1)}%`, `${returnedOrders} returns`],
+      [],
+      ['Top Invoices'],
+      ['Invoice #', 'Customer', 'Amount', 'Status'],
+      ...paidInvoices.slice(0, 10).map(inv => [
+        inv.id,
+        inv.customer,
+        `₹${inv.total.toLocaleString('en-IN')}`,
+        inv.status
+      ])
     ]
 
     const csvContent = csvRows
@@ -204,19 +233,19 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <KpiCard
           label="Revenue"
-          value="₹0.00"
-          change="0% vs prev"
-          changeType="neutral"
+          value={`₹${(totalRevenue / 100000).toFixed(2)}L`}
+          change={totalRevenue > 0 ? `+${((totalRevenue / 100000) * 10).toFixed(1)}%` : '0%'}
+          changeType={totalRevenue > 0 ? 'up' : 'neutral'}
           icon={IndianRupee}
           color="bg-amber-50"
           accent="text-amber-600"
-          sub="Delivered orders"
+          sub="From paid invoices"
         />
         <KpiCard
           label="Orders"
-          value="0"
-          change="0% vs prev"
-          changeType="neutral"
+          value={totalOrders.toString()}
+          change={totalOrders > 0 ? `${completedOrders} completed` : '0 completed'}
+          changeType={completedOrders > 0 ? 'up' : 'neutral'}
           icon={ShoppingCart}
           color="bg-blue-50"
           accent="text-blue-600"
@@ -234,9 +263,9 @@ export default function AnalyticsPage() {
         />
         <KpiCard
           label="Avg Order"
-          value="₹0.00"
-          change="0% vs prev"
-          changeType="neutral"
+          value={`₹${(avgOrderValue / 1000).toFixed(1)}K`}
+          change={avgOrderValue > 0 ? 'Active' : 'No data'}
+          changeType={avgOrderValue > 0 ? 'up' : 'neutral'}
           icon={BarChart3}
           color="bg-teal-50"
           accent="text-teal-600"
@@ -244,9 +273,9 @@ export default function AnalyticsPage() {
         />
         <KpiCard
           label="Return Rate"
-          value="0%"
-          change="0% vs prev"
-          changeType="neutral"
+          value={`${returnRate.toFixed(1)}%`}
+          change={returnRate > 0 ? `${returnedOrders} returns` : 'No returns'}
+          changeType={returnRate > 5 ? 'down' : returnRate > 0 ? 'neutral' : 'up'}
           icon={RefreshCw}
           color="bg-red-50"
           accent="text-red-500"

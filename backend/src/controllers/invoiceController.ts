@@ -30,7 +30,7 @@ const generateInvoiceNumber = async (): Promise<string> => {
 
 export const createInvoice = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { customerId, customerName, customerPhone, customerEmail, customerAddress, customerGstin, items, paymentMode, discountAmount=0, oldGoldExchange=0, notes } = req.body;
+    const { customerId, customerName, customerPhone, customerEmail, customerAddress, customerGstin, items, paymentMode, discountAmount=0, oldGoldExchange=0, amountPaid=0, balanceDue, paymentHistory=[], notes } = req.body;
     const invoiceNumber = await generateInvoiceNumber();
     let subtotal=0, totalCgst=0, totalSgst=0;
     const processedItems = items.map((item: any) => {
@@ -43,7 +43,19 @@ export const createInvoice = async (req: AuthRequest, res: Response, next: NextF
       return { ...item, unitPrice, cgstAmount, sgstAmount, totalAmount: base+cgstAmount+sgstAmount };
     });
     const totalAmount = subtotal + totalCgst + totalSgst - discountAmount - oldGoldExchange;
-    const invoice = await Invoice.create({ invoiceNumber, userId: req.user!.id, customerId: customerId||undefined, customerName, customerPhone, customerEmail, customerAddress, customerGstin, paymentMode, subtotal, discountAmount, cgst: totalCgst, sgst: totalSgst, totalAmount, oldGoldExchange, notes, items: processedItems });
+    
+    // Calculate balance if not provided
+    const finalBalanceDue = balanceDue !== undefined ? balanceDue : (totalAmount - amountPaid);
+    
+    const invoice = await Invoice.create({ 
+      invoiceNumber, userId: req.user!.id, customerId: customerId||undefined, 
+      customerName, customerPhone, customerEmail, customerAddress, customerGstin, 
+      paymentMode, subtotal, discountAmount, cgst: totalCgst, sgst: totalSgst, 
+      totalAmount, oldGoldExchange, 
+      amountPaid, balanceDue: finalBalanceDue, paymentHistory, // Partial payment fields
+      notes, items: processedItems 
+    });
+    
     generateInvoicePDF(invoice).then(async pdfUrl => {
       await Invoice.findByIdAndUpdate(invoice._id, { pdfUrl });
       if (customerPhone) await sendWhatsAppMessage({ invoiceId: invoice._id.toString(), phone: customerPhone, pdfUrl, customerName, invoiceNumber, totalAmount });
@@ -61,7 +73,34 @@ export const getInvoices = async (req: AuthRequest, res: Response, next: NextFun
     if (search) filter.$or = [{ invoiceNumber: { $regex: search, $options: 'i' } }, { customerName: { $regex: search, $options: 'i' } }, { customerPhone: { $regex: search } }];
     if (startDate || endDate) { filter.createdAt = {}; if (startDate) filter.createdAt.$gte = new Date(startDate as string); if (endDate) filter.createdAt.$lte = new Date(endDate as string); }
     const [invoices, total] = await Promise.all([Invoice.find(filter).sort({ createdAt: -1 }).skip((pageNum-1)*limitNum).limit(limitNum), Invoice.countDocuments(filter)]);
-    res.json({ success: true, data: { invoices, pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total/limitNum) } } });
+    
+    // Ensure payment fields have default values and correct balance calculation for old invoices
+    const invoicesWithDefaults = invoices.map(invoice => {
+      const invoiceObj = invoice.toObject();
+      if (invoiceObj.amountPaid === undefined) {
+        invoiceObj.amountPaid = 0;
+      }
+      
+      // Recalculate balance to ensure correctness
+      const correctBalance = invoiceObj.totalAmount - (invoiceObj.amountPaid || 0);
+      
+      // If balance is wrong in DB, fix it
+      if (invoiceObj.balanceDue === undefined || Math.abs(invoiceObj.balanceDue - correctBalance) > 0.01) {
+        invoiceObj.balanceDue = correctBalance;
+        
+        // Update in database asynchronously (don't wait for it)
+        Invoice.findByIdAndUpdate(invoice._id, { balanceDue: correctBalance }).catch(err => 
+          console.error('Failed to fix balance for invoice:', invoice.invoiceNumber, err)
+        );
+      }
+      
+      if (!invoiceObj.paymentHistory) {
+        invoiceObj.paymentHistory = [];
+      }
+      return invoiceObj;
+    });
+    
+    res.json({ success: true, data: { invoices: invoicesWithDefaults, pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total/limitNum) } } });
   } catch (err) { next(err); }
 };
 
@@ -88,7 +127,25 @@ export const updateInvoice = async (req: AuthRequest, res: Response, next: NextF
     
     if (!invoice) throw new AppError('Invoice not found', 404);
     
-    const updateData = { ...req.body, isEdited: true };
+    const updateData = { ...req.body };
+    
+    // Handle payment updates - add to payment history if amountPaid is being updated
+    if (req.body.amountPaid !== undefined && req.body.amountPaid !== invoice.amountPaid) {
+      const paymentDifference = req.body.amountPaid - (invoice.amountPaid || 0);
+      if (paymentDifference > 0) {
+        // New payment being added
+        const newPayment = {
+          amount: paymentDifference,
+          date: new Date(),
+          mode: req.body.paymentMode || 'Cash',
+          notes: req.body.paymentNotes || 'Additional payment'
+        };
+        updateData.paymentHistory = [...(invoice.paymentHistory || []), newPayment];
+      }
+    }
+    
+    // Mark as edited
+    updateData.isEdited = true;
     if (invoice.isEdited) {
       updateData.editHistory = [...(invoice.editHistory || []), { editedAt: new Date(), editedBy: req.user!.id, changes: req.body }];
     } else {

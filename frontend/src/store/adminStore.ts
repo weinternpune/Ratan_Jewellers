@@ -64,6 +64,7 @@ export interface Invoice {
   customer: string
   email?: string
   phone?: string
+  hallmarkId?: string // BIS Hallmark Unique ID
   category?: string
   metal?: string
   purity?: string
@@ -74,6 +75,9 @@ export interface Invoice {
   amount: number
   gst: number
   total: number
+  amountPaid?: number // Amount paid so far
+  balanceDue?: number // Remaining balance
+  paymentHistory?: Array<{amount: number; date: string; mode: string; notes?: string}> // Payment tracking
   status: InvoiceStatus
   date: string
   due: string
@@ -198,7 +202,7 @@ const initialOrders: Order[] = [
 ]
 
 const initialInvoices: Invoice[] = [
-  { id: 'INV-2049', customer: 'Demo Customer', phone: '+91 98765 43210', amount: 50000, gst: 1500, total: 51500, status: 'paid', date: '13 Jun 2026', due: '—', category: 'Necklaces', metal: '22K Gold', purity: '916', netWeight: '8.5', goldRate: 6520, makingCharges: 10, price: 5000 },
+  { id: 'INV-2049', customer: 'Demo Customer', phone: '+91 98765 43210', amount: 50000, gst: 1500, total: 51500, status: 'paid', date: '13 Jun 2026', due: '—', category: 'Necklaces', metal: '22K Gold', purity: '916', netWeight: '8.5', goldRate: 14525, makingCharges: 10, price: 5000 },
 ]
 
 const initialInventory: InventoryItem[] = []
@@ -252,6 +256,7 @@ interface AdminStore {
 
   // Invoices
   addInvoice: (inv: Omit<Invoice, 'id'>) => Promise<void>
+  updateInvoice: (id: string, data: Partial<Invoice>) => Promise<void>
   updateInvoiceStatus: (id: string, status: InvoiceStatus) => Promise<void>
   deleteInvoice: (id: string) => Promise<void>
   fetchInvoices: () => Promise<void>
@@ -298,7 +303,7 @@ export const useAdminStore = create<AdminStore>()(
       inventory: initialInventory,
       customers: initialCustomers,
       auditLogs: initialLogs,
-      goldRates: { '24K': '6520', '22K': '5980', '18K': '4890', '14K': '3810' },
+      goldRates: { '24K': '14525', '22K': '13314', '18K': '10893', '14K': '8349' },
       currentRole: 'super_admin',
       loading: {
         invoices: false,
@@ -421,34 +426,89 @@ export const useAdminStore = create<AdminStore>()(
           set(s => ({ loading: { ...s.loading, invoices: true } }))
           const result = await invoiceApi.getAll()
           
-          const frontendInvoices: Invoice[] = (result.invoices || []).map((invoice: BackendInvoice) => ({
-            id: invoice.invoiceNumber || invoice._id,
-            customer: invoice.customerName || 'Unknown Customer',
-            email: invoice.customerEmail || '',
-            phone: invoice.customerPhone || '',
-            amount: invoice.subtotal || 0,
-            gst: (invoice.cgst || 0) + (invoice.sgst || 0),
-            total: invoice.totalAmount || 0,
-            status: (invoice.status || 'pending').toLowerCase() as InvoiceStatus,
-            date: invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-            due: '—',
-            // Extract category and other details from notes if available
-            category: invoice.notes?.includes('Category:') ? invoice.notes.split('Category: ')[1]?.split(',')[0] : undefined,
-            metal: invoice.notes?.includes('Metal:') ? invoice.notes.split('Metal: ')[1] : undefined,
-            purity: invoice.items?.[0]?.purity,
-            netWeight: invoice.items?.[0]?.netWeight?.toString(),
-            goldRate: invoice.items?.[0]?.goldRate,
-            makingCharges: invoice.items?.[0]?.makingCharges,
-            price: 0
-          }))
+          console.log('=== FETCH INVOICES DEBUG ===')
+          console.log('Raw backend response:', result.invoices?.[0])
+          console.log('Total invoices:', result.invoices?.length)
+          
+          const frontendInvoices: Invoice[] = (result.invoices || []).map((invoice: any) => {
+            // Recalculate balance to ensure correctness (backend might have wrong data)
+            const total = invoice.totalAmount || 0
+            const paid = invoice.amountPaid || 0
+            const correctBalance = total - paid
+            
+            // If backend balance doesn't match calculated balance, log warning and use correct value
+            if (invoice.balanceDue !== undefined && Math.abs(invoice.balanceDue - correctBalance) > 0.01) {
+              console.warn(`⚠️ Balance mismatch for invoice ${invoice.invoiceNumber}:`, {
+                total,
+                paid,
+                backendBalance: invoice.balanceDue,
+                correctBalance
+              })
+            }
+            
+            // Determine correct status based on balance
+            let correctStatus: InvoiceStatus = 'pending'
+            if (correctBalance <= 0) {
+              correctStatus = 'paid'
+            } else if (invoice.status === 'overdue') {
+              correctStatus = 'overdue'
+            }
+            
+            // Log if status needs correction
+            if (invoice.status !== correctStatus) {
+              console.warn(`⚠️ Status correction for ${invoice.invoiceNumber}: ${invoice.status} → ${correctStatus}`)
+            }
+            
+            const mapped = {
+              id: invoice.invoiceNumber || invoice._id,
+              customer: invoice.customerName || 'Unknown Customer',
+              email: invoice.customerEmail || '',
+              phone: invoice.customerPhone || '',
+              hallmarkId: invoice.hallmarkId || '',
+              amount: invoice.subtotal || 0,
+              gst: (invoice.cgst || 0) + (invoice.sgst || 0),
+              total: total,
+              amountPaid: paid, // Map payment fields
+              balanceDue: correctBalance, // Always use correctly calculated balance
+              paymentHistory: invoice.paymentHistory || [], // Map payment history
+              status: correctStatus, // Use corrected status
+              date: invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+              due: '—',
+              // Extract category and other details from notes if available
+              category: invoice.notes?.includes('Category:') ? invoice.notes.split('Category: ')[1]?.split(',')[0] : undefined,
+              metal: invoice.notes?.includes('Metal:') ? invoice.notes.split('Metal: ')[1] : undefined,
+              purity: invoice.items?.[0]?.purity,
+              netWeight: invoice.items?.[0]?.netWeight?.toString(),
+              goldRate: invoice.items?.[0]?.goldRate,
+              makingCharges: invoice.items?.[0]?.makingCharges,
+              price: 0
+            }
+            
+            console.log('Backend invoice:', invoice.invoiceNumber, {
+              amountPaid: invoice.amountPaid,
+              balanceDue: invoice.balanceDue,
+              totalAmount: invoice.totalAmount
+            })
+            console.log('Mapped to frontend:', mapped.id, {
+              amountPaid: mapped.amountPaid,
+              balanceDue: mapped.balanceDue,
+              total: mapped.total
+            })
+            
+            return mapped
+          })
           
           set(s => ({ 
             invoices: frontendInvoices,
             loading: { ...s.loading, invoices: false }
           }))
         } catch (error) {
+          console.error('Failed to fetch invoices:', error)
           handleApiError(error)
-          set(s => ({ loading: { ...s.loading, invoices: false } }))
+          set(s => ({ 
+            invoices: [], // Set empty array on error
+            loading: { ...s.loading, invoices: false } 
+          }))
         }
       },
 
@@ -462,7 +522,7 @@ export const useAdminStore = create<AdminStore>()(
               name: 'Jewellery Item',
               purity: invData.purity || '22K',
               netWeight: parseFloat(invData.netWeight || '0'),
-              goldRate: invData.goldRate || 6520,
+              goldRate: invData.goldRate || 7069,
               makingCharges: invData.makingCharges || 0,
               stoneCharges: 0,
               cgstRate: 1.5,
@@ -471,6 +531,9 @@ export const useAdminStore = create<AdminStore>()(
             }],
             discountAmount: 0,
             oldGoldExchange: 0,
+            amountPaid: invData.amountPaid || 0, // Partial payment
+            balanceDue: invData.balanceDue !== undefined ? invData.balanceDue : invData.total, // Balance
+            paymentHistory: invData.paymentHistory || [], // Payment tracking
             notes: invData.category ? `Category: ${invData.category}, Metal: ${invData.metal}` : ''
           }
           
@@ -485,7 +548,10 @@ export const useAdminStore = create<AdminStore>()(
             amount: newInvoice.subtotal,
             gst: (newInvoice.cgst || 0) + (newInvoice.sgst || 0),
             total: newInvoice.totalAmount,
-            status: 'paid',
+            amountPaid: newInvoice.amountPaid || invData.amountPaid || 0, // Map paid amount
+            balanceDue: newInvoice.balanceDue !== undefined ? newInvoice.balanceDue : (invData.balanceDue !== undefined ? invData.balanceDue : invData.total), // Map balance
+            paymentHistory: newInvoice.paymentHistory || invData.paymentHistory || [], // Map payment history
+            status: invData.status || 'paid',
             date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
             due: '—',
             category: invData.category,
@@ -498,10 +564,63 @@ export const useAdminStore = create<AdminStore>()(
           }
           
           set(s => ({ invoices: [frontendInvoice, ...s.invoices] }))
-          get().addLog({ type: 'billing', action: 'Invoice created', user: 'Admin', role: 'Admin', ip: '—', details: `${frontendInvoice.id} — ₹${frontendInvoice.total.toLocaleString('en-IN')}` })
+          get().addLog({ type: 'billing', action: 'Invoice created', user: 'Admin', role: 'Admin', ip: '—', details: `${frontendInvoice.id} — ₹${frontendInvoice.total.toLocaleString('en-IN')} (Paid: ₹${frontendInvoice.amountPaid?.toLocaleString('en-IN') || 0})` })
           toast.success(`Invoice ${frontendInvoice.id} created`)
         } catch (error) {
           handleApiError(error)
+        }
+      },
+
+      updateInvoice: async (id, data) => {
+        try {
+          console.log('=== UPDATE INVOICE DEBUG ===')
+          console.log('Invoice ID:', id)
+          console.log('Update data being sent:', data)
+          
+          const response = await invoiceApi.update(id, data)
+          console.log('Update response received:', response)
+          
+          // Update local state with the response data
+          if (response && response.data) {
+            const updatedInvoice = response.data
+            console.log('Updated invoice from backend:', {
+              amountPaid: updatedInvoice.amountPaid,
+              balanceDue: updatedInvoice.balanceDue,
+              status: updatedInvoice.status
+            })
+            
+            set(s => ({ 
+              invoices: s.invoices.map(i => {
+                if (i.id === id) {
+                  const updated = { 
+                    ...i, 
+                    amountPaid: updatedInvoice.amountPaid !== undefined ? updatedInvoice.amountPaid : data.amountPaid,
+                    balanceDue: updatedInvoice.balanceDue !== undefined ? updatedInvoice.balanceDue : data.balanceDue,
+                    status: updatedInvoice.status || data.status,
+                    paymentHistory: updatedInvoice.paymentHistory || i.paymentHistory
+                  }
+                  console.log('Updated invoice in state:', {
+                    id: updated.id,
+                    amountPaid: updated.amountPaid,
+                    balanceDue: updated.balanceDue,
+                    status: updated.status
+                  })
+                  return updated
+                }
+                return i
+              }) 
+            }))
+          } else {
+            // Fallback to just updating with the data we sent
+            console.log('No response.data, using fallback update')
+            set(s => ({ invoices: s.invoices.map(i => i.id === id ? { ...i, ...data } : i) }))
+          }
+          
+          get().addLog({ type: 'billing', action: 'Invoice updated', user: 'Admin', role: 'Admin', ip: '—', details: `${id} - Payment updated` })
+        } catch (error) {
+          console.error('Update invoice error:', error)
+          handleApiError(error)
+          throw error
         }
       },
 
@@ -697,7 +816,7 @@ export const useAdminStore = create<AdminStore>()(
           inventory: [],
           customers: [],
           auditLogs: [],
-          goldRates: { '24K': '6520', '22K': '5980', '18K': '4890', '14K': '3810' },
+          goldRates: { '24K': '14525', '22K': '13314', '18K': '10893', '14K': '8349' },
           currentRole: 'super_admin',
           loading: { invoices: false, orders: false, customers: false },
         })
