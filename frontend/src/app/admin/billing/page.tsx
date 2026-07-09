@@ -141,35 +141,35 @@ export default function BillingPage() {
       const updatedForm = {...p, [field]: value}
       
       // Auto-update purity and gold rate when metal is selected
-      if (field === 'metal') {
-        const metalValue = value as string
-        const metalToPurity: Record<string, string> = {
-          '24K Gold': '24KT',
-          '22K Gold': '22KT',
-          '20K Gold': '20KT',
-          '18K Gold': '18KT',
-          '14K Gold': '14KT',
-          'Silver': 'Silver',
-          'Platinum': 'Platinum'
-        }
+      // if (field === 'metal') {
+      //   const metalValue = value as string
+      //   const metalToPurity: Record<string, string> = {
+      //     '24K Gold': '24KT',
+      //     '22K Gold': '22KT',
+      //     '20K Gold': '20KT',
+      //     '18K Gold': '18KT',
+      //     '14K Gold': '14KT',
+      //     'Silver': 'Silver',
+      //     'Platinum': 'Platinum'
+      //   }
         
-        const purityRates: Record<string, number> = {
-          '24KT': 14525, // 24K Gold - ₹14,525/g
-          '22KT': 13314, // 22K Gold - ₹13,314/g
-          '20KT': 12104, // 20K Gold (estimated)
-          '18KT': 10893, // 18K Gold - ₹10,893/g
-          '14KT': 8349,  // 14K Gold - ₹8,349/g
-          'Silver': 89,  // Silver (estimated)
-          'Platinum': 3500 // Platinum (estimated)
-        }
+      //   const purityRates: Record<string, number> = {
+      //     '24KT': 14525, // 24K Gold - ₹14,525/g
+      //     '22KT': 13314, // 22K Gold - ₹13,314/g
+      //     '20KT': 12104, // 20K Gold (estimated)
+      //     '18KT': 10893, // 18K Gold - ₹10,893/g
+      //     '14KT': 8349,  // 14K Gold - ₹8,349/g
+      //     'Silver': 89,  // Silver (estimated)
+      //     'Platinum': 3500 // Platinum (estimated)
+      //   }
         
-        if (metalToPurity[metalValue]) {
-          const purity = metalToPurity[metalValue]
-          updatedForm.purity = purity
-          updatedForm.goldRate = purityRates[purity] || 14525
-          console.log(`Auto-set purity to ${purity} and gold rate to ₹${updatedForm.goldRate}/g for metal ${metalValue}`)
-        }
-      }
+      //   if (metalToPurity[metalValue]) {
+      //     const purity = metalToPurity[metalValue]
+      //     updatedForm.purity = purity
+      //     updatedForm.goldRate = purityRates[purity] || 14525
+      //     console.log(`Auto-set purity to ${purity} and gold rate to ₹${updatedForm.goldRate}/g for metal ${metalValue}`)
+      //   }
+      // }
       
       // Auto-update gold rate when purity is selected
       if (field === 'purity') {
@@ -750,11 +750,7 @@ export default function BillingPage() {
                     <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Metal</label>
                     <select value={form.metal||''} onChange={e=>handleFieldChange('metal', e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] cursor-pointer bg-white">
                       <option value="">Select Metal</option>
-                      <option value="24K Gold">24K Gold</option>
-                      <option value="22K Gold">22K Gold</option>
-                      <option value="20K Gold">20K Gold</option>
-                      <option value="18K Gold">18K Gold</option>
-                      <option value="14K Gold">14K Gold</option>
+                      <option value="24K Gold">Gold</option>
                       <option value="Silver">Silver</option>
                       <option value="Platinum">Platinum</option>
                     </select>
