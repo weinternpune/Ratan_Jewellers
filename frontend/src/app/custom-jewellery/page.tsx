@@ -7,6 +7,7 @@ import Footer from '@/components/layout/Footer'
 import { Sparkles, MessageSquare, Phone, Mail, Check, ArrowRight, Pencil, Plus, X, Image as ImageIcon } from 'lucide-react'
 import { useCustomJewelleryStore } from '@/store/customJewelleryStore'
 import { useAuthStore } from '@/store'
+import { API_URL } from '@/lib/config'
 import toast from 'react-hot-toast'
 
 const categories = [
@@ -134,7 +135,7 @@ export default function CustomJewelleryPage() {
 
       // Also send to backend API for server-side persistence
       try {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/custom-jewellery`, {
+        await fetch(`${API_URL}/custom-jewellery`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -24,9 +24,10 @@ interface Product {
 // ─── Constants ────────────────────────────────────────────────────────────────
 const DEBOUNCE_DELAY = 350
 const MAX_RESULTS    = 6
+import { API_URL } from '@/lib/config'
+
 const MAX_RECENT     = 5
 const RECENT_KEY     = 'rj_recent_searches'
-const API_URL        = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
 
 const quickSearches = [
   { label: 'Gold Necklaces',  link: '/products?category=necklaces&metal=gold',    icon: Gem },

@@ -51,17 +51,22 @@ npm run dev
 ```bash
 cd frontend
 
-# Create environment file
-echo "NEXT_PUBLIC_API_URL=http://localhost:5000/api" > .env.local
-
 # Install dependencies
 npm install
 
-# Start frontend
+# Start frontend (No .env.local needed! Auto-connects to localhost:5000)
 npm run dev
 ```
 
 **Frontend will run on:** http://localhost:3000
+
+**✨ AUTO-CONFIG:** Frontend automatically connects to `localhost:5000`. No manual `.env.local` setup needed!  
+**⚙️ OPTIONAL:** Create `.env.local` only if using custom backend URL:
+```bash
+# Optional: Only if backend is NOT on localhost:5000
+cp .env.example .env.local
+# Edit .env.local with your custom backend URL
+```
 
 ### Step 4: Login
 - **Super Admin:** uttamkumar86830@gmail.com / SuperAdmin@2025#RJ
@@ -79,6 +84,7 @@ npm run dev
 - **Login Error 401:** Run `npm run seed:staff` in backend
 - **CORS Error:** Make sure backend is running on port 5000
 - **MongoDB Connection:** Check MONGODB_URI in backend/.env
+- **Custom Backend Port:** Create `frontend/.env.local` with your backend URL
 
 ## 🏗️ Tech Stack
 

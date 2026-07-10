@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react'
 import { useAuthStore } from '@/store'
 import { api } from '@/lib/api'
+import { BACKEND_URL } from '@/lib/config'
 import toast from 'react-hot-toast'
 
 interface LoginResponse {
@@ -109,7 +110,7 @@ export default function LoginPage() {
   }
 
   const handleGoogleLogin = () => {
-    window.location.href = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace('/api','') + '/api/auth/google'
+    window.location.href = `${BACKEND_URL}/api/auth/google`
   }
 
   return (

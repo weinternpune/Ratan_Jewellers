@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { MessageCircle, Eye, X, Send, Plus, Image as ImageIcon, Trash2, CheckCircle2, Clock, AlertCircle, RefreshCw } from 'lucide-react'
 import { useCustomJewelleryStore, CustomJewelleryRequest } from '@/store/customJewelleryStore'
 import { useAuthStore } from '@/store/authStore'
+import { API_URL } from '@/lib/config'
 import toast from 'react-hot-toast'
 
 const statusConfig = {
@@ -29,7 +30,7 @@ function readRequestsFromStorage(): CustomJewelleryRequest[] {
 // ── Fetch requests from backend API ──────────
 async function fetchRequestsFromBackend(): Promise<CustomJewelleryRequest[]> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/custom-jewellery`)
+    const response = await fetch(`${API_URL}/custom-jewellery`)
     const data = await response.json()
     if (data.success && Array.isArray(data.data)) {
       // Transform backend format to match frontend format

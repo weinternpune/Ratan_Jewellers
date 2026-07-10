@@ -3,8 +3,7 @@ import { useState, useEffect } from 'react'
 import { TrendingUp, RefreshCw, Edit2, Save, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import axios from 'axios'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+import { API_URL } from '@/lib/config'
 
 export default function GoldRatesPage() {
   const [rates, setRates] = useState({
