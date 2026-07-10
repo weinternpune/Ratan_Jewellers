@@ -177,11 +177,17 @@ export const refreshGoldRate = async (req: Request, res: Response, next: NextFun
         lastUpdated: new Date()
       };
 
+      // Update all purity rates based on the fetched 24K rate
+      CURRENT_MARKET_RATES['24K'] = liveRate;
+      CURRENT_MARKET_RATES['22K'] = Math.round(liveRate * 0.916);
+      CURRENT_MARKET_RATES['18K'] = Math.round(liveRate * 0.750);
+      CURRENT_MARKET_RATES['14K'] = Math.round(liveRate * 0.585);
+
       return res.json({
         success: true,
-        message: 'Gold rate refreshed successfully',
+        message: 'Gold rates refreshed successfully from market',
         data: {
-          rate: liveRate,
+          rates: CURRENT_MARKET_RATES,
           lastUpdated: cachedGoldRate.lastUpdated
         }
       });
@@ -194,9 +200,9 @@ export const refreshGoldRate = async (req: Request, res: Response, next: NextFun
       
       return res.json({
         success: true,
-        message: 'Using current market rate',
+        message: 'Using current market rates - external APIs unavailable',
         data: {
-          rate: CURRENT_MARKET_RATES['24K'],
+          rates: CURRENT_MARKET_RATES,
           lastUpdated: cachedGoldRate.lastUpdated
         }
       });

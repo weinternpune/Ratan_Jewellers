@@ -245,28 +245,6 @@ export default function GoldRatesPage() {
         </div>
       </div>
 
-      {/* API Sources */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <h3 className="font-bold text-gray-900 mb-3">Live API Sources</h3>
-        <div className="space-y-2 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Primary:</span>
-            <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">GoldAPI.io (India specific)</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Backup 1:</span>
-            <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">metals-api.com</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Backup 2:</span>
-            <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">metals.live</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Backup 3:</span>
-            <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">goldprice.org</span>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
