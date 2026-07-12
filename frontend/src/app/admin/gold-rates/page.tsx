@@ -4,6 +4,7 @@ import { TrendingUp, RefreshCw, Edit2, Save, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import axios from 'axios'
 import { API_URL } from '@/lib/config'
+import { apiClient } from '@/lib/api'
 
 export default function GoldRatesPage() {
   const [rates, setRates] = useState({
@@ -17,6 +18,17 @@ export default function GoldRatesPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editRate, setEditRate] = useState('14525')
+
+  // Debug: Log available tokens on mount
+  useEffect(() => {
+    const tokens = {
+      accessToken: localStorage.getItem('accessToken'),
+      adminAccessToken: localStorage.getItem('adminAccessToken'),
+      admin_token: localStorage.getItem('admin_token'),
+      ratan_access_token: localStorage.getItem('ratan_access_token'),
+    }
+    console.log('🔑 Available tokens:', Object.keys(tokens).filter(k => tokens[k as keyof typeof tokens]))
+  }, [])
 
   // Fetch current rates
   const fetchRates = async () => {
@@ -63,12 +75,8 @@ export default function GoldRatesPage() {
 
     setLoading(true)
     try {
-      const token = localStorage.getItem('admin_token')
-      const response = await axios.post(
-        `${API_URL}/gold-rates/update`,
-        { rate },
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
+      // Use apiClient which automatically handles token from localStorage
+      const response = await apiClient.post(`/gold-rates/update`, { rate })
       
       if (response.data.success) {
         toast.success('Gold rates updated successfully!')
@@ -77,7 +85,12 @@ export default function GoldRatesPage() {
         setEditing(false)
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update rates')
+      console.error('Manual update error:', error)
+      if (error.response?.status === 401) {
+        toast.error('Session expired. Please login again.')
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to update rates')
+      }
     } finally {
       setLoading(false)
     }

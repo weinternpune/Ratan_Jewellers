@@ -14,7 +14,7 @@ const statusConfig: Record<InvoiceStatus,{label:string;color:string}> = {
 
 const emptyInv = { 
   customer:'', phone:'', hallmarkId:'',
-  category:'', metal:'', purity:'', netWeight:'', price:0, goldRate:0, makingCharges:0,
+  category:'', metal:'', purity:'', netWeight:'', price:'', goldRate:0, makingCharges:0,
   amount:0, gst:0, total:0, amountPaid:0, balanceDue:0, // Partial payment fields
   status:'paid' as InvoiceStatus, 
   date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), due:'—' 
@@ -106,7 +106,10 @@ export default function BillingPage() {
       // Calculate: (Weight × Gold Rate) + (Making Charges on base amount) + Additional Price
       const baseAmount = weight * rate // Weight × Gold Rate
       const makingAmount = (baseAmount * makingCharges) / 100 // Making charges % on base amount
-      const additionalPrice = parseFloat(String(form.price || 0)) || 0 // Additional price
+      // Handle empty string, convert to 0 for calculation
+      const additionalPrice = form.price === '' || form.price === null || form.price === undefined 
+        ? 0 
+        : parseFloat(String(form.price))
       const subtotal = baseAmount + makingAmount + additionalPrice // Total before GST
       const totalAmount = Math.round(subtotal) // Round to nearest rupee
       
@@ -154,7 +157,10 @@ export default function BillingPage() {
           const makingCharges = updatedForm.makingCharges || 0
           const baseAmount = weight * rate
           const makingAmount = (baseAmount * makingCharges) / 100
-          const additionalPrice = parseFloat(String(updatedForm.price || 0)) || 0
+          // Handle empty string in additional price
+          const additionalPrice = updatedForm.price === '' || updatedForm.price === null || updatedForm.price === undefined
+            ? 0
+            : parseFloat(String(updatedForm.price))
           const subtotal = baseAmount + makingAmount + additionalPrice
           const totalAmount = Math.round(subtotal)
           const gst = Math.round(totalAmount * 0.03)
@@ -749,7 +755,19 @@ export default function BillingPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Additional Price (₹)</label>
-                  <input value={form.price||''} onChange={e=>handleFieldChange('price', Number(e.target.value) || 0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" placeholder="Stone/work charges"/>
+                  <input 
+                    type="number"
+                    value={form.price} 
+                    onChange={e => {
+                      const val = e.target.value
+                      // Keep as string for empty, convert to number for calculations
+                      handleFieldChange('price', val === '' ? '' : parseFloat(val))
+                    }}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]" 
+                    placeholder="Enter additional charges (optional)"
+                    min="0"
+                    step="0.01"
+                  />
                 </div>
                 
                 <div>
@@ -789,10 +807,10 @@ export default function BillingPage() {
                         <span>₹{(((parseFloat(form.netWeight) || 0) * (form.goldRate || 0) * (form.makingCharges || 0)) / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
                       </div>
                     )}
-                    {form.price > 0 && (
+                    {form.price !== '' && form.price !== null && form.price !== undefined && (
                       <div className="flex justify-between text-blue-600">
                         <span>+ Additional Charges:</span>
-                        <span>₹{(form.price || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
+                        <span>₹{(parseFloat(String(form.price)) || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
                       </div>
                     )}
                     <div className="border-t pt-1 mt-2 flex justify-between font-semibold">
