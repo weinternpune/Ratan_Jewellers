@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { PRODUCTS } from '@/assets/products'
+import { PRODUCTS } from '@/assets/products/allproducts'
 
 
 
@@ -148,20 +148,18 @@ function ProductCard({ product, onWishlistToggle }: {
         <p className="text-[12px] text-gray-400 leading-none">{subtitle}</p>
 
         <div className="flex items-center justify-between mt-0.5">
-          <span className="text-[16px] font-bold text-gray-900">
-            ₹{product.currentPrice.toLocaleString('en-IN')}
-          </span>
+          
           <span className="flex items-center gap-1 text-[12px] text-gray-500">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b" stroke="none">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
-            <span className="font-medium text-gray-700">{product.avgRating.toFixed(1)}</span>
+            <span className="font-medium   text-gray-700">{product.avgRating.toFixed(1)}</span>
             <span className="text-gray-400">({product.reviewCount})</span>
           </span>
         </div>
 
         <div className="flex items-center justify-between mt-1">
-          <span className="text-[12px] text-gray-400">{product.netWeight}.000 gm</span>
+          <span className="text-[12px] text-gray-400">{product.netWeight} /gm</span>
           {product.inStock ? (
             <button
               type="button"

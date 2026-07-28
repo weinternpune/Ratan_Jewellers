@@ -12,12 +12,10 @@ title: string
 const mock = [
 {
 id: 't0',
-name: "Men's Necklace",
-slug: 'mens-necklace-22k',
+name: "Royal gold Necklace",
+slug: 'royal-necklace-22k',
 sku: 'RJT00001',
-images: [
-'https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1164/1662631757_9cbff375c83181ab33e4.png',
-],
+images: ["/images/products/necklaces/gold-necklace-1.png"],
 metal: 'Gold',
 purity: '22KT',
 netWeight: 18.75,

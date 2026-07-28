@@ -3,8 +3,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 const categories = [
-  { name: 'Necklaces', slug: 'necklaces', image: '/images/categories/necklace1.jpeg', count: '200+ designs' },
-  { name: 'Rings', slug: 'rings', image: '/images/categories/ring1.jpeg', count: '150+ designs' },
+  { name: 'Necklaces', slug: 'necklaces', image: '/images/categories/necklace_1.png', count: '200+ designs' },
+  { name: 'Rings', slug: 'rings', image: '/images/categories/ring_1.png', count: '150+ designs' },
   { name: 'Bangles', slug: 'bangles', image: '/images/categories/bangle1.jpeg', count: '180+ designs' },
   { name: 'Earrings', slug: 'earrings', image: '/images/categories/earrings1.jpeg', count: '220+ designs' },
   { name: 'Chains', slug: 'chains', image: '/images/categories/chain1.jpeg', count: '90+ designs' },
