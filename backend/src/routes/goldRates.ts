@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { getLiveGoldRate, refreshGoldRate, updateGoldRate, getAllRates } from '../controllers/goldRateController';
+import { getLiveGoldRate, refreshGoldRate, updateGoldRate, updateGoldRatePremium, getAllRates } from '../controllers/goldRateController';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
-// GET /api/gold-rates - Get current 24K gold rate
+// GET /api/gold-rates - Get current 24K gold rate (Nagpur, Maharashtra)
 router.get('/', getLiveGoldRate);
 
 // GET /api/gold-rates/all - Get all purity rates
@@ -13,7 +13,10 @@ router.get('/all', getAllRates);
 // POST /api/gold-rates/refresh - Force refresh gold rate from external APIs
 router.post('/refresh', refreshGoldRate);
 
-// POST /api/gold-rates/update - Manually update gold rate (admin only)
+// POST /api/gold-rates/update - Manually override the effective rate (admin only)
 router.post('/update', authenticate, updateGoldRate);
+
+// POST /api/gold-rates/premium - Update the local Nagpur premium (₹/gram) (admin only)
+router.post('/premium', authenticate, updateGoldRatePremium);
 
 export default router;

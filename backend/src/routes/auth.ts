@@ -86,13 +86,19 @@ router.get('/create-test-user', (async (req, res) => {
 
 // ── Google OAuth ────────────────────────────────────────────────────────────
 const googleGuard: RequestHandler = (req, res, next) => {
-  const id = process.env.GOOGLE_CLIENT_ID;
-  const secret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
-  if (!id || id === 'your_google_client_id' || !secret) {
+  if (
+    !clientId ||
+    !clientSecret ||
+    clientId === 'your_google_client_id' ||
+    clientSecret === 'your_google_client_secret'
+  ) {
     return res.status(503).json({
       success: false,
-      message: 'Google OAuth is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your .env file.',
+      message:
+        'Google OAuth is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to the backend environment variables.',
     });
   }
 
@@ -102,7 +108,9 @@ const googleGuard: RequestHandler = (req, res, next) => {
 router.get(
   '/google',
   googleGuard,
-  passport.authenticate('google', { scope: ['profile', 'email'] })
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+  })
 );
 
 router.get(
@@ -110,7 +118,9 @@ router.get(
   googleGuard,
   passport.authenticate('google', {
     session: false,
-    failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=google_failed`,
+    failureRedirect:
+      `${process.env.FRONTEND_URL || 'http://localhost:3000'}` +
+      '/login?error=google_failed',
   }),
   googleCallback as RequestHandler
 );

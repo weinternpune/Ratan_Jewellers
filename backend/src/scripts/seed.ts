@@ -22,6 +22,8 @@ const SEED_USERS = [
   { name: 'Sales Staff',      email: 'sales@ratanjewellers.com',      password: 'Sales@2025#RJ',        role: 'SALES_STAFF',        phone: '+919000000004' },
   { name: 'Inventory Manager',email: 'inventory@ratanjewellers.com',  password: 'Inventory@2025#RJ',    role: 'INVENTORY_MANAGER',  phone: '+919000000005' },
   { name: 'Test Customer',    email: 'customer@ratanjewellers.com',   password: 'Customer@2025#RJ',     role: 'CUSTOMER',           phone: '+919000000006' },
+  { name: 'Uttam Kumar',      email: 'ukumar0470@gmail.com',          password: 'uttam@7642',           role: 'SUPER_ADMIN',        phone: '+919000000009' },
+  { name: 'Ratan Jewellers',  email: 'ratan.jewellers002@gmail.com',  password: 'Ratan@2026',           role: 'SUPER_ADMIN',        phone: '+919000000010' },
 ]
 
 const UserSchema = new mongoose.Schema({

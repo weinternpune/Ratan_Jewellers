@@ -224,7 +224,7 @@ export default function GoldRatesPage() {
             <div>
               <div className="font-semibold text-gray-800 text-sm">Automatic Refresh (Every 5 minutes)</div>
               <div className="text-xs text-gray-600 mt-1">
-                Backend automatically fetches rates from external APIs (GoldAPI.io, metals-api.com, metals.live, goldprice.org)
+                Backend automatically fetches rates from external APIs (VGold Price, VGold Live, VGold Metals API, VGold API)
                 and caches them for 5 minutes.
               </div>
             </div>

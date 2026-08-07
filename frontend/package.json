@@ -12,6 +12,8 @@
     "@tanstack/react-query": "^5.100.14",
     "axios": "^1.16.1",
     "framer-motion": "^12.40.0",
+    "html2canvas-pro": "^2.3.2",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.17.0",
     "next": "^15.5.18",
     "react": "^18.3.1",

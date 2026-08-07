@@ -30,7 +30,7 @@ const generateInvoiceNumber = async (): Promise<string> => {
 
 export const createInvoice = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { customerId, customerName, customerPhone, customerEmail, customerAddress, customerGstin, items, paymentMode, discountAmount=0, oldGoldExchange=0, amountPaid=0, balanceDue, paymentHistory=[], notes } = req.body;
+    const { customerId, customerName, customerPhone, customerEmail, customerAddress, customerGstin, items, paymentMode, discountAmount=0, oldGoldExchange=0, amountPaid=0, balanceDue, paymentHistory=[], notes, status } = req.body;
     const invoiceNumber = await generateInvoiceNumber();
     let subtotal=0, totalCgst=0, totalSgst=0;
     const processedItems = items.map((item: any) => {
@@ -47,10 +47,13 @@ export const createInvoice = async (req: AuthRequest, res: Response, next: NextF
     // Calculate balance if not provided
     const finalBalanceDue = balanceDue !== undefined ? balanceDue : (totalAmount - amountPaid);
     
-    // Auto-determine status based on balance
-    let invoiceStatus = 'pending';
-    if (finalBalanceDue <= 0) {
-      invoiceStatus = 'paid';
+    // Respect an explicitly chosen status (e.g. manually marking "Paid" or
+    // "Draft" even with a balance outstanding). Only auto-derive from the
+    // balance when no valid status was provided.
+    const validStatuses = ['paid', 'pending', 'overdue', 'draft'];
+    let invoiceStatus = validStatuses.includes(status) ? status : undefined;
+    if (!invoiceStatus) {
+      invoiceStatus = finalBalanceDue <= 0 ? 'paid' : 'pending';
     }
     
     const invoice = await Invoice.create({ 
@@ -59,7 +62,7 @@ export const createInvoice = async (req: AuthRequest, res: Response, next: NextF
       paymentMode, subtotal, discountAmount, cgst: totalCgst, sgst: totalSgst, 
       totalAmount, oldGoldExchange, 
       amountPaid, balanceDue: finalBalanceDue, paymentHistory, // Partial payment fields
-      status: invoiceStatus, // Auto-set status based on balance
+      status: invoiceStatus, // Respects manual override, falls back to balance-derived
       notes, items: processedItems 
     });
     

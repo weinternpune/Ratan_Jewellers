@@ -1,5 +1,9 @@
 {
   "dependencies": {
-    "node-fetch": "^3.3.2"
+    "cloudinary": "^2.10.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "node-fetch": "^3.3.2",
+    "pdfkit": "^0.19.1"
   }
 }

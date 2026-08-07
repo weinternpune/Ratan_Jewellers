@@ -1,167 +1,230 @@
 import { Request, Response, NextFunction } from 'express';
-import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+import cron from 'node-cron';
+import puppeteer from 'puppeteer';
 
-// Cache for gold rates (in-memory)
-let cachedGoldRate: {
-  rate: number;
-  lastUpdated: Date;
-} = {
-  rate: 14525, // Default 24K rate per gram (updated to current India market rate)
-  lastUpdated: new Date()
+// ── Persistence ──────────────────────────────────────────────────────────
+const CACHE_DIR = path.join(process.cwd(), 'data');
+const CACHE_FILE = path.join(CACHE_DIR, 'goldRateCache.json');
+
+interface GoldRateCache {
+  baseRate: number;        // 24K rate as fetched from V Gold, Nagpur
+  premiumPerGram: number;  // Optional manual nudge on top of the fetched rate — defaults to 0
+  source: 'nagpur-vgold' | 'stale'; // 'stale' = V Gold unreachable this attempt, showing last known rate
+  rates: {
+    '24K': number;
+    '22K': number;
+    '18K': number;
+    '14K': number;
+  };
+  lastUpdated: string;
+  lastFetchDate: string; // YYYY-MM-DD (IST)
+}
+
+const DEFAULT_CACHE: GoldRateCache = {
+  baseRate: 14525,
+  premiumPerGram: 0,
+  source: 'stale',
+  rates: {
+    '24K': 14525,
+    '22K': Math.round(14525 * 0.916),
+    '18K': Math.round(14525 * 0.750),
+    '14K': Math.round(14525 * 0.585),
+  },
+  lastUpdated: new Date().toISOString(),
+  lastFetchDate: '',
 };
 
-// Current market rates per gram (INR) - Updated to current India gold prices
-const CURRENT_MARKET_RATES = {
-  '24K': 14525,   // Current India market rate ₹14,525/g
-  '22K': 13314,   // Current India market rate ₹13,314/g  
-  '18K': 10893,   // Current India market rate ₹10,893/g
-  '14K': 8349     // Current India market rate ₹8,349/g
-};
-
-// Fetch live gold rate from external API
-async function fetchLiveGoldRate(): Promise<number | null> {
+function loadCache(): GoldRateCache {
   try {
-    // Method 1: Try GoldAPI.io (India specific rates)
-    // Note: Free tier available, need API key for production
-    // For now, using public endpoints
-    const response = await axios.get('https://www.goldapi.io/api/XAU/INR', {
-      timeout: 5000,
-      headers: {
-        'x-access-token': process.env.GOLD_API_KEY || 'goldapi-demo-key'
+    if (fs.existsSync(CACHE_FILE)) {
+      const raw = fs.readFileSync(CACHE_FILE, 'utf-8');
+      return { ...DEFAULT_CACHE, ...JSON.parse(raw) };
+    }
+  } catch (err) {
+    console.error('Failed to read gold rate cache file, using defaults:', err);
+  }
+  return { ...DEFAULT_CACHE };
+}
+
+function saveCache(cache: GoldRateCache) {
+  try {
+    if (!fs.existsSync(CACHE_DIR)) {
+      fs.mkdirSync(CACHE_DIR, { recursive: true });
+    }
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2));
+  } catch (err) {
+    console.error('Failed to write gold rate cache file:', err);
+  }
+}
+
+let cachedGoldRate: GoldRateCache = loadCache();
+
+function todayIST(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+}
+
+function computeRatesFromEffective24K(effective24K: number) {
+  return {
+    '24K': effective24K,
+    '22K': Math.round(effective24K * 0.916),
+    '18K': Math.round(effective24K * 0.750),
+    '14K': Math.round(effective24K * 0.585),
+  };
+}
+
+// ── Source 1: Real Nagpur rate, scraped from V Gold (Sarafa Bazaar, Nagpur) ──
+// Their live rates table is rendered by JavaScript after the page loads, so
+// a plain HTTP fetch of the HTML won't contain the numbers — this needs a
+// real headless browser to render the page first, then read the text.
+async function fetchNagpurRateFromVGold(): Promise<number | null> {
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+    const page = await browser.newPage();
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
+    );
+    await page.goto('https://www.vgoldspot.com/LiveRates.html', {
+      waitUntil: 'networkidle2',
+      timeout: 20000,
+    });
+
+    // The rate ticker populates via JS after load — give it a moment, and
+    // wait for the specific table to actually contain the text we need
+    // rather than a fixed sleep, so this is resilient to slow network.
+    await page.waitForFunction(
+      () => (globalThis as any).document.body.innerText.includes('GOLD 999'),
+      { timeout: 15000 }
+    );
+
+    const pageText: string = await page.evaluate(() => (globalThis as any).document.body.innerText);
+
+    // Find where "GOLD 999 (100 gm)" appears — tolerant of extra/odd
+    // whitespace (including non-breaking spaces some sites use).
+    const labelMatch = pageText.match(/GOLD\s*999\s*\(\s*100\s*gm\s*\)/i);
+    if (!labelMatch || labelMatch.index === undefined) {
+      console.log('⚠️ V Gold: "GOLD 999 (100 gm)" label not found at all in rendered text');
+      return null;
+    }
+
+    // Look at a window of text right after the label. The H:/L: range line
+    // can appear before or after the actual sell price depending on how
+    // their page orders DOM nodes vs. visual layout, so rather than assume
+    // adjacency, strip the H:/L: segment out first, then take the first
+    // remaining plausible price number.
+    let window = pageText.slice(labelMatch.index, labelMatch.index + 250);
+    console.log('🔍 V Gold: raw text window after label:', JSON.stringify(window.slice(0, 150)));
+
+    window = window.replace(/H\s*[:=]\s*[\d,]+\s*\/?\s*L\s*[:=]\s*[\d,]+/gi, '');
+
+    // Every number-looking token in that cleaned window, in order.
+    // No conversion here — the raw number V Gold shows for
+    // "GOLD 999 (100 gm)" is used exactly as-is, matching their site
+    // number-for-number rather than deriving a per-gram figure.
+    const numberTokens = window.match(/[\d,]{4,7}/g) || [];
+    let rawRate: number | null = null;
+    for (const token of numberTokens) {
+      const val = parseFloat(token.replace(/,/g, ''));
+      // Sanity range: V Gold's displayed figure for this row is
+      // realistically somewhere between ₹50,000 and ₹500,000.
+      if (val >= 50000 && val <= 500000) {
+        rawRate = val;
+        break;
       }
-    });
-    
-    if (response.data && response.data.price_gram_24k) {
-      const ratePerGram = Math.round(response.data.price_gram_24k);
-      console.log('✅ Gold rate fetched from GoldAPI.io:', ratePerGram);
-      return ratePerGram;
     }
-  } catch (error) {
-    console.log('GoldAPI.io failed, trying alternative...');
+
+    if (!rawRate) {
+      console.log('⚠️ V Gold: found the label but no plausible price number near it. Cleaned window:', JSON.stringify(window.slice(0, 150)));
+      return null;
+    }
+
+    console.log('✅ Nagpur rate fetched from V Gold (Sarafa Bazaar), raw 100gm figure:', rawRate);
+    return rawRate;
+  } catch (err) {
+    console.log('V Gold (Nagpur) scrape failed:', (err as Error).message);
+    return null;
+  } finally {
+    if (browser) await browser.close().catch(() => {});
+  }
+}
+
+// Nagpur V Gold is the sole source now — no national/international
+// fallback. If the scrape fails, we simply keep the last known Nagpur
+// rate rather than substituting unrelated national/international pricing.
+async function performDailyRefresh(): Promise<GoldRateCache> {
+  const now = new Date();
+
+  const nagpurRate = await fetchNagpurRateFromVGold();
+  if (nagpurRate !== null) {
+    const effective24K = nagpurRate + cachedGoldRate.premiumPerGram;
+    cachedGoldRate = {
+      baseRate: nagpurRate,
+      premiumPerGram: cachedGoldRate.premiumPerGram,
+      source: 'nagpur-vgold',
+      rates: computeRatesFromEffective24K(effective24K),
+      lastUpdated: now.toISOString(),
+      lastFetchDate: todayIST(),
+    };
+  } else {
+    console.log('⚠️ V Gold unreachable this attempt — keeping last known Nagpur rate');
+    cachedGoldRate = { ...cachedGoldRate, source: 'stale', lastFetchDate: todayIST() };
   }
 
-  try {
-    // Method 2: Try metals-api.com (supports INR)
-    const response = await axios.get('https://metals-api.com/api/latest', {
-      timeout: 5000,
-      params: {
-        access_key: process.env.METALS_API_KEY || 'demo',
-        base: 'XAU',
-        symbols: 'INR'
-      }
-    });
-    
-    if (response.data && response.data.rates && response.data.rates.INR) {
-      // Convert per troy ounce to per gram
-      const inrPerOunce = response.data.rates.INR;
-      const inrPerGram = Math.round(inrPerOunce / 31.1035);
-      console.log('✅ Gold rate fetched from metals-api.com:', inrPerGram);
-      return inrPerGram;
-    }
-  } catch (error) {
-    console.log('metals-api.com failed, trying global APIs...');
-  }
+  saveCache(cachedGoldRate);
+  return cachedGoldRate;
+}
 
-  try {
-    // Method 3: Try metals.live API (global prices)
-    const response = await axios.get('https://api.metals.live/v1/spot/gold', {
-      timeout: 5000
-    });
-    
-    if (response.data && response.data[0]?.price) {
-      const usdPerOunce = response.data[0].price;
-      // Convert USD per ounce to INR per gram
-      // Get live USD to INR rate or use approximate 83
-      const usdToInr = 83; // Can fetch live exchange rate from forex API
-      const inrPerGram = (usdPerOunce * usdToInr) / 31.1035;
-      const calculatedRate = Math.round(inrPerGram);
-      
-      console.log('✅ Gold rate calculated from metals.live:', calculatedRate);
-      return calculatedRate;
-    }
-  } catch (error) {
-    console.log('metals.live API failed, trying another...');
-  }
+// ── Daily cron schedule ────────────────────────────────────────────────────
+cron.schedule(
+  '15 9 * * *',
+  () => {
+    console.log('⏰ Running scheduled daily gold rate refresh...');
+    performDailyRefresh().catch((err) => console.error('Daily gold rate refresh failed:', err));
+  },
+  { timezone: 'Asia/Kolkata' }
+);
 
-  try {
-    // Method 4: Try goldprice.org unofficial API
-    const response = await axios.get('https://data-asg.goldprice.org/dbXRates/USD', {
-      timeout: 5000
-    });
-    
-    if (response.data && response.data.items) {
-      const goldData = response.data.items.find((item: any) => item.curr === 'XAU');
-      if (goldData) {
-        const usdPerOunce = parseFloat(goldData.xauPrice);
-        const usdToInr = 83;
-        const inrPerGram = (usdPerOunce * usdToInr) / 31.1035;
-        const calculatedRate = Math.round(inrPerGram);
-        
-        console.log('✅ Gold rate calculated from goldprice.org:', calculatedRate);
-        return calculatedRate;
-      }
-    }
-  } catch (error) {
-    console.log('goldprice.org API failed');
-  }
+if (cachedGoldRate.lastFetchDate !== todayIST()) {
+  performDailyRefresh().catch((err) => console.error('Startup gold rate refresh failed:', err));
+}
 
-  console.log('⚠️ All APIs failed, using market rate');
-  return null;
+// ── Route handlers ────────────────────────────────────────────────────────
+
+function locationLabel(source: GoldRateCache['source']) {
+  return source === 'nagpur-vgold'
+    ? 'Nagpur, Maharashtra (V Gold, Sarafa Bazaar)'
+    : 'Nagpur, Maharashtra (last known rate — V Gold temporarily unreachable)';
 }
 
 export const getLiveGoldRate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Check if cache is fresh (< 5 minutes old)
-    const now = new Date();
-    const cacheAge = now.getTime() - cachedGoldRate.lastUpdated.getTime();
-    const fiveMinutes = 5 * 60 * 1000;
-
-    if (cacheAge < fiveMinutes) {
-      // Return cached rate
+    if (cachedGoldRate.lastFetchDate === todayIST()) {
       return res.json({
         success: true,
         data: {
-          rate: cachedGoldRate.rate,
+          rate: cachedGoldRate.rates['24K'],
           lastUpdated: cachedGoldRate.lastUpdated,
-          cached: true
-        }
-      });
-    }
-
-    // Fetch fresh rate
-    const liveRate = await fetchLiveGoldRate();
-
-    if (liveRate) {
-      cachedGoldRate = {
-        rate: liveRate,
-        lastUpdated: now
-      };
-
-      return res.json({
-        success: true,
-        data: {
-          rate: liveRate,
-          lastUpdated: now,
-          cached: false
-        }
-      });
-    } else {
-      // Return current market rate as fallback
-      cachedGoldRate = {
-        rate: CURRENT_MARKET_RATES['24K'],
-        lastUpdated: now
-      };
-      
-      return res.json({
-        success: true,
-        data: {
-          rate: CURRENT_MARKET_RATES['24K'],
-          lastUpdated: now,
           cached: true,
-          warning: 'Using current market rate - external APIs unavailable'
+          location: locationLabel(cachedGoldRate.source)
         }
       });
     }
+
+    const fresh = await performDailyRefresh();
+    return res.json({
+      success: true,
+      data: {
+        rate: fresh.rates['24K'],
+        lastUpdated: fresh.lastUpdated,
+        cached: false,
+        location: locationLabel(fresh.source)
+      }
+    });
   } catch (err) {
     next(err);
   }
@@ -169,78 +232,48 @@ export const getLiveGoldRate = async (req: Request, res: Response, next: NextFun
 
 export const refreshGoldRate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const liveRate = await fetchLiveGoldRate();
-
-    if (liveRate) {
-      cachedGoldRate = {
-        rate: liveRate,
-        lastUpdated: new Date()
-      };
-
-      // Update all purity rates based on the fetched 24K rate
-      CURRENT_MARKET_RATES['24K'] = liveRate;
-      CURRENT_MARKET_RATES['22K'] = Math.round(liveRate * 0.916);
-      CURRENT_MARKET_RATES['18K'] = Math.round(liveRate * 0.750);
-      CURRENT_MARKET_RATES['14K'] = Math.round(liveRate * 0.585);
-
-      return res.json({
-        success: true,
-        message: 'Gold rates refreshed successfully from market',
-        data: {
-          rates: CURRENT_MARKET_RATES,
-          lastUpdated: cachedGoldRate.lastUpdated
-        }
-      });
-    } else {
-      // Return current market rate
-      cachedGoldRate = {
-        rate: CURRENT_MARKET_RATES['24K'],
-        lastUpdated: new Date()
-      };
-      
-      return res.json({
-        success: true,
-        message: 'Using current market rates - external APIs unavailable',
-        data: {
-          rates: CURRENT_MARKET_RATES,
-          lastUpdated: cachedGoldRate.lastUpdated
-        }
-      });
-    }
+    const fresh = await performDailyRefresh();
+    return res.json({
+      success: true,
+      message: fresh.source === 'nagpur-vgold'
+        ? 'Gold rates refreshed from Nagpur (V Gold, Sarafa Bazaar)'
+        : 'V Gold temporarily unreachable — showing last known Nagpur rate',
+      data: {
+        rates: fresh.rates,
+        baseRate: fresh.baseRate,
+        premiumPerGram: fresh.premiumPerGram,
+        source: fresh.source,
+        location: locationLabel(fresh.source),
+        lastUpdated: fresh.lastUpdated
+      }
+    });
   } catch (err) {
     next(err);
   }
 };
 
-// Manual update of gold rates (admin only)
 export const updateGoldRate = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { rate } = req.body;
-    
     if (!rate || rate <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid gold rate'
-      });
+      return res.status(400).json({ success: false, message: 'Invalid gold rate' });
     }
 
-    // Update cache with manual rate
+    const effective24K = Math.round(rate);
     cachedGoldRate = {
-      rate: Math.round(rate),
-      lastUpdated: new Date()
+      ...cachedGoldRate,
+      rates: computeRatesFromEffective24K(effective24K),
+      lastUpdated: new Date().toISOString(),
+      lastFetchDate: todayIST(),
     };
-
-    // Also update market rates reference
-    CURRENT_MARKET_RATES['24K'] = Math.round(rate);
-    CURRENT_MARKET_RATES['22K'] = Math.round(rate * 0.916);
-    CURRENT_MARKET_RATES['18K'] = Math.round(rate * 0.750);
-    CURRENT_MARKET_RATES['14K'] = Math.round(rate * 0.585);
+    saveCache(cachedGoldRate);
 
     return res.json({
       success: true,
       message: 'Gold rates updated successfully',
       data: {
-        rates: CURRENT_MARKET_RATES,
+        rates: cachedGoldRate.rates,
+        location: locationLabel(cachedGoldRate.source),
         lastUpdated: cachedGoldRate.lastUpdated
       }
     });
@@ -249,13 +282,51 @@ export const updateGoldRate = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-// Get all purity rates
+export const updateGoldRatePremium = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { premiumPerGram } = req.body;
+    if (premiumPerGram === undefined || premiumPerGram === null || Number.isNaN(Number(premiumPerGram))) {
+      return res.status(400).json({ success: false, message: 'Invalid premium value' });
+    }
+
+    const newPremium = Math.round(Number(premiumPerGram));
+    const effective24K = cachedGoldRate.baseRate + newPremium;
+
+    cachedGoldRate = {
+      ...cachedGoldRate,
+      premiumPerGram: newPremium,
+      rates: computeRatesFromEffective24K(effective24K),
+      lastUpdated: new Date().toISOString(),
+    };
+    saveCache(cachedGoldRate);
+
+    return res.json({
+      success: true,
+      message: 'Premium updated successfully',
+      data: {
+        rates: cachedGoldRate.rates,
+        baseRate: cachedGoldRate.baseRate,
+        premiumPerGram: cachedGoldRate.premiumPerGram,
+        source: cachedGoldRate.source,
+        location: locationLabel(cachedGoldRate.source),
+        lastUpdated: cachedGoldRate.lastUpdated
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getAllRates = async (req: Request, res: Response, next: NextFunction) => {
   try {
     return res.json({
       success: true,
       data: {
-        rates: CURRENT_MARKET_RATES,
+        rates: cachedGoldRate.rates,
+        baseRate: cachedGoldRate.baseRate,
+        premiumPerGram: cachedGoldRate.premiumPerGram,
+        source: cachedGoldRate.source,
+        location: locationLabel(cachedGoldRate.source),
         lastUpdated: cachedGoldRate.lastUpdated
       }
     });
