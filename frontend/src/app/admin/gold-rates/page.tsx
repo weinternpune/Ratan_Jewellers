@@ -19,17 +19,6 @@ export default function GoldRatesPage() {
   const [editing, setEditing] = useState(false)
   const [editRate, setEditRate] = useState('14525')
 
-  // Debug: Log available tokens on mount
-  useEffect(() => {
-    const tokens = {
-      accessToken: localStorage.getItem('accessToken'),
-      adminAccessToken: localStorage.getItem('adminAccessToken'),
-      admin_token: localStorage.getItem('admin_token'),
-      ratan_access_token: localStorage.getItem('ratan_access_token'),
-    }
-    console.log('🔑 Available tokens:', Object.keys(tokens).filter(k => tokens[k as keyof typeof tokens]))
-  }, [])
-
   // Fetch current rates
   const fetchRates = async () => {
     try {
@@ -45,9 +34,17 @@ export default function GoldRatesPage() {
 
   useEffect(() => {
     fetchRates()
+
+    // Auto-refresh every 30 seconds — the backend itself only actually
+    // re-scrapes V Gold if 30+ seconds have passed since its last fetch
+    // (see getAllRates in goldRateController.ts), so polling here at the
+    // same 30s cadence keeps the displayed rate continuously live without
+    // hammering V Gold's site on every single request.
+    const interval = setInterval(fetchRates, 30000)
+    return () => clearInterval(interval)
   }, [])
 
-  // Refresh from external APIs
+  // Refresh from external APIs (manual button — forces an immediate scrape)
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
@@ -75,9 +72,8 @@ export default function GoldRatesPage() {
 
     setLoading(true)
     try {
-      // Use apiClient which automatically handles token from localStorage
       const response = await apiClient.post(`/gold-rates/update`, { rate })
-      
+
       if (response.data.success) {
         toast.success('Gold rates updated successfully!')
         setRates(response.data.data.rates)
@@ -103,7 +99,7 @@ export default function GoldRatesPage() {
         <div>
           <h1 className="text-xl font-bold text-gray-900">Gold Rates Management</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Current market rates • Last updated: {lastUpdated ? lastUpdated.toLocaleString('en-IN') : 'Loading...'}
+            Live from V Gold, Nagpur • Auto-refreshes every 30s • Last updated: {lastUpdated ? lastUpdated.toLocaleString('en-IN') : 'Loading...'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -113,7 +109,7 @@ export default function GoldRatesPage() {
             className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-50 disabled:opacity-50"
           >
             <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-            {refreshing ? 'Refreshing...' : 'Refresh from Market'}
+            {refreshing ? 'Refreshing...' : 'Refresh Now'}
           </button>
           <button
             onClick={() => {
@@ -141,7 +137,7 @@ export default function GoldRatesPage() {
             <div className="p-6 space-y-4">
               <div>
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">
-                  24K Gold Rate (₹ per gram)
+                  24K Gold Rate (₹)
                 </label>
                 <input
                   type="number"
@@ -151,15 +147,16 @@ export default function GoldRatesPage() {
                   placeholder="14525"
                 />
                 <p className="text-xs text-gray-500 mt-2">
-                  Other purities will be calculated automatically:
+                  Other purities are calculated automatically:
                   <br />
                   22K = 24K × 0.916 | 18K = 24K × 0.750 | 14K = 24K × 0.585
                 </p>
               </div>
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                 <p className="text-xs text-amber-700">
-                  <strong>Note:</strong> This will update the gold rate for all new invoices and product calculations.
-                  Existing invoices will not be affected.
+                  <strong>Note:</strong> A manual override will be replaced automatically the
+                  next time the 30-second auto-refresh (or the daily cron) fetches a fresh
+                  rate from V Gold.
                 </p>
               </div>
             </div>
@@ -204,10 +201,7 @@ export default function GoldRatesPage() {
               <span className="text-sm font-semibold text-amber-900">{purity} Gold</span>
             </div>
             <div className="text-2xl font-bold text-amber-900">₹{parseInt(rate).toLocaleString('en-IN')}</div>
-            <div className="text-xs text-amber-700 mt-1">per gram</div>
-            <div className="text-xs text-amber-600 mt-3 font-semibold">
-              ₹{(parseInt(rate) * 10).toLocaleString('en-IN')} per 10g
-            </div>
+            <div className="text-xs text-amber-700 mt-1">V Gold quote</div>
           </div>
         ))}
       </div>
@@ -215,17 +209,18 @@ export default function GoldRatesPage() {
       {/* Info Section */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
         <h3 className="font-bold text-gray-900">How Gold Rates Update</h3>
-        
+
         <div className="space-y-3">
           <div className="flex items-start gap-3">
             <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
               <span className="text-xs font-bold text-green-600">1</span>
             </div>
             <div>
-              <div className="font-semibold text-gray-800 text-sm">Automatic Refresh (Every 5 minutes)</div>
+              <div className="font-semibold text-gray-800 text-sm">Auto-Refresh (Every 30 seconds)</div>
               <div className="text-xs text-gray-600 mt-1">
-                Backend automatically fetches rates from external APIs (VGold Price, VGold Live, VGold Metals API, VGold API)
-                and caches them for 5 minutes.
+                This page polls the backend every 30 seconds. The backend itself only
+                re-scrapes V Gold's live page if 30+ seconds have passed since its last
+                fetch, keeping the rate continuously current without hammering their site.
               </div>
             </div>
           </div>
@@ -235,9 +230,9 @@ export default function GoldRatesPage() {
               <span className="text-xs font-bold text-blue-600">2</span>
             </div>
             <div>
-              <div className="font-semibold text-gray-800 text-sm">Manual Refresh (Button)</div>
+              <div className="font-semibold text-gray-800 text-sm">Refresh Now (Button)</div>
               <div className="text-xs text-gray-600 mt-1">
-                Click "Refresh from Market" to immediately fetch latest rates from live gold market APIs.
+                Forces an immediate re-scrape of V Gold's live page, bypassing the 30-second window.
               </div>
             </div>
           </div>
@@ -249,8 +244,7 @@ export default function GoldRatesPage() {
             <div>
               <div className="font-semibold text-gray-800 text-sm">Manual Update (Override)</div>
               <div className="text-xs text-gray-600 mt-1">
-                Click "Manual Update" to set a specific rate based on your local jeweller's pricing.
-                Other purities are calculated automatically.
+                Temporarily overrides the rate — gets replaced by the next auto-refresh.
               </div>
             </div>
           </div>

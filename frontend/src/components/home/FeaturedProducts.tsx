@@ -3,31 +3,16 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { PRODUCTS } from "@/assets/products/allproducts";
 import ProductCard from '@/components/products/ProductCard'
 // import { apiClient } from '@/lib/api'
 
 interface Props { title: string; filter: 'newest' | 'trending' | 'featured' }
 
-const mockProducts = Array.from({ length: 6 }, (_, i) => ({
-  id: `mock-${i}`,
-  name: ['Gold Traditional Necklace','Diamond Stud Earrings','Gold Ring For Women','Gold Bangles','Mangalsutra Pendant','Silver Pooja Thali'][i],
-  slug: `product-${i}`, sku: `RJ${String(i+1).padStart(5,'0')}`,
-  images: ['https://d25g9z9s77rn4i.cloudfront.net/uploads/product/1318/1779442888_0ac1f452c046c8b762b9.webp','https://i.pinimg.com/1200x/f6/8f/30/f68f30f993851facd04f33bc45da1d1d.jpg','https://i.pinimg.com/1200x/2e/dc/5c/2edc5c21e8ce0c9960a3f28f3a1a99c8.jpg','https://i.pinimg.com/736x/82/6c/0f/826c0f20bcff3dc6a1026a353c266676.jpg','https://d25g9z9s77rn4i.cloudfront.net/uploads/product/764/1780054045_2efbce9def7e01b07340.webp','https://tiimg.tistatic.com/fp/1/006/590/fine-finished-brass-pooja-thali-023.jpg'].slice(i, i+1),
-  metal: ['Gold','Gold','Gold','Gold','Gold','Silver'][i],
-  purity: ['22KT','18KT','22KT','22KT','22KT','92.5'][i],
-  netWeight: [15.25,3.25,4.1,20.5,6.2,250.0][i],
-  currentPrice: [145000,48500,32500,102000,35800,18500][i],
-  goldRate: 6500, makingCharges: 2000, stoneCharges: i%2===0?0:5000,
-  avgRating: [4.8,4.9,4.7,4.8,4.9,4.7][i],
-  reviewCount: [124,98,75,87,64,43][i],
-  inStock: true, isFeatured: i<2, isTrending: i%3===0,
-  category: { name: ['Necklaces','Earrings','Rings','Bangles','Mangalsutras','Pooja'][i] },
-}))
-
 export default function FeaturedProducts({ title, filter }: Props) {
 const data = null
   const apiProducts = (data as any)?.products ?? []
-  const displayProducts =  mockProducts
+ const displayProducts = PRODUCTS.slice(0, 6);
   return (
     <section className="py-16 sm:py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">

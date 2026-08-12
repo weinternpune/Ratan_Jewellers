@@ -190,7 +190,7 @@ export default function LiveGoldRate() {
                   ).toLocaleString('en-IN')}
 
                   <span className="text-yellow-200 text-[10px]">
-                    /g
+                    /100g
                   </span>
                 </span>
               </div>

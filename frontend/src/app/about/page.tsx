@@ -133,25 +133,25 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-2 gap-10">
             <div>
               <Image
-                src="/images/founder.jpg"
+                src="/images/founder.jpeg"
                 alt="Founder"
                 width={500}
                 height={600}
                 className="w-full"
               />
-              <h3 className="text-2xl font-serif mt-5">Founder</h3>
-              <p className="text-gray-600">Visionary Leadership</p>
+              {/* <h3 className="text-2xl font-serif mt-5">Founder</h3>
+              <p className="text-gray-600">Visionary Leadership</p> */}
             </div>
             <div>
               <Image
-                src="/images/director.png"
+                src="/images/director.jpeg"
                 alt="Director"
                 width={500}
                 height={600}
                 className="w-full"
               />
-              <h3 className="text-2xl font-serif mt-5">Managing Director</h3>
-              <p className="text-gray-600">Driving Innovation</p>
+              {/* <h3 className="text-2xl font-serif mt-5">Managing Director</h3>
+              <p className="text-gray-600">Driving Innovation</p> */}
             </div>
           </div>
         </div>

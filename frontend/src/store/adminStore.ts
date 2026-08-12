@@ -77,6 +77,7 @@ export interface Invoice {
   total: number
   amountPaid?: number
   balanceDue?: number
+  discount?: number
   paymentHistory?: Array<{
     amount: number
     date: string
@@ -741,6 +742,7 @@ export const useAdminStore = create<AdminStore>()(
         total: total,
         amountPaid: paid,
         balanceDue: correctBalance,
+        discount: invoice.discountAmount || 0,
         paymentHistory: invoice.paymentHistory || [],
 
         // IMPORTANT:
@@ -863,7 +865,7 @@ export const useAdminStore = create<AdminStore>()(
               }
             ],
 
-            discountAmount: 0,
+            discountAmount: invData.discount || 0,
             oldGoldExchange: 0,
 
             amountPaid:
@@ -924,6 +926,11 @@ export const useAdminStore = create<AdminStore>()(
                       ? invData.balanceDue
                       : invData.total
                   ),
+
+            discount:
+              newInvoice.discountAmount !== undefined
+                ? newInvoice.discountAmount
+                : (invData.discount || 0),
 
             paymentHistory:
               newInvoice.paymentHistory ||
@@ -1288,7 +1295,8 @@ export const useAdminStore = create<AdminStore>()(
         const gst = Math.round(subtotal * 0.03)
         const cgst = Math.round(gst / 2)
         const sgst = gst - cgst
-        const total = subtotal + gst
+        const discount = inv.discount || 0
+        const total = Math.max(subtotal + gst - discount, 0)
         const amountPaid = inv.amountPaid || 0
         const balanceDue = Math.max(total - amountPaid, 0)
 
@@ -1407,7 +1415,7 @@ export const useAdminStore = create<AdminStore>()(
       </thead>
       <tbody>
         <tr>
-          <td>7113</td>
+          <td>71131900</td>
           <td class="particulars">${inv.category || 'Jewellery Item'}${inv.metal ? ` (${inv.metal})` : ''}</td>
           <td>${inv.hallmarkId || '—'}</td>
           <td>${inv.purity || '—'}</td>
@@ -1435,11 +1443,18 @@ export const useAdminStore = create<AdminStore>()(
         <div style="margin-bottom:8px;"><strong>Rs:</strong> ${numberToWords(total)} Rupees Only</div>
         <div style="color:#555;">Narration: By ${amountPaid > 0 ? 'Cash/UPI' : 'Pending'}</div>
         ${inv.hallmarkId ? `<div style="margin-top:8px;color:#4338CA;font-weight:700;">BIS Hallmark: ${inv.hallmarkId}</div>` : ''}
+        <div style="margin-top:10px;font-size:10.5px;color:#444;line-height:1.6;">
+          <strong>NOTE:</strong><br>
+          916 EXCHANGE 100% 916 RETURNS 916<br>
+          750 EXCHANGE 100% 750 RETURNS 750<br>
+          833 EXCHANGE 100% 833 RETURNS 833
+        </div>
       </div>
       <div class="totals-col">
         <table>
           <tr><td class="label">ADD CGST 1.5%</td><td class="val">${cgst.toLocaleString('en-IN')}.00</td></tr>
           <tr><td class="label">ADD SGST 1.5%</td><td class="val">${sgst.toLocaleString('en-IN')}.00</td></tr>
+          ${discount > 0 ? `<tr><td class="label">Less Discount</td><td class="val" style="color:#DC2626;">-${discount.toLocaleString('en-IN')}.00</td></tr>` : ''}
           <tr><td class="label">Amount Paid</td><td class="val" style="color:#059669;">${amountPaid.toLocaleString('en-IN')}.00</td></tr>
           <tr><td class="label">Balance Due</td><td class="val" style="color:${balanceDue > 0 ? '#DC2626' : '#059669'};">${balanceDue.toLocaleString('en-IN')}.00</td></tr>
           <tr class="net-payable"><td>Net Payable</td><td class="val">₹${total.toLocaleString('en-IN')}.00</td></tr>

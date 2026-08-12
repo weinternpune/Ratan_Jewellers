@@ -203,7 +203,13 @@ function locationLabel(source: GoldRateCache['source']) {
 
 export const getLiveGoldRate = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    if (cachedGoldRate.lastFetchDate === todayIST()) {
+    // Rolling 30-second cache instead of once-per-day: as long as the
+    // frontend polls at least every 30s, this stays continuously live.
+    // Launching Puppeteer on every single request would be wasteful if
+    // multiple requests land within the same second, so this still
+    // short-circuits to the cached value within that 30s window.
+    const ageMs = Date.now() - new Date(cachedGoldRate.lastUpdated).getTime();
+    if (ageMs < 30000) {
       return res.json({
         success: true,
         data: {
@@ -319,6 +325,14 @@ export const updateGoldRatePremium = async (req: Request, res: Response, next: N
 
 export const getAllRates = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    // Same rolling 30-second window as getLiveGoldRate — this is the
+    // endpoint the frontend ticker/admin page actually polls, so this is
+    // where the real auto-refresh needs to happen.
+    const ageMs = Date.now() - new Date(cachedGoldRate.lastUpdated).getTime();
+    if (ageMs >= 30000) {
+      await performDailyRefresh();
+    }
+
     return res.json({
       success: true,
       data: {

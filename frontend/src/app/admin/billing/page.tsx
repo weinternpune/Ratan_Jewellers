@@ -14,7 +14,7 @@ const statusConfig: Record<InvoiceStatus,{label:string;color:string}> = {
 
 const emptyInv = { 
   customer:'', phone:'', email:'',
-  category:'', metal:'', purity:'', hallmarkId:'', netWeight:'', price:0, goldRate:6520, makingCharges:0,
+  category:'', metal:'', purity:'', hallmarkId:'', netWeight:'', price:0, goldRate:6520, makingCharges:0, discount:0,
   amount:0, gst:0, cgst:0, sgst:0, total:0, amountPaid:0, balanceDue:0, status:'paid' as InvoiceStatus, 
   date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), due:'—' 
 }
@@ -78,7 +78,8 @@ export default function BillingPage() {
     const gst = Math.round(subtotal * 0.03)
     const cgst = Math.round(gst / 2)
     const sgst = gst - cgst
-    const total = subtotal + gst
+    const discount = inv.discount || 0
+    const total = Math.max(subtotal + gst - discount, 0)
 
     const paid = inv.amountPaid || 0
     const balance = inv.balanceDue ?? Math.max(total - paid, 0)
@@ -114,6 +115,7 @@ export default function BillingPage() {
         ${inv.phone ? `<div style="font-size:11px;color:#6b7280;">Phone: ${inv.phone}</div>` : ''}
       </div>
       ${inv.hallmarkId ? `<div style="background:#eef2ff;border:1px solid #e0e7ff;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#4338ca;font-weight:700;">BIS Hallmark: ${inv.hallmarkId}</div>` : ''}
+      <div style="font-size:10px;color:#555;line-height:1.5;margin-bottom:12px;"><strong>NOTE:</strong><br>916 EXCHANGE 100% 916 RETURNS 916<br>750 EXCHANGE 100% 750 RETURNS 750<br>833 EXCHANGE 100% 833 RETURNS 833</div>
       <table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:16px;">
         <tr style="background:#fefce8;">
           <th style="border:1px solid #e5e7eb;padding:6px;text-align:left;">Particulars</th>
@@ -135,6 +137,7 @@ export default function BillingPage() {
       <table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px;">
         <tr style="border-top:1px solid #f3f4f6;"><td style="padding-top:8px;font-size:11px;color:#6b7280;">CGST @ 1.5%</td><td style="padding-top:8px;text-align:right;font-size:11px;color:#6b7280;">₹${cgst.toLocaleString('en-IN')}</td></tr>
         <tr><td style="font-size:11px;color:#6b7280;">SGST @ 1.5%</td><td style="text-align:right;font-size:11px;color:#6b7280;">₹${sgst.toLocaleString('en-IN')}</td></tr>
+        ${discount > 0 ? `<tr><td style="font-size:11px;color:#dc2626;">Discount</td><td style="text-align:right;font-size:11px;color:#dc2626;">−₹${discount.toLocaleString('en-IN')}</td></tr>` : ''}
         <tr style="border-top:1px solid #e5e7eb;"><td style="padding-top:8px;font-weight:800;font-size:15px;">Grand Total</td><td style="padding-top:8px;text-align:right;font-weight:800;font-size:15px;">₹${total.toLocaleString('en-IN')}</td></tr>
       </table>
       <div style="display:flex;gap:10px;">
@@ -266,18 +269,20 @@ export default function BillingPage() {
 
       const gst = Math.round(subtotal * 0.03)
       const { cgst, sgst } = splitGST(gst)
-      const total = subtotal + gst
+      const discount = Math.round(data.discount || 0)
+      const total = Math.max(subtotal + gst - discount, 0)
       const amountPaid = data.amountPaid || 0
       const balanceDue = Math.max(total - amountPaid, 0)
-      return { ...data, amount: subtotal, gst, cgst, sgst, total, balanceDue }
+      return { ...data, amount: subtotal, gst, cgst, sgst, discount, total, balanceDue }
     } else if (data.amount > 0) {
       const amount = Math.round(data.amount)
       const gst = Math.round(amount * 0.03)
       const { cgst, sgst } = splitGST(gst)
-      const total = amount + gst
+      const discount = Math.round(data.discount || 0)
+      const total = Math.max(amount + gst - discount, 0)
       const amountPaid = data.amountPaid || 0
       const balanceDue = Math.max(total - amountPaid, 0)
-      return { ...data, amount, gst, cgst, sgst, total, balanceDue }
+      return { ...data, amount, gst, cgst, sgst, discount, total, balanceDue }
     }
     return data
   }
@@ -443,6 +448,9 @@ export default function BillingPage() {
                   <span className="text-sm font-mono font-bold text-indigo-700 ml-auto">{previewInvoice.hallmarkId}</span>
                 </div>
               ) : null}
+              <div className="text-[10px] text-gray-500 leading-relaxed mb-4 bg-gray-50 rounded-lg px-3 py-2">
+                <strong>NOTE:</strong><br/>916 EXCHANGE 100% 916 RETURNS 916<br/>750 EXCHANGE 100% 750 RETURNS 750<br/>833 EXCHANGE 100% 833 RETURNS 833
+              </div>
               {/* Tabulated line-item breakdown, same style as a traditional jeweller tax invoice */}
               <div className="overflow-x-auto mb-4">
                 <table className="w-full text-xs border border-gray-200">
@@ -473,6 +481,7 @@ export default function BillingPage() {
                   {(previewInvoice.price && previewInvoice.price > 0) ? <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Additional Charges</td><td className="py-1 text-right text-xs text-gray-500">₹{previewInvoice.price.toLocaleString('en-IN')}</td></tr> : null}
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">CGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.cgst ?? Math.round(previewInvoice.gst/2)).toLocaleString('en-IN')}</td></tr>
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">SGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.sgst ?? (previewInvoice.gst - Math.round(previewInvoice.gst/2))).toLocaleString('en-IN')}</td></tr>
+                  {(previewInvoice.discount && previewInvoice.discount > 0) ? <tr className="border-b border-gray-50"><td className="py-3 text-red-600 text-xs font-medium">Discount</td><td className="py-3 text-right text-red-600 text-xs font-medium">−₹{previewInvoice.discount.toLocaleString('en-IN')}</td></tr> : null}
                 </tbody>
                 <tfoot><tr><td className="pt-3 font-bold text-gray-900">Grand Total</td><td className="pt-3 text-right font-bold text-gray-900 text-base">₹{previewInvoice.total.toLocaleString('en-IN')}</td></tr></tfoot>
               </table>
@@ -567,11 +576,11 @@ export default function BillingPage() {
                     <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Purity</label>
                     <select value={form.purity||''} onChange={e=>handleFieldChange('purity', e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-400 cursor-pointer bg-white">
                       <option value="">Select Purity</option>
-                      <option value="24KT">24KT</option>
-                      <option value="22KT">22KT</option>
-                      <option value="20KT">20KT</option>
-                      <option value="18KT">18KT</option>
-                      <option value="14KT">14KT</option>
+                      <option value="24KT(999/995)">24KT(999/995)</option>
+                      <option value="23KT(958)">23KT(958)</option>
+                      <option value="22KT(916)">22KT(916)</option>
+                      <option value="21KT(875)">21KT(875)</option>
+                      <option value="18KT(750)">18KT(750)</option>
                     </select>
                   </div>
 
@@ -606,6 +615,11 @@ export default function BillingPage() {
                   </div>
 
                   <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Discount (₹)</label>
+                    <input value={form.discount||''} onChange={e=>handleFieldChange('discount', Number(e.target.value) || 0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-emerald-400 bg-white" placeholder="Deducted from grand total"/>
+                  </div>
+
+                  <div className="md:col-span-2">
                     <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Amount (₹) *</label>
                     <input value={form.amount||''} onChange={e=>handleAmountChange(Number(e.target.value)||0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-emerald-400 bg-gray-50" placeholder="Auto-calculated or manual" readOnly={form.netWeight && form.goldRate ? true : false}/>
                     <div className="text-xs text-gray-500 mt-1">
@@ -661,6 +675,12 @@ export default function BillingPage() {
                     <span>₹{form.gst.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
+                {form.discount > 0 && (
+                  <div className="flex justify-between items-center text-sm text-red-600 font-medium border-t border-amber-200 pt-2">
+                    <span>Discount</span>
+                    <span>−₹{form.discount.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
                 <div className="border-t border-amber-200 pt-3">
                   <div className="flex justify-between items-center font-bold text-base">
                     <span>Grand Total</span>

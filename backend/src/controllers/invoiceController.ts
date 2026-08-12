@@ -35,12 +35,16 @@ export const createInvoice = async (req: AuthRequest, res: Response, next: NextF
     let subtotal=0, totalCgst=0, totalSgst=0;
     const processedItems = items.map((item: any) => {
       const goldValue = item.netWeight * item.goldRate;
-      const unitPrice = goldValue + item.makingCharges + item.stoneCharges;
+      // makingCharges is a PERCENTAGE (e.g. 3 = 3%), not a flat rupee amount —
+      // this was being added directly as raw rupees before, silently
+      // undercharging every invoice by treating "3%" as "₹3".
+      const makingAmount = goldValue * (item.makingCharges || 0) / 100;
+      const unitPrice = goldValue + makingAmount + item.stoneCharges;
       const base = unitPrice * item.quantity;
       const cgstAmount = base * (item.cgstRate || 1.5) / 100;
       const sgstAmount = base * (item.sgstRate || 1.5) / 100;
       subtotal += base; totalCgst += cgstAmount; totalSgst += sgstAmount;
-      return { ...item, unitPrice, cgstAmount, sgstAmount, totalAmount: base+cgstAmount+sgstAmount };
+      return { ...item, unitPrice, makingAmount, cgstAmount, sgstAmount, totalAmount: base+cgstAmount+sgstAmount };
     });
     const totalAmount = subtotal + totalCgst + totalSgst - discountAmount - oldGoldExchange;
     
