@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { TrendingUp, TrendingDown, RefreshCw } from 'lucide-react'
 import { useUIStore } from '@/store'
+import { API_URL } from '@/lib/config'
 
 const purities = [
   { label: '24K (999)', multiplier: 1 },
@@ -11,26 +12,30 @@ const purities = [
   { label: '14K (585)', multiplier: 0.585 }
 ]
 
-// Function to fetch live gold rate from backend API
+// Fetches the live gold rate from the backend.
+// Previously hardcoded to http://localhost:5000 — that only ever worked on
+// a dev machine, since a visitor's browser has nothing listening on that
+// address. Using API_URL (same env var the rest of the app already uses)
+// makes this hit the real production API instead.
 async function fetchLiveGoldRate(): Promise<number | null> {
   try {
-    const response = await fetch('http://localhost:5000/api/gold-rates', {
+    const response = await fetch(`${API_URL}/gold-rates/all`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       }
     })
-    
+
     if (response.ok) {
       const result = await response.json()
-      if (result.success && result.data?.rate) {
-        return result.data.rate
+      if (result.success && result.data?.rates?.['24K']) {
+        return result.data.rates['24K']
       }
     }
   } catch (error) {
     console.error('Failed to fetch live gold rate from backend:', error)
   }
-  
+
   return null // Return null if API fails
 }
 
@@ -40,7 +45,6 @@ export default function LiveGoldRate() {
   const [prevRate, setPrevRate] = useState(goldRate)
   const [isUpdating, setIsUpdating] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
-  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(true)
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
@@ -49,42 +53,28 @@ export default function LiveGoldRate() {
     const fetchAndUpdateRate = async () => {
       setIsUpdating(true)
       const liveRate = await fetchLiveGoldRate()
-      
+
       if (liveRate) {
-        setPrevRate(goldRate)
+        setPrevRate((prev) => goldRate)
         setGoldRate(liveRate)
         setLastUpdated(new Date())
-      } else {
-        // Fallback to slight variation if API fails
-        const fallbackRate = goldRate + (Math.random() - 0.5) * 20
-        setPrevRate(goldRate)
-        setGoldRate(Math.round(fallbackRate))
-        setLastUpdated(new Date())
       }
-      
+      // No fake-random fallback on failure — keep showing the last real
+      // rate rather than inventing a number, same principle as the admin
+      // Gold Rates page.
+
       setIsUpdating(false)
     }
-    
-    // Initial fetch
+
     fetchAndUpdateRate()
-  }, [])
 
-  // Auto-update every 5 minutes (300000ms)
-  useEffect(() => {
-    if (!autoUpdateEnabled) return
-
-    const intervalId = setInterval(async () => {
-      const liveRate = await fetchLiveGoldRate()
-      
-      if (liveRate) {
-        setPrevRate(goldRate)
-        setGoldRate(liveRate)
-        setLastUpdated(new Date())
-      }
-    }, 300000) // 5 minutes
-
+    // Auto-refresh every 30 seconds — the backend itself only actually
+    // re-scrapes V Gold if 30+ seconds have passed since its last fetch,
+    // so polling here at the same cadence keeps this ticker continuously
+    // live without hammering the backend.
+    const intervalId = setInterval(fetchAndUpdateRate, 30000)
     return () => clearInterval(intervalId)
-  }, [autoUpdateEnabled, goldRate, setGoldRate])
+  }, [])
 
   const trend = goldRate >= prevRate ? 'up' : 'down'
   const change = goldRate - prevRate
@@ -96,19 +86,11 @@ export default function LiveGoldRate() {
 
   const refreshRate = async () => {
     setIsUpdating(true)
-
     try {
       const liveRate = await fetchLiveGoldRate()
-      
       if (liveRate) {
         setPrevRate(goldRate)
         setGoldRate(liveRate)
-        setLastUpdated(new Date())
-      } else {
-        // Fallback to slight variation
-        const nr = goldRate + (Math.random() - 0.5) * 20
-        setPrevRate(goldRate)
-        setGoldRate(Math.round(nr))
         setLastUpdated(new Date())
       }
     } finally {
@@ -122,7 +104,6 @@ export default function LiveGoldRate() {
 
     if (!container) return
 
-    // Check if mobile
     const isMobile = window.innerWidth < 768
 
     if (!isMobile) return
@@ -132,19 +113,15 @@ export default function LiveGoldRate() {
     const autoScroll = () => {
       if (!container) return
 
-      const maxScroll =
-        container.scrollWidth - container.clientWidth
-
+      const maxScroll = container.scrollWidth - container.clientWidth
       const currentScroll = container.scrollLeft
 
-      // Change direction at edges
       if (currentScroll >= maxScroll) {
         direction = -1
       } else if (currentScroll <= 0) {
         direction = 1
       }
 
-      // Smooth auto scroll
       container.scrollLeft += direction * 1
     }
 
