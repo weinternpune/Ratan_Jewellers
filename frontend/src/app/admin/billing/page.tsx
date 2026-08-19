@@ -14,7 +14,7 @@ const statusConfig: Record<InvoiceStatus,{label:string;color:string}> = {
 
 const emptyInv = { 
   customer:'', phone:'', email:'',
-  category:'', metal:'', purity:'', hallmarkId:'', netWeight:'', price:0, goldRate:6520, makingCharges:0, discount:0,
+  category:'', metal:'', purity:'', hallmarkId:'', netWeight:'', price:0, goldRate:6520, makingCharges:0, discount:0, lessURD:0,
   amount:0, gst:0, cgst:0, sgst:0, total:0, amountPaid:0, balanceDue:0, status:'paid' as InvoiceStatus, 
   date:new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}), due:'—' 
 }
@@ -95,6 +95,9 @@ export default function BillingPage() {
     container.style.fontFamily = 'Arial, Helvetica, sans-serif'
     container.style.color = '#111827'
     container.innerHTML = `
+      <div style="display:flex;justify-content:center;margin-bottom:14px;">
+        <img src="${window.location.origin}/bis-logo.png" alt="BIS" style="height:48px;width:auto;"/>
+      </div>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;">
         <div>
           <div style="font-size:18px;font-weight:800;color:#0D0700;">RATAN JEWELLERS</div>
@@ -138,6 +141,7 @@ export default function BillingPage() {
         <tr style="border-top:1px solid #f3f4f6;"><td style="padding-top:8px;font-size:11px;color:#6b7280;">CGST @ 1.5%</td><td style="padding-top:8px;text-align:right;font-size:11px;color:#6b7280;">₹${cgst.toLocaleString('en-IN')}</td></tr>
         <tr><td style="font-size:11px;color:#6b7280;">SGST @ 1.5%</td><td style="text-align:right;font-size:11px;color:#6b7280;">₹${sgst.toLocaleString('en-IN')}</td></tr>
         ${discount > 0 ? `<tr><td style="font-size:11px;color:#dc2626;">Discount</td><td style="text-align:right;font-size:11px;color:#dc2626;">−₹${discount.toLocaleString('en-IN')}</td></tr>` : ''}
+        ${inv.lessURD ? `<tr><td style="font-size:11px;color:#6b7280;">Less URD</td><td style="text-align:right;font-size:11px;color:#6b7280;">₹${inv.lessURD.toLocaleString('en-IN')}</td></tr>` : ''}
         <tr style="border-top:1px solid #e5e7eb;"><td style="padding-top:8px;font-weight:800;font-size:15px;">Grand Total</td><td style="padding-top:8px;text-align:right;font-weight:800;font-size:15px;">₹${total.toLocaleString('en-IN')}</td></tr>
       </table>
       <div style="display:flex;gap:10px;">
@@ -432,6 +436,10 @@ export default function BillingPage() {
               <button onClick={()=>setPreviewInvoice(null)} className="text-gray-400 hover:text-gray-600"><X size={18}/></button>
             </div>
             <div className="p-6">
+              <div className="flex justify-center mb-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/bis-logo.png" alt="BIS" className="h-12 w-auto"/>
+              </div>
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
                 <div className="min-w-0 break-words"><div className="text-lg font-bold text-[#0D0700]">RATAN JEWELLERS</div><div className="text-xs text-gray-500">Shop No 1: Tidke Complex, Arjuni</div><div className="text-xs text-gray-500">Shop No 2: Main Bus Stop, Paraswada</div><div className="text-xs text-gray-500">GSTIN: 27AESPU9905N1ZA</div><div className="text-xs text-gray-500">BIS License No: HM/C-7490069821</div></div>
                 <div className="min-w-0 break-words sm:text-right"><div className="text-[#C9A84C] font-mono font-bold text-base">{previewInvoice.id}</div><div className="text-xs text-gray-500">{previewInvoice.date}</div>{previewInvoice.due && previewInvoice.due !== '—' ? <div className="text-xs text-gray-400">Due: {previewInvoice.due}</div> : null}<span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${statusConfig[previewInvoice.status].color}`}>{statusConfig[previewInvoice.status].label}</span></div>
@@ -482,6 +490,7 @@ export default function BillingPage() {
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">CGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.cgst ?? Math.round(previewInvoice.gst/2)).toLocaleString('en-IN')}</td></tr>
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">SGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.sgst ?? (previewInvoice.gst - Math.round(previewInvoice.gst/2))).toLocaleString('en-IN')}</td></tr>
                   {(previewInvoice.discount && previewInvoice.discount > 0) ? <tr className="border-b border-gray-50"><td className="py-3 text-red-600 text-xs font-medium">Discount</td><td className="py-3 text-right text-red-600 text-xs font-medium">−₹{previewInvoice.discount.toLocaleString('en-IN')}</td></tr> : null}
+                  {(previewInvoice.lessURD && previewInvoice.lessURD > 0) ? <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">Less URD</td><td className="py-3 text-right text-gray-600 text-xs">₹{previewInvoice.lessURD.toLocaleString('en-IN')}</td></tr> : null}
                 </tbody>
                 <tfoot><tr><td className="pt-3 font-bold text-gray-900">Grand Total</td><td className="pt-3 text-right font-bold text-gray-900 text-base">₹{previewInvoice.total.toLocaleString('en-IN')}</td></tr></tfoot>
               </table>
@@ -619,6 +628,12 @@ export default function BillingPage() {
                     <input value={form.discount||''} onChange={e=>handleFieldChange('discount', Number(e.target.value) || 0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-emerald-400 bg-white" placeholder="Deducted from grand total"/>
                   </div>
 
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Less URD (₹)</label>
+                    <input value={form.lessURD||''} onChange={e=>setForm(p=>({...p,lessURD:Number(e.target.value)||0}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-emerald-400 bg-white" placeholder="For display only"/>
+                    <div className="text-xs text-gray-400 mt-1">Shown on the invoice only — not added to or deducted from any total</div>
+                  </div>
+
                   <div className="md:col-span-2">
                     <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Amount (₹) *</label>
                     <input value={form.amount||''} onChange={e=>handleAmountChange(Number(e.target.value)||0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-emerald-400 bg-gray-50" placeholder="Auto-calculated or manual" readOnly={form.netWeight && form.goldRate ? true : false}/>
@@ -679,6 +694,12 @@ export default function BillingPage() {
                   <div className="flex justify-between items-center text-sm text-red-600 font-medium border-t border-amber-200 pt-2">
                     <span>Discount</span>
                     <span>−₹{form.discount.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                {form.lessURD > 0 && (
+                  <div className="flex justify-between items-center text-sm text-gray-500 border-t border-amber-200 pt-2">
+                    <span>Less URD <span className="text-gray-400">(display only)</span></span>
+                    <span>₹{form.lessURD.toLocaleString('en-IN')}</span>
                   </div>
                 )}
                 <div className="border-t border-amber-200 pt-3">

@@ -78,6 +78,10 @@ export interface Invoice {
   amountPaid?: number
   balanceDue?: number
   discount?: number
+  // Display-only field ("Less URD"). Shown on the invoice exactly like the
+  // other amount lines, but intentionally never read by any amount/GST/
+  // total calculation anywhere in this file — it is cosmetic only.
+  lessURD?: number
   paymentHistory?: Array<{
     amount: number
     date: string
@@ -769,7 +773,14 @@ export const useAdminStore = create<AdminStore>()(
           : undefined,
 
         metal: invoice.notes?.includes('Metal:')
-          ? invoice.notes.split('Metal: ')[1]
+          ? invoice.notes.split('Metal: ')[1]?.split(',')[0]
+          : undefined,
+
+        // Display-only value, stashed inside `notes` the same way
+        // category/metal are (the schema has no dedicated column for it).
+        // Never fed back into any total/GST calculation.
+        lessURD: invoice.notes?.includes('Less URD:')
+          ? parseFloat(invoice.notes.split('Less URD: ')[1]?.split(',')[0]) || undefined
           : undefined,
 
         purity: invoice.items?.[0]?.purity,
@@ -879,9 +890,14 @@ export const useAdminStore = create<AdminStore>()(
             paymentHistory:
               invData.paymentHistory || [],
 
-            notes: invData.category
-              ? `Category: ${invData.category}, Metal: ${invData.metal}`
-              : ''
+            // "Less URD" has no dedicated backend column — it's a display-only
+            // value, so it's stashed in `notes` (same trick used for
+            // category/metal) purely so it survives a page refresh. It is
+            // never read into subtotal/GST/discount/total math anywhere.
+            notes: [
+              invData.category ? `Category: ${invData.category}, Metal: ${invData.metal}` : '',
+              invData.lessURD ? `Less URD: ${invData.lessURD}` : ''
+            ].filter(Boolean).join(', ')
           }
 
           const result =
@@ -972,7 +988,10 @@ export const useAdminStore = create<AdminStore>()(
               invData.makingCharges,
 
             price:
-              invData.price
+              invData.price,
+
+            lessURD:
+              invData.lessURD
           }
 
           set(s => ({
@@ -1362,11 +1381,14 @@ export const useAdminStore = create<AdminStore>()(
     .signature-row { display: flex; justify-content: space-between; padding: 30px 16px 14px; }
     .signature-row div { font-size: 11px; }
     .status-tag { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #059669; }
+    .bis-logo-row { display: flex; justify-content: center; padding: 10px 0 0; }
+    .bis-logo-row img { height: 52px; width: auto; }
     @media print { body { padding: 0; } }
   </style>
 </head>
 <body>
   <div class="invoice-container">
+    <div class="bis-logo-row"><img src="${window.location.origin}/bis-logo.png" alt="BIS"/></div>
     <div class="jurisdiction">SUBJECT TO NAGPUR JURISDICTION</div>
 
     <div class="header">
@@ -1455,6 +1477,7 @@ export const useAdminStore = create<AdminStore>()(
           <tr><td class="label">ADD CGST 1.5%</td><td class="val">${cgst.toLocaleString('en-IN')}.00</td></tr>
           <tr><td class="label">ADD SGST 1.5%</td><td class="val">${sgst.toLocaleString('en-IN')}.00</td></tr>
           ${discount > 0 ? `<tr><td class="label">Less Discount</td><td class="val" style="color:#DC2626;">-${discount.toLocaleString('en-IN')}.00</td></tr>` : ''}
+          ${inv.lessURD ? `<tr><td class="label">Less URD</td><td class="val">${inv.lessURD.toLocaleString('en-IN')}.00</td></tr>` : ''}
           <tr><td class="label">Amount Paid</td><td class="val" style="color:#059669;">${amountPaid.toLocaleString('en-IN')}.00</td></tr>
           <tr><td class="label">Balance Due</td><td class="val" style="color:${balanceDue > 0 ? '#DC2626' : '#059669'};">${balanceDue.toLocaleString('en-IN')}.00</td></tr>
           <tr class="net-payable"><td>Net Payable</td><td class="val">₹${total.toLocaleString('en-IN')}.00</td></tr>
