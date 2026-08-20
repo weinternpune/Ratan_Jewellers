@@ -140,8 +140,8 @@ export default function BillingPage() {
       <table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px;">
         <tr style="border-top:1px solid #f3f4f6;"><td style="padding-top:8px;font-size:11px;color:#6b7280;">CGST @ 1.5%</td><td style="padding-top:8px;text-align:right;font-size:11px;color:#6b7280;">₹${cgst.toLocaleString('en-IN')}</td></tr>
         <tr><td style="font-size:11px;color:#6b7280;">SGST @ 1.5%</td><td style="text-align:right;font-size:11px;color:#6b7280;">₹${sgst.toLocaleString('en-IN')}</td></tr>
-        ${discount > 0 ? `<tr><td style="font-size:11px;color:#dc2626;">Discount</td><td style="text-align:right;font-size:11px;color:#dc2626;">−₹${discount.toLocaleString('en-IN')}</td></tr>` : ''}
-        ${inv.lessURD ? `<tr><td style="font-size:11px;color:#6b7280;">Less URD</td><td style="text-align:right;font-size:11px;color:#6b7280;">₹${inv.lessURD.toLocaleString('en-IN')}</td></tr>` : ''}
+        <tr><td style="font-size:11px;color:${discount > 0 ? '#dc2626' : '#374151'};">Discount</td><td style="text-align:right;font-size:11px;color:${discount > 0 ? '#dc2626' : '#374151'};">${discount > 0 ? '−₹' + discount.toLocaleString('en-IN') : '0'}</td></tr>
+        <tr><td style="font-size:11px;color:#6b7280;">Less URD</td><td style="text-align:right;font-size:11px;color:#6b7280;"></td></tr>
         <tr style="border-top:1px solid #e5e7eb;"><td style="padding-top:8px;font-weight:800;font-size:15px;">Grand Total</td><td style="padding-top:8px;text-align:right;font-weight:800;font-size:15px;">₹${total.toLocaleString('en-IN')}</td></tr>
       </table>
       <div style="display:flex;gap:10px;">
@@ -489,8 +489,8 @@ export default function BillingPage() {
                   {(previewInvoice.price && previewInvoice.price > 0) ? <tr className="border-b border-gray-50"><td className="py-1 text-xs text-gray-500">Additional Charges</td><td className="py-1 text-right text-xs text-gray-500">₹{previewInvoice.price.toLocaleString('en-IN')}</td></tr> : null}
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">CGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.cgst ?? Math.round(previewInvoice.gst/2)).toLocaleString('en-IN')}</td></tr>
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">SGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.sgst ?? (previewInvoice.gst - Math.round(previewInvoice.gst/2))).toLocaleString('en-IN')}</td></tr>
-                  {(previewInvoice.discount && previewInvoice.discount > 0) ? <tr className="border-b border-gray-50"><td className="py-3 text-red-600 text-xs font-medium">Discount</td><td className="py-3 text-right text-red-600 text-xs font-medium">−₹{previewInvoice.discount.toLocaleString('en-IN')}</td></tr> : null}
-                  {(previewInvoice.lessURD && previewInvoice.lessURD > 0) ? <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">Less URD</td><td className="py-3 text-right text-gray-600 text-xs">₹{previewInvoice.lessURD.toLocaleString('en-IN')}</td></tr> : null}
+                  <tr className="border-b border-gray-50"><td className={`py-3 text-xs font-medium ${(previewInvoice.discount && previewInvoice.discount > 0) ? 'text-red-600' : 'text-gray-500'}`}>Discount</td><td className={`py-3 text-right text-xs font-medium ${(previewInvoice.discount && previewInvoice.discount > 0) ? 'text-red-600' : 'text-gray-500'}`}>{(previewInvoice.discount && previewInvoice.discount > 0) ? `−₹${previewInvoice.discount.toLocaleString('en-IN')}` : '0'}</td></tr>
+                  <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">Less URD</td><td className="py-3 text-right text-gray-600 text-xs"></td></tr>
                 </tbody>
                 <tfoot><tr><td className="pt-3 font-bold text-gray-900">Grand Total</td><td className="pt-3 text-right font-bold text-gray-900 text-base">₹{previewInvoice.total.toLocaleString('en-IN')}</td></tr></tfoot>
               </table>
@@ -690,18 +690,14 @@ export default function BillingPage() {
                     <span>₹{form.gst.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
-                {form.discount > 0 && (
-                  <div className="flex justify-between items-center text-sm text-red-600 font-medium border-t border-amber-200 pt-2">
-                    <span>Discount</span>
-                    <span>−₹{form.discount.toLocaleString('en-IN')}</span>
-                  </div>
-                )}
-                {form.lessURD > 0 && (
-                  <div className="flex justify-between items-center text-sm text-gray-500 border-t border-amber-200 pt-2">
-                    <span>Less URD <span className="text-gray-400">(display only)</span></span>
-                    <span>₹{form.lessURD.toLocaleString('en-IN')}</span>
-                  </div>
-                )}
+                <div className={`flex justify-between items-center text-sm font-medium border-t border-amber-200 pt-2 ${form.discount > 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                  <span>Discount</span>
+                  <span>{form.discount > 0 ? `−₹${form.discount.toLocaleString('en-IN')}` : '0'}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm text-gray-500 border-t border-amber-200 pt-2">
+                  <span>Less URD <span className="text-gray-400">(display only)</span></span>
+                  <span></span>
+                </div>
                 <div className="border-t border-amber-200 pt-3">
                   <div className="flex justify-between items-center font-bold text-base">
                     <span>Grand Total</span>

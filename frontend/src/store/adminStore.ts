@@ -1476,8 +1476,8 @@ export const useAdminStore = create<AdminStore>()(
         <table>
           <tr><td class="label">ADD CGST 1.5%</td><td class="val">${cgst.toLocaleString('en-IN')}.00</td></tr>
           <tr><td class="label">ADD SGST 1.5%</td><td class="val">${sgst.toLocaleString('en-IN')}.00</td></tr>
-          ${discount > 0 ? `<tr><td class="label">Less Discount</td><td class="val" style="color:#DC2626;">-${discount.toLocaleString('en-IN')}.00</td></tr>` : ''}
-          ${inv.lessURD ? `<tr><td class="label">Less URD</td><td class="val">${inv.lessURD.toLocaleString('en-IN')}.00</td></tr>` : ''}
+          <tr><td class="label">Less Discount</td><td class="val" style="color:${discount > 0 ? '#DC2626' : '#333'};">${discount > 0 ? '-' + discount.toLocaleString('en-IN') + '.00' : '0.00'}</td></tr>
+          <tr><td class="label">Less URD</td><td class="val"></td></tr>
           <tr><td class="label">Amount Paid</td><td class="val" style="color:#059669;">${amountPaid.toLocaleString('en-IN')}.00</td></tr>
           <tr><td class="label">Balance Due</td><td class="val" style="color:${balanceDue > 0 ? '#DC2626' : '#059669'};">${balanceDue.toLocaleString('en-IN')}.00</td></tr>
           <tr class="net-payable"><td>Net Payable</td><td class="val">₹${total.toLocaleString('en-IN')}.00</td></tr>
