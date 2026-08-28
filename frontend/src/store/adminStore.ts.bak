@@ -58,21 +58,6 @@ export interface OrderItem {
   price: number
 }
 
-// A single line item on an invoice. Multiple of these can exist per
-// invoice (multi-item billing). `category`/`subCategory` come from the
-// Gold/Silver taxonomy in billing/page.tsx; `metalType` records which of
-// the two lists it was picked from.
-export interface InvoiceLineItem {
-  metalType: 'Gold' | 'Silver'
-  category: string
-  subCategory?: string
-  purity: string
-  netWeight: string
-  goldRate: number
-  makingCharges: number
-  price: number
-}
-
 export interface Invoice {
   id: string
   order?: string
@@ -80,12 +65,6 @@ export interface Invoice {
   email?: string
   phone?: string
   hallmarkId?: string
-  // Full multi-item breakdown. When present, this is the source of truth
-  // for what's shown on the invoice and how totals are calculated.
-  items?: InvoiceLineItem[]
-  // Legacy/convenience single-item fields, kept for the invoices table
-  // and for invoices created before multi-item support existed. Always
-  // mirror items[0] for invoices that have `items` set.
   category?: string
   metal?: string
   purity?: string
@@ -789,50 +768,26 @@ export const useAdminStore = create<AdminStore>()(
 
         due: '—',
 
-        // Display-only value, stashed inside `notes` (the schema has no
-        // dedicated column for it). Never fed back into any total/GST
-        // calculation.
+        category: invoice.notes?.includes('Category:')
+          ? invoice.notes.split('Category: ')[1]?.split(',')[0]
+          : undefined,
+
+        metal: invoice.notes?.includes('Metal:')
+          ? invoice.notes.split('Metal: ')[1]?.split(',')[0]
+          : undefined,
+
+        // Display-only value, stashed inside `notes` the same way
+        // category/metal are (the schema has no dedicated column for it).
+        // Never fed back into any total/GST calculation.
         lessURD: invoice.notes?.includes('Less URD:')
           ? parseFloat(invoice.notes.split('Less URD: ')[1]?.split(',')[0]) || undefined
           : undefined,
 
-        // Full multi-item breakdown, reconstructed from the backend's
-        // generic items array. `name` was composed on creation as
-        // "Category - SubCategory (Gold/Silver)" — split it back apart
-        // for display. Older, pre-multi-item invoices simply won't match
-        // this pattern and fall back to the raw name as the category.
-        items: (invoice.items || []).map((it: any) => {
-          const nameMatch = (it.name || '').match(/^(.*?)(?:\s*\(([^)]+)\))?$/)
-          const namePart = (nameMatch?.[1] || it.name || '').trim()
-          const metalPart = (nameMatch?.[2] || '').trim()
-          const [category, subCategory] = namePart.includes(' - ')
-            ? [namePart.split(' - ')[0].trim(), namePart.split(' - ').slice(1).join(' - ').trim()]
-            : [namePart, undefined]
-          return {
-            metalType: (metalPart === 'Silver' ? 'Silver' : 'Gold') as 'Gold' | 'Silver',
-            category,
-            subCategory,
-            purity: it.purity || '',
-            netWeight: (it.netWeight ?? 0).toString(),
-            goldRate: it.goldRate || 0,
-            makingCharges: it.makingCharges || 0,
-            price: it.stoneCharges || 0,
-          }
-        }),
-
-        // Legacy/table-view convenience fields — mirror the first item so
-        // the invoices table (which only has room for one row per
-        // invoice) still shows something sensible. A "+N more" suffix on
-        // category hints that there's more than one item.
-        category: invoice.items?.[0]?.name
-          ? invoice.items[0].name + (invoice.items.length > 1 ? ` (+${invoice.items.length - 1} more)` : '')
-          : undefined,
-        metal: undefined,
         purity: invoice.items?.[0]?.purity,
         netWeight: invoice.items?.[0]?.netWeight?.toString(),
         goldRate: invoice.items?.[0]?.goldRate,
         makingCharges: invoice.items?.[0]?.makingCharges,
-        price: invoice.items?.[0]?.stoneCharges || 0
+        price: 0
       }
 
       return mapped
@@ -901,24 +856,25 @@ export const useAdminStore = create<AdminStore>()(
 
             status: invData.status,
 
-            // One backend item per line item entered in the create-invoice
-            // form. `name` bakes in Category/SubCategory/Metal since the
-            // backend item schema has no dedicated columns for them —
-            // fetchInvoices splits this string back apart on reload.
-            items: (invData.items && invData.items.length > 0
-              ? invData.items
-              : [{ metalType: 'Gold' as const, category: 'Jewellery Item', subCategory: '', purity: '22KT(916)', netWeight: '0', goldRate: 7069, makingCharges: 0, price: 0 }]
-            ).map(item => ({
-              name: `${item.category || 'Jewellery Item'}${item.subCategory ? ' - ' + item.subCategory : ''} (${item.metalType})`,
-              purity: item.purity || '—',
-              netWeight: parseFloat(item.netWeight || '0') || 0,
-              goldRate: item.goldRate || 0,
-              makingCharges: item.makingCharges || 0,
-              stoneCharges: item.price || 0,
-              cgstRate: 1.5,
-              sgstRate: 1.5,
-              quantity: 1
-            })),
+            items: [
+              {
+                name: 'Jewellery Item',
+                purity:
+                  invData.purity || '22K',
+                netWeight:
+                  parseFloat(
+                    invData.netWeight || '0'
+                  ),
+                goldRate:
+                  invData.goldRate || 7069,
+                makingCharges:
+                  invData.makingCharges || 0,
+                stoneCharges: 0,
+                cgstRate: 1.5,
+                sgstRate: 1.5,
+                quantity: 1
+              }
+            ],
 
             discountAmount: invData.discount || 0,
             oldGoldExchange: 0,
@@ -935,10 +891,13 @@ export const useAdminStore = create<AdminStore>()(
               invData.paymentHistory || [],
 
             // "Less URD" has no dedicated backend column — it's a display-only
-            // value, so it's stashed in `notes` purely so it survives a
-            // page refresh. It is never read into subtotal/GST/discount/
-            // total math anywhere.
-            notes: invData.lessURD ? `Less URD: ${invData.lessURD}` : ''
+            // value, so it's stashed in `notes` (same trick used for
+            // category/metal) purely so it survives a page refresh. It is
+            // never read into subtotal/GST/discount/total math anywhere.
+            notes: [
+              invData.category ? `Category: ${invData.category}, Metal: ${invData.metal}` : '',
+              invData.lessURD ? `Less URD: ${invData.lessURD}` : ''
+            ].filter(Boolean).join(', ')
           }
 
           const result =
@@ -1010,32 +969,26 @@ export const useAdminStore = create<AdminStore>()(
 
             due: '—',
 
-            // Store the full itemized breakdown exactly as entered — no
-            // need to wait for a refetch, we already have it.
-            items: invData.items,
-
-            // Legacy/table-view convenience fields, mirroring item 1.
-            category: invData.items?.[0]
-              ? `${invData.items[0].category}${invData.items[0].subCategory ? ' - ' + invData.items[0].subCategory : ''}${invData.items.length > 1 ? ` (+${invData.items.length - 1} more)` : ''}`
-              : undefined,
+            category:
+              invData.category,
 
             metal:
-              invData.items?.[0]?.metalType,
+              invData.metal,
 
             purity:
-              invData.items?.[0]?.purity,
+              invData.purity,
 
             netWeight:
-              invData.items?.[0]?.netWeight,
+              invData.netWeight,
 
             goldRate:
-              invData.items?.[0]?.goldRate,
+              invData.goldRate,
 
             makingCharges:
-              invData.items?.[0]?.makingCharges,
+              invData.makingCharges,
 
             price:
-              invData.items?.[0]?.price,
+              invData.price,
 
             lessURD:
               invData.lessURD
@@ -1349,37 +1302,15 @@ export const useAdminStore = create<AdminStore>()(
         const inv = get().invoices.find(i => i.id === id)
         if (!inv) return
 
-        // Multi-item breakdown. Falls back to a single synthesized line
-        // from the legacy flat fields for invoices created before
-        // multi-item support existed.
-        const lineItems = (inv.items && inv.items.length > 0) ? inv.items : [{
-          metalType: (inv.metal as 'Gold' | 'Silver') || 'Gold',
-          category: inv.category || 'Jewellery Item',
-          subCategory: '',
-          purity: inv.purity || '',
-          netWeight: inv.netWeight || '0',
-          goldRate: inv.goldRate || 0,
-          makingCharges: inv.makingCharges || 0,
-          price: inv.price || 0,
-        }]
-
-        // Recompute every line from scratch — same fix as the
-        // create-invoice form — so making charges are folded into each
-        // item's subtotal BEFORE GST, then all items are summed for the
-        // invoice-level subtotal/GST/total.
-        const computedLines = lineItems.map(item => {
-          const netWeight = parseFloat(item.netWeight || '0') || 0
-          const goldRate = item.goldRate || 0
-          const makingChargesPct = item.makingCharges || 0
-          const lineBase = Math.round(netWeight * goldRate)
-          const makingAmt = Math.round((lineBase * makingChargesPct) / 100)
-          const additional = item.price || 0
-          const lineSubtotal = lineBase + makingAmt + additional
-          return { ...item, netWeight, goldRate, makingChargesPct, additional, lineSubtotal }
-        })
-
-        const subtotal = computedLines.reduce((sum, l) => sum + l.lineSubtotal, 0)
-        const totalNetWeight = computedLines.reduce((sum, l) => sum + l.netWeight, 0)
+        // Recompute explicitly so making charges are folded into the
+        // subtotal before GST, same fix as the create-invoice form.
+        const netWeight = parseFloat(inv.netWeight || '0') || 0
+        const goldRate = inv.goldRate || 0
+        const makingChargesPct = inv.makingCharges || 0
+        const lineBase = Math.round(netWeight * goldRate)
+        const makingAmt = Math.round((lineBase * makingChargesPct) / 100)
+        const additional = inv.price || 0
+        const subtotal = (netWeight && goldRate) ? (lineBase + makingAmt + additional) : (inv.amount || 0)
         const gst = Math.round(subtotal * 0.03)
         const cgst = Math.round(gst / 2)
         const sgst = gst - cgst
@@ -1425,15 +1356,10 @@ export const useAdminStore = create<AdminStore>()(
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; padding: 24px; color: #111; font-size: 12px; }
     .invoice-container { max-width: 900px; margin: 0 auto; border: 1.5px solid #000; }
-    .jurisdiction { text-align: center; font-size: 10px; padding: 4px; border-bottom: 1px solid #000; color: #555; }
-    .top-banner { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #3a0d0d 0%, #0D0700 60%); padding: 18px 22px; }
-    .top-banner .company-name { font-size: 28px; font-weight: 800; color: #F0C14B; letter-spacing: 0.5px; }
-    .top-banner .company-sub { font-size: 10px; color: #e8cf9a; margin-top: 4px; }
-    .phone-pill { display: inline-flex; align-items: center; gap: 6px; background: #fff; color: #7a1f1f; font-weight: 700; font-size: 11px; padding: 4px 12px; border-radius: 14px; margin-top: 10px; }
-    .banner-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-    .bis-badge { background: #fff; border-radius: 8px; padding: 5px 9px; display: flex; align-items: center; justify-content: center; }
-    .bis-badge img { height: 40px; width: auto; display: block; }
-    .invoice-tag { font-family: monospace; font-weight: 800; font-size: 15px; color: #F0C14B; }
+    .jurisdiction { text-align: center; font-size: 10px; padding: 4px; border-bottom: 1px solid #000; }
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid #000; }
+    .company-name { font-size: 26px; font-weight: bold; color: #0D0700; }
+    .company-sub { font-size: 10px; color: #555; margin-top: 2px; }
     .invoice-title { text-align: center; font-weight: bold; font-size: 13px; padding: 4px; border-bottom: 1px solid #000; letter-spacing: 1px; }
     .meta-row { display: flex; border-bottom: 1px solid #000; }
     .meta-col { flex: 1; padding: 8px 12px; font-size: 11px; line-height: 1.6; }
@@ -1454,25 +1380,28 @@ export const useAdminStore = create<AdminStore>()(
     .totals-col tr.net-payable td { font-weight: 800; font-size: 13px; border-top: 1.5px solid #000; background: #fafafa; }
     .signature-row { display: flex; justify-content: space-between; padding: 30px 16px 14px; }
     .signature-row div { font-size: 11px; }
-    .status-tag { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #4ADE80; background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 10px; }
+    .status-tag { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #059669; }
+    .bis-logo-row { display: flex; justify-content: center; padding: 10px 0 0; }
+    .bis-logo-row img { height: 52px; width: auto; }
     @media print { body { padding: 0; } }
   </style>
 </head>
 <body>
   <div class="invoice-container">
-    <div class="top-banner">
+    <div class="bis-logo-row"><img src="${window.location.origin}/bis-logo.png" alt="BIS"/></div>
+    <div class="jurisdiction">SUBJECT TO NAGPUR JURISDICTION</div>
+
+    <div class="header">
       <div>
         <div class="company-name">RATAN JEWELLERS</div>
         <div class="company-sub">Shop No 1: Tidke Complex, Arjuni &nbsp;|&nbsp; Shop No 2: Main Bus Stop, Paraswada</div>
-        <div class="phone-pill">📞&nbsp;+91 75075 10948</div>
+        <div class="company-sub">Phone: +91 75075 10948 &nbsp;|&nbsp; Email: info@ratanjeweller.in</div>
       </div>
-      <div class="banner-right">
-        <div class="bis-badge"><img src="${window.location.origin}/bis-logo.png" alt="BIS"/></div>
-        <div class="invoice-tag">${inv.id}</div>
+      <div style="text-align:right;">
+        <div style="font-family:monospace;font-weight:800;font-size:16px;color:#C9A84C;">${inv.id}</div>
         <div class="status-tag">${inv.status}</div>
       </div>
     </div>
-    <div class="jurisdiction">SUBJECT TO TIRORA JURISDICTION &nbsp;|&nbsp; Email: info@ratanjeweller.in</div>
 
     <div class="invoice-title">TAX INVOICE</div>
 
@@ -1507,26 +1436,25 @@ export const useAdminStore = create<AdminStore>()(
         </tr>
       </thead>
       <tbody>
-        ${computedLines.map(l => `
         <tr>
           <td>71131900</td>
-          <td class="particulars">${l.category}${l.subCategory ? ` - ${l.subCategory}` : ''} (${l.metalType})</td>
+          <td class="particulars">${inv.category || 'Jewellery Item'}${inv.metal ? ` (${inv.metal})` : ''}</td>
           <td>${inv.hallmarkId || '—'}</td>
-          <td>${l.purity || '—'}</td>
+          <td>${inv.purity || '—'}</td>
           <td>1</td>
-          <td>${l.netWeight || '—'}</td>
-          <td>${l.netWeight || '—'}</td>
-          <td>${l.goldRate ? l.goldRate.toLocaleString('en-IN') : '—'}</td>
-          <td>${l.makingChargesPct ? `${l.makingChargesPct}%` : '—'}</td>
-          <td>${l.additional ? l.additional.toLocaleString('en-IN') : '0.00'}</td>
-          <td>${l.lineSubtotal.toLocaleString('en-IN')}.00</td>
-        </tr>`).join('')}
+          <td>${netWeight || '—'}</td>
+          <td>${netWeight || '—'}</td>
+          <td>${goldRate ? goldRate.toLocaleString('en-IN') : '—'}</td>
+          <td>${makingChargesPct ? `${makingChargesPct}%` : '—'}</td>
+          <td>${additional ? additional.toLocaleString('en-IN') : '0.00'}</td>
+          <td>${subtotal.toLocaleString('en-IN')}.00</td>
+        </tr>
       </tbody>
       <tfoot>
         <tr>
           <td colspan="5"></td>
-          <td>${totalNetWeight || '—'}</td>
-          <td>${totalNetWeight || '—'}</td>
+          <td>${netWeight || '—'}</td>
+          <td>${netWeight || '—'}</td>
           <td colspan="4">Subtotal: ${subtotal.toLocaleString('en-IN')}.00</td>
         </tr>
       </tfoot>
