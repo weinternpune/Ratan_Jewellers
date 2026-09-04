@@ -111,94 +111,59 @@ async function fetchMCXGoldRateFromMoneyControl(): Promise<number | null> {
       timeout: 20000,
     });
 
-    let rawRate: number | null = null;
-    let method = '';
-
-    // ── Strategy 1: the exact live-price widget (#sp_val) ────────────
-    // Confirmed against real markup: the big price is an animated
-    // "rolling digit" widget (id="sp_val"). Each digit's true value sits
-    // in a small `[class*="number-placeholder"]` fallback span, and —
-    // this is the part a plain text-scan can never get right — the
-    // digits are stored in the DOM in REVERSE (right-to-left) order, one
-    // wrapper div per character (digits, plus separate wrapper divs for
-    // the "." and "," characters). Reading them in DOM order and
-    // reversing gives the actual price, e.g. reversing "0,0,.,1,4,0,,,5,5,1"
-    // yields "155,041.00".
-    try {
-      await page.waitForSelector('#sp_val', { timeout: 15000 });
-      const decoded: string | null = await page.evaluate(() => {
-        const doc = (globalThis as any).document;
-        const root = doc.querySelector('#sp_val');
-        if (!root) return null;
-        // The digit/punctuation wrapper divs are direct children of the
-        // innermost element matching [class*="ticker-view"] — there are
-        // two nested elements sharing that class prefix (an outer one
-        // with aria-live attributes, wrapping an identical inner one),
-        // so take the deepest/last match to get the actual repeating
-        // children rather than a single wrapper.
-        const viewCandidates = Array.from(root.querySelectorAll('[class*="ticker-view"]'));
-        const view = viewCandidates.length > 0 ? viewCandidates[viewCandidates.length - 1] : root;
-        const children = Array.from((view as any).children) as any[];
-        if (children.length === 0) return null;
-        const parts = children.map((child: any) => {
-          const placeholder = child.querySelector('[class*="number-placeholder"]');
-          return (placeholder ? placeholder.textContent : child.textContent || '').trim();
-        });
-        return parts.reverse().join('');
-      });
-
-      if (decoded) {
-        const val = parseFloat(decoded.replace(/,/g, ''));
-        if (!isNaN(val) && val >= 40000 && val <= 300000) {
-          rawRate = val;
-          method = '#sp_val digit-ticker (decoded: "' + decoded + '")';
-        } else {
-          console.log(`⚠️ MoneyControl: #sp_val decoded to "${decoded}", which is outside the plausible price range — falling back.`);
-        }
-      }
-    } catch (e) {
-      console.log('⚠️ MoneyControl: #sp_val not found within 15s — falling back to text-anchor strategy.');
-    }
+    // Give any client-side price widget a moment to populate.
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     const pageText: string = await page.evaluate(() => (globalThis as any).document.body.innerText);
 
-    // ── Strategy 2: "Exchange : MCX" text anchor ─────────────────────
-    if (rawRate === null) {
-      const anchorMatch = pageText.match(/Exchange\s*:\s*MCX/i);
-      if (anchorMatch && anchorMatch.index !== undefined) {
-        const afterAnchor = pageText.slice(anchorMatch.index, anchorMatch.index + 300);
-        const anchoredTokens = afterAnchor.match(/[\d,]{5,7}(?:\.\d{1,2})?/g) || [];
-        for (const token of anchoredTokens) {
-          const val = parseFloat(token.replace(/,/g, ''));
-          if (val >= 40000 && val <= 300000) {
-            rawRate = val;
-            method = '"Exchange : MCX" text anchor';
-            break;
-          }
+    // The main LTP figure on this exact page layout sits right after the
+    // "Exchange : MCX" line (see: "Gold" heading → "Exchange : MCX" →
+    // the big price → the ▲/▼ change line → "As on <date> | <time>" →
+    // "Trade now"). Anchoring on "Exchange : MCX" is far more reliable
+    // than scanning the whole page for "a number that looks like a
+    // price", since nav bars, ad banners, OI/volume/day-range figures
+    // and the bid/ask panel further down can all contain numbers in the
+    // same rough magnitude.
+    let rawRate: number | null = null;
+    const anchorMatch = pageText.match(/Exchange\s*:\s*MCX/i);
+    if (anchorMatch && anchorMatch.index !== undefined) {
+      const afterAnchor = pageText.slice(anchorMatch.index, anchorMatch.index + 300);
+      const anchoredTokens = afterAnchor.match(/[\d,]{5,7}(?:\.\d{1,2})?/g) || [];
+      for (const token of anchoredTokens) {
+        const val = parseFloat(token.replace(/,/g, ''));
+        if (val >= 40000 && val <= 300000) {
+          rawRate = val;
+          break;
         }
       }
     }
 
-    // ── Strategy 3: broad scan (last resort) ─────────────────────────
+    // Fallback if the page layout doesn't match what we expect: scan the
+    // first chunk of visible text for the first plausible price-range
+    // number, same as before. Less precise, but keeps things working
+    // rather than failing outright if MoneyControl tweaks their markup.
     if (rawRate === null) {
       const topOfPage = pageText.slice(0, 3000);
       const numberTokens = topOfPage.match(/[\d,]{5,7}(?:\.\d{1,2})?/g) || [];
       for (const token of numberTokens) {
         const val = parseFloat(token.replace(/,/g, ''));
+        // Sanity range: MCX Gold futures (per 10g) realistically falls
+        // somewhere between ₹40,000 and ₹3,00,000 for the foreseeable future.
         if (val >= 40000 && val <= 300000) {
           rawRate = val;
-          method = 'broad fallback scan';
           break;
         }
       }
     }
 
     if (!rawRate) {
-      console.log('⚠️ MoneyControl: no plausible MCX Gold price found by any strategy. Text sample:', JSON.stringify(pageText.slice(0, 200)));
+      console.log('⚠️ MoneyControl: no plausible MCX Gold price found anywhere on the page. Text sample:', JSON.stringify(pageText.slice(0, 200)));
       return null;
     }
 
-    console.log(`✅ MCX Gold rate fetched from MoneyControl: ${rawRate} (via ${method})`);
+    console.log(
+      `✅ MCX Gold rate fetched from MoneyControl: ${rawRate} (via ${anchorMatch ? '"Exchange : MCX" anchor' : 'fallback scan'})`
+    );
     return rawRate;
   } catch (err) {
     console.log('MoneyControl (MCX Gold) scrape failed:', (err as Error).message);

@@ -53,8 +53,8 @@ const SILVER_CATEGORIES: Record<string, string[]> = {
   'Kadhali': [],
 }
 
-const GOLD_PURITY = ['24 KT (99.50 KS)', '24 KT (99.99 KS)', '23KT(958)', '22KT(916)', '20KT(833)', '18KT(750)']
-const SILVER_PURITY = ['S 60 Stamp', 'S 70 Stamp', 'S 91 Stamp', 'S 92.5 Sterling Silver', 'S 99.99']
+const GOLD_PURITY = ['24 KT (99.50 KS)', '24 KT (99.99)', '23KT(958)', '22KT(916)', '20KT(833)', '18KT(750)']
+const SILVER_PURITY = ['S 92.5 Sterling Silver', 'S 99.99', 'S 81', 'S Regular']
 
 type LineItem = {
   metalType: 'Gold' | 'Silver'
@@ -1003,3 +1003,4 @@ export default function BillingPage() {
     </div>
   )
 }
+
