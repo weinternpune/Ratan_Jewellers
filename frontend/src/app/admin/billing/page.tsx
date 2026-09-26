@@ -12,6 +12,7 @@ const statusConfig: Record<InvoiceStatus,{label:string;color:string}> = {
   draft:{label:'Draft',color:'bg-gray-100 text-gray-500'},
 }
 
+
 // ── Category → sub-category taxonomy ────────────────────────────────
 // Each key is a top-level category; the value is its list of
 // sub-categories (an empty list means the category has none, and the
@@ -62,26 +63,40 @@ type LineItem = {
   subCategory: string
   purity: string
   netWeight: string
-  goldRate: number
-  makingCharges: number
-  price: number
+  goldRate: string          // string so decimals can be typed freely
+  makingCharges: string     // string so decimals can be typed freely
+  price: string             // string so decimals can be typed freely
 }
 
 const emptyItem = (): LineItem => ({
-  metalType: 'Gold', category: '', subCategory: '', purity: '', netWeight: '', goldRate: 6520, makingCharges: 0, price: 0
+  metalType: 'Gold',
+  category: '',
+  subCategory: '',
+  purity: '',
+  netWeight: '',
+  goldRate: '6520',
+  makingCharges: '',
+  price: '',
 })
 
 // Computes one line item's taxable subtotal the same way everywhere it's
 // needed: weight × rate, plus making charges as a % of that, plus any
 // flat additional/stone charges.
-const computeLineSubtotal = (item: { netWeight: string; goldRate: number; makingCharges: number; price: number }) => {
-  const weight = parseFloat(item.netWeight) || 0
-  const rate = item.goldRate || 0
-  const making = item.makingCharges || 0
-  const price = item.price || 0
-  const base = Math.round(weight * rate)
-  const makingAmt = Math.round((base * making) / 100)
-  return base + makingAmt + Math.round(price)
+// Keeps full floating-point precision and rounds only the final rupee amount.
+const computeLineSubtotal = (item: {
+  netWeight: string | number
+  goldRate: string | number
+  makingCharges: string | number
+  price: string | number
+}) => {
+  const weight = parseFloat(String(item.netWeight)) || 0
+  const rate   = parseFloat(String(item.goldRate)) || 0
+  const making = parseFloat(String(item.makingCharges)) || 0
+  const price  = parseFloat(String(item.price)) || 0
+
+  const base      = weight * rate
+  const makingAmt = (base * making) / 100
+  return Math.round(base + makingAmt + price)
 }
 
 const emptyInv = { 
@@ -147,9 +162,9 @@ export default function BillingPage() {
       subCategory: '',
       purity: inv.purity || '',
       netWeight: inv.netWeight || '0',
-      goldRate: inv.goldRate || 0,
-      makingCharges: inv.makingCharges || 0,
-      price: inv.price || 0,
+      goldRate: String(inv.goldRate ?? 0),
+      makingCharges: String(inv.makingCharges ?? 0),
+      price: String(inv.price ?? 0),
     }]
     // Recompute every line from scratch — same fix as the create-invoice
     // form — rather than trusting inv.amount/inv.gst/inv.total blindly.
@@ -212,8 +227,8 @@ export default function BillingPage() {
         <tr>
           <td style="border:1px solid #e5e7eb;padding:6px;">${l.category || 'Jewellery Item'}${l.subCategory ? ` - ${l.subCategory}` : ''} (${l.metalType})</td>
           <td style="border:1px solid #e5e7eb;padding:6px;text-align:center;">${l.purity || '—'}</td>
-          <td style="border:1px solid #e5e7eb;padding:6px;text-align:right;">${parseFloat(l.netWeight||'0')||'—'}g</td>
-          <td style="border:1px solid #e5e7eb;padding:6px;text-align:right;">${l.goldRate ? `₹${l.goldRate.toLocaleString('en-IN')}` : '—'}</td>
+          <td style="border:1px solid #e5e7eb;padding:6px;text-align:right;">${parseFloat(String(l.netWeight||'0'))||'—'}g</td>
+          <td style="border:1px solid #e5e7eb;padding:6px;text-align:right;">${l.goldRate ? `₹${Number(l.goldRate).toLocaleString('en-IN')}` : '—'}</td>
           <td style="border:1px solid #e5e7eb;padding:6px;text-align:right;">${l.makingCharges ? `${l.makingCharges}%` : '—'}</td>
           <td style="border:1px solid #e5e7eb;padding:6px;text-align:right;font-weight:700;">₹${l.lineSubtotal.toLocaleString('en-IN')}</td>
         </tr>`).join('')}
@@ -411,7 +426,19 @@ export default function BillingPage() {
     if (!form.customer.trim()) { toast.error('Customer name required'); return }
     if (form.items.some(it => !it.category)) { toast.error('Select a category for every item'); return }
     if (form.amount <= 0) { toast.error('Amount must be greater than 0'); return }
-    await addInvoice(form)
+
+    // Convert string fields back to numbers before sending to the store
+    const normalized = {
+      ...form,
+      items: form.items.map(it => ({
+        ...it,
+        goldRate: parseFloat(it.goldRate) || 0,
+        makingCharges: parseFloat(it.makingCharges) || 0,
+        price: parseFloat(it.price) || 0,
+      })),
+    }
+
+    await addInvoice(normalized)
     setShowCreate(false)
     setForm(emptyInv)
   }
@@ -514,7 +541,7 @@ export default function BillingPage() {
       {previewInvoice && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 sticky top-0 bg-white">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 sticky top-0 bg-white z-10">
               <h2 className="font-bold text-gray-900">Invoice Preview</h2>
               <button onClick={()=>setPreviewInvoice(null)} className="text-gray-400 hover:text-gray-600"><X size={18}/></button>
             </div>
@@ -570,7 +597,7 @@ export default function BillingPage() {
                         <td className="border border-gray-200 px-2 py-1.5">{l.category || 'Jewellery Item'}{l.subCategory ? ` - ${l.subCategory}` : ''} ({l.metalType})</td>
                         <td className="border border-gray-200 px-2 py-1.5 text-center">{l.purity || '—'}</td>
                         <td className="border border-gray-200 px-2 py-1.5 text-right">{l.netWeight ? `${l.netWeight}g` : '—'}</td>
-                        <td className="border border-gray-200 px-2 py-1.5 text-right">{l.goldRate ? `₹${l.goldRate.toLocaleString('en-IN')}` : '—'}</td>
+                        <td className="border border-gray-200 px-2 py-1.5 text-right">{l.goldRate ? `₹${Number(l.goldRate).toLocaleString('en-IN')}` : '—'}</td>
                         <td className="border border-gray-200 px-2 py-1.5 text-right">{l.makingCharges ? `${l.makingCharges}%` : '—'}</td>
                         <td className="border border-gray-200 px-2 py-1.5 text-right font-semibold">₹{computeLineSubtotal(l).toLocaleString('en-IN')}</td>
                       </tr>
@@ -620,11 +647,12 @@ export default function BillingPage() {
       {showCreate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 sticky top-0 bg-white bg-gradient-to-r from-[#0D0700] to-[#241300]">
+            {/* sticky header with z-20 so content never slides over the title */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 sticky top-0 z-20 bg-gradient-to-r from-[#0D0700] to-[#241300]">
               <h2 className="font-bold text-[#C9A84C] flex items-center gap-2"><Receipt size={18}/>Create Invoice</h2>
               <button onClick={()=>setShowCreate(false)} className="text-[#C9A84C]/70 hover:text-[#C9A84C]"><X size={18}/></button>
             </div>
-            <div className="px-6 py-5 space-y-6">
+            <div className="px-6 py-5 space-y-6 pt-6">
               
               <div className="border border-blue-100 bg-blue-50/60 rounded-xl p-4">
                 <h3 className="text-sm font-semibold text-blue-700 mb-3 flex items-center gap-1.5"><User size={14}/>Customer Details</h3>
@@ -703,22 +731,50 @@ export default function BillingPage() {
 
                           <div>
                             <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Net Weight (grams)</label>
-                            <input value={item.netWeight} onChange={e=>updateItem(idx,'netWeight',e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-400 bg-white" placeholder="10.5"/>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={item.netWeight}
+                              onChange={e=>updateItem(idx,'netWeight',e.target.value)}
+                              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-400 bg-white"
+                              placeholder="10.5"
+                            />
                           </div>
 
                           <div>
                             <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Rate (₹/gram)</label>
-                            <input value={item.goldRate||''} onChange={e=>updateItem(idx,'goldRate',Number(e.target.value)||0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-400 bg-white" placeholder="6520"/>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={item.goldRate}
+                              onChange={e=>updateItem(idx,'goldRate',e.target.value)}
+                              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-400 bg-white"
+                              placeholder="6520"
+                            />
                           </div>
 
                           <div>
                             <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Making Charges (%)</label>
-                            <input value={item.makingCharges||''} onChange={e=>updateItem(idx,'makingCharges',Number(e.target.value)||0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-400 bg-white" placeholder="10"/>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={item.makingCharges}
+                              onChange={e=>updateItem(idx,'makingCharges',e.target.value)}
+                              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-400 bg-white"
+                              placeholder="10"
+                            />
                           </div>
 
                           <div>
                             <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Additional Price (₹)</label>
-                            <input value={item.price||''} onChange={e=>updateItem(idx,'price',Number(e.target.value)||0)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-400 bg-white" placeholder="Stone/work charges"/>
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={item.price}
+                              onChange={e=>updateItem(idx,'price',e.target.value)}
+                              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-400 bg-white"
+                              placeholder="Stone/work charges"
+                            />
                           </div>
 
                           <div className="flex items-end">
@@ -1003,4 +1059,3 @@ export default function BillingPage() {
     </div>
   )
 }
-
