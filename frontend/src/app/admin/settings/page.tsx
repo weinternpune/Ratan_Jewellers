@@ -1,11 +1,10 @@
 'use client'
 import { useState } from 'react'
-import { Settings, Bell, Shield, ChevronRight, Save, RefreshCw, CreditCard, Truck } from 'lucide-react'
-import { useAdminStore } from '@/store/adminStore'
+import { Settings, Bell, Shield, ChevronRight, Save, CreditCard, Truck } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const settingGroups = [
-  {id:'general',label:'General',icon:Settings},{id:'gold',label:'Gold Rate',icon:RefreshCw},
+  {id:'general',label:'General',icon:Settings},
   {id:'payment',label:'Payment',icon:CreditCard},{id:'shipping',label:'Shipping',icon:Truck},
   {id:'notifications',label:'Notifications',icon:Bell},{id:'security',label:'Security & RBAC',icon:Shield},
 ]
@@ -19,15 +18,12 @@ function Toggle({ checked, onChange }: { checked:boolean; onChange:()=>void }) {
 }
 
 export default function SettingsPage() {
-  const { goldRates, updateGoldRates } = useAdminStore()
   const [activeGroup, setActiveGroup] = useState('general')
-  const [localRates, setLocalRates] = useState(goldRates)
   const [storeInfo, setStoreInfo] = useState({ name:'Ratan Jewellers', tagline:'Purity You Can Trust Since 1975', email:'info@ratanjewellers.com', phone:'+91 98765 43210', address:'123 Gold Market, Pune, Maharashtra 411001', gstin:'27AAAAA0000A1Z5' })
-  const [toggles, setToggles] = useState({ autoGoldRate:true, emailNotif:true, smsNotif:false, whatsappNotif:true, maintenanceMode:false, guestCheckout:true, twoFactor:false, sessionTimeout:true })
+  const [toggles, setToggles] = useState({ emailNotif:true, smsNotif:false, whatsappNotif:true, maintenanceMode:false, guestCheckout:true, twoFactor:false, sessionTimeout:true })
   const toggle = (key: keyof typeof toggles) => setToggles(p=>({...p,[key]:!p[key]}))
 
   const saveGeneral = () => { toast.success('Store settings saved'); }
-  const saveGoldRates = () => { updateGoldRates(localRates) }
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -53,25 +49,6 @@ export default function SettingsPage() {
               ))}
               <div className="flex items-center justify-between pt-2 border-t border-gray-100"><span className="text-sm text-gray-500">Maintenance Mode</span><Toggle checked={toggles.maintenanceMode} onChange={()=>toggle('maintenanceMode')}/></div>
               <button onClick={saveGeneral} className="flex items-center gap-2 bg-[#0D0700] text-[#C9A84C] px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#1a0e00]"><Save size={14}/>Save Changes</button>
-            </div>
-          )}
-
-          {activeGroup==='gold' && (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
-              <h2 className="font-bold text-gray-900">Gold Rate Settings</h2>
-              <div className="flex items-center justify-between p-4 bg-amber-50 rounded-xl border border-amber-200">
-                <div><div className="text-sm font-semibold text-amber-800">Auto-update Gold Rate</div><div className="text-xs text-amber-600 mt-0.5">Fetches live rates from MCX every 5 minutes</div></div>
-                <Toggle checked={toggles.autoGoldRate} onChange={()=>toggle('autoGoldRate')}/>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                {(Object.entries(localRates) as [keyof typeof localRates, string][]).map(([purity,rate])=>(
-                  <div key={purity}><label className="text-xs font-semibold text-gray-600 mb-1.5 block">{purity} Gold Rate (₹/g)</label>
-                    <input value={rate} onChange={e=>setLocalRates(p=>({...p,[purity]:e.target.value}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C] font-mono"/>
-                  </div>
-                ))}
-              </div>
-              <div><label className="text-xs font-semibold text-gray-600 mb-1.5 block">Making Charge (%)</label><input defaultValue="12" className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#C9A84C]"/></div>
-              <button onClick={saveGoldRates} className="flex items-center gap-2 bg-[#0D0700] text-[#C9A84C] px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#1a0e00]"><Save size={14}/>Update Rates</button>
             </div>
           )}
 

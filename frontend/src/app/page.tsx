@@ -5,7 +5,7 @@ import CartDrawer from '@/components/cart/CartDrawer'
 import FeaturedCategories from '@/components/home/FeaturedCategories'
 import FeaturedProducts from '@/components/home/FeaturedProducts'
 import TrendingProducts from '@/components/home/TrendingProduct'
-import LiveGoldRate from '@/components/home/LiveGoldRate'
+import LiveGoldRatesButton from '@/components/home/LiveGoldRatesButton'
 import Testimonials from '@/components/home/Testimonials'
 import AboutUs from '@/components/home/AboutUs'
 import WhyChooseUs from '@/components/home/WhyChooseUs'
@@ -16,7 +16,7 @@ export default function HomePage() {
       <Navbar />
       <CartDrawer />
       <HeroSection />
-      <LiveGoldRate />
+      <LiveGoldRatesButton />
       <FeaturedCategories />
       <FeaturedProducts title="New Arrivals" filter="newest" />
       <AboutUs />

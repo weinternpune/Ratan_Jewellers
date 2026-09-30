@@ -8,7 +8,6 @@ import {
   Package,
   ShoppingCart,
   Receipt,
-  TrendingUp,
   Boxes,
   UserCircle,
   BarChart3,
@@ -158,13 +157,6 @@ const allNavItems = [
     icon: Receipt,
     module: "billing" as const,
     roles: ["sales_staff", "store_manager", "admin", "super_admin"],
-  },
-  {
-    href: "/admin/gold-rates",
-    label: "Gold Rates",
-    icon: TrendingUp,
-    module: "billing" as const,
-    roles: ["store_manager", "admin", "super_admin"],
   },
   {
     href: "/admin/inventory",
