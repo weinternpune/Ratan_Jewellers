@@ -1,17 +1,13 @@
 import { NextResponse } from 'next/server'
 
-/*
+/**
  * Always run on the server at request time.
- * Nothing is pre-rendered at build time.
  */
 export const dynamic = 'force-dynamic'
-
 export const runtime = 'nodejs'
 
 const SOURCE_URL =
   'https://allindiabullion.com/gold-rate/maharashtra/nagpur'
-
-const CACHE_MS = 60 * 1000
 
 type Direction = 'up' | 'down' | null
 
@@ -26,27 +22,22 @@ interface ProductRate {
 interface AibData {
   city: string
   state: string
-
   fetchedAt: string
   liveTime: string | null
-
   reference: {
     gold24kPer10g: number | null
     gold22kPer10g: number | null
     silverPerKg: number | null
   }
-
   products: {
     gold: {
       retail995: ProductRate | null
       rtgs995: ProductRate | null
       gst995: ProductRate | null
-
       retail999: ProductRate | null
       rtgs999: ProductRate | null
       gst999: ProductRate | null
     }
-
     silver: {
       retail999: ProductRate | null
       rtgs999: ProductRate | null
@@ -55,29 +46,28 @@ interface AibData {
   }
 }
 
-/*
- * Keep the last successful response in memory.
- * This preserves your existing stale-data behaviour.
+/**
+ * Keep the last successful response only as a fallback
+ * when AIB temporarily fails.
+ *
+ * IMPORTANT:
+ * This cache is NEVER used for successful requests.
+ * Every successful request fetches fresh data from AIB.
  */
-let cache: {
-  at: number
-  data: AibData
-} | null = null
+let lastSuccessfulData: AibData | null = null
 
 function parseNumber(value: string): number {
-  return Number(
-    value.replace(/[₹,\s]/g, ''),
-  )
+  return Number(value.replace(/[₹,\s]/g, ''))
 }
 
-/*
- * Extract one product from the text.
+/**
+ * Extract one product from the AIB text.
  *
  * Example:
  *
  * RETAIL 995
  * per 10 g
- * ₹1,49,759▼ 12
+ * ₹1,49,759 ▼ 12
  */
 function extractProduct(
   text: string,
@@ -90,7 +80,7 @@ function extractProduct(
   )
 
   const regex = new RegExp(
-    `${escapedLabel}[\\s\\S]{0,100}?₹\\s*([\\d,]+)\\s*([▲▼])?\\s*([\\d,]*)`,
+    `${escapedLabel}[\\s\\S]{0,150}?₹\\s*([\\d,]+)\\s*([▲▼])?\\s*([\\d,]*)`,
     'i',
   )
 
@@ -123,12 +113,6 @@ function extractProduct(
   }
 }
 
-/*
- * Same product names exist in Gold and Silver.
- *
- * Therefore Silver must be extracted from the part of
- * the page after "Silver Products".
- */
 function extractSilverProduct(
   silverText: string,
   label: string,
@@ -151,11 +135,10 @@ function extractGoldProduct(
   )
 }
 
-/*
+/**
  * Convert HTML into readable text.
  *
- * We intentionally don't depend on cheerio or another
- * package, so no additional dependency is required.
+ * No cheerio dependency required.
  */
 function htmlToText(html: string): string {
   return html
@@ -180,7 +163,7 @@ function htmlToText(html: string): string {
     .trim()
 }
 
-/*
+/**
  * Extract the first occurrence of a number after a label.
  */
 function extractReferenceRate(
@@ -196,16 +179,16 @@ function extractReferenceRate(
   return parseNumber(match[1])
 }
 
-/*
- * Parse the exact Nagpur AIB page.
+/**
+ * Parse the exact AIB Nagpur page.
  */
 function parseNagpurPage(
   html: string,
 ): AibData {
   const text = htmlToText(html)
 
-  /*
-   * AIB currently displays:
+  /**
+   * AIB displays:
    *
    * Live Update • 13:53:13 IST
    */
@@ -216,8 +199,8 @@ function parseNagpurPage(
   const liveTime =
     liveTimeMatch?.[1] ?? null
 
-  /*
-   * Reference rates shown near the top of the page.
+  /**
+   * Reference rates.
    */
   const gold24kPer10g =
     extractReferenceRate(
@@ -237,8 +220,8 @@ function parseNagpurPage(
       /Silver\s*₹\s*([\d,]+)\s*per\s*kg/i,
     )
 
-  /*
-   * Gold section starts before Silver Products.
+  /**
+   * Separate Gold and Silver sections.
    */
   const silverIndex = text
     .toUpperCase()
@@ -249,16 +232,13 @@ function parseNagpurPage(
       ? text.slice(0, silverIndex)
       : text
 
-  /*
-   * Silver section starts at Silver Products.
-   */
   const silverText =
     silverIndex > -1
       ? text.slice(silverIndex)
       : ''
 
-  /*
-   * GOLD
+  /**
+   * GOLD PRODUCTS
    */
   const retail995 =
     extractGoldProduct(
@@ -296,8 +276,8 @@ function parseNagpurPage(
       '999 WITH GST',
     )
 
-  /*
-   * SILVER
+  /**
+   * SILVER PRODUCTS
    */
   const silverRetail999 =
     extractSilverProduct(
@@ -317,11 +297,8 @@ function parseNagpurPage(
       '999 WITH GST',
     )
 
-  /*
-   * Validate that the main live products were found.
-   *
-   * If AIB changes its HTML structure later, we don't
-   * silently show incorrect/empty data.
+  /**
+   * Validate required products.
    */
   const requiredProducts = [
     retail995,
@@ -350,9 +327,16 @@ function parseNagpurPage(
     city: 'Nagpur',
     state: 'Maharashtra',
 
+    /**
+     * This is the time when our server successfully
+     * fetched and parsed AIB.
+     */
     fetchedAt:
       new Date().toISOString(),
 
+    /**
+     * This comes directly from AIB.
+     */
     liveTime,
 
     reference: {
@@ -366,7 +350,6 @@ function parseNagpurPage(
         retail995,
         rtgs995,
         gst995,
-
         retail999,
         rtgs999,
         gst999,
@@ -381,8 +364,11 @@ function parseNagpurPage(
   }
 }
 
-/*
- * API response.
+/**
+ * API response helper.
+ *
+ * IMPORTANT:
+ * No browser/CDN caching.
  */
 function respond(
   data: AibData,
@@ -393,10 +379,10 @@ function respond(
       success: true,
       stale,
 
-      fetchedAt:
-        new Date(
-          cache?.at ?? Date.now(),
-        ).toISOString(),
+      /**
+       * Actual successful fetch time.
+       */
+      fetchedAt: data.fetchedAt,
 
       source: SOURCE_URL,
 
@@ -405,32 +391,50 @@ function respond(
     {
       headers: {
         'Cache-Control':
-          'public, s-maxage=60, stale-while-revalidate=300',
+          'no-store, no-cache, must-revalidate, proxy-revalidate',
+        Pragma: 'no-cache',
+        Expires: '0',
       },
     },
   )
 }
 
+/**
+ * GET /api/aib-gold-rates
+ *
+ * Every successful request:
+ *
+ * Browser
+ *   ↓
+ * API
+ *   ↓
+ * Fresh AIB request
+ *   ↓
+ * Parse
+ *   ↓
+ * Return latest rate
+ */
 export async function GET() {
-  /*
-   * Use cached data for one minute.
-   */
-  if (
-    cache &&
-    Date.now() - cache.at < CACHE_MS
-  ) {
-    return respond(
-      cache.data,
-      false,
-    )
-  }
-
   try {
-    /*
-     * Fetch the ORIGINAL AIB Nagpur page.
+    console.log(
+      '[aib-gold-rates] Fetching fresh data from AIB...',
+    )
+
+    /**
+     * IMPORTANT:
+     *
+     * No application cache.
+     * No Next.js Data Cache.
+     * No browser cache.
+     *
+     * Every request goes to AIB.
      */
+    // Cache-bust the external AIB request so an upstream/CDN
+    // cannot keep returning an older HTML snapshot.
+    const freshSourceUrl = `${SOURCE_URL}?_=${Date.now()}`
+
     const response = await fetch(
-      SOURCE_URL,
+      freshSourceUrl,
       {
         method: 'GET',
 
@@ -438,13 +442,16 @@ export async function GET() {
 
         headers: {
           'User-Agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36',
 
           Accept:
             'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
 
           'Accept-Language':
             'en-IN,en;q=0.9',
+
+          Referer:
+            'https://allindiabullion.com/',
         },
       },
     )
@@ -464,19 +471,33 @@ export async function GET() {
       )
     }
 
-    /*
-     * Parse ORIGINAL AIB values.
+    /**
+     * Parse fresh AIB values.
      */
     const data =
       parseNagpurPage(html)
 
-    /*
-     * Save last successful result.
+    /**
+     * Save ONLY as fallback.
+     *
+     * This data will not be returned on a
+     * successful request.
      */
-    cache = {
-      at: Date.now(),
-      data,
-    }
+    lastSuccessfulData = data
+
+    console.log(
+      '[aib-gold-rates] Fresh AIB data:',
+      {
+        liveTime: data.liveTime,
+        fetchedAt: data.fetchedAt,
+        gold24k:
+          data.reference.gold24kPer10g,
+        gold22k:
+          data.reference.gold22kPer10g,
+        silver:
+          data.reference.silverPerKg,
+      },
+    )
 
     return respond(
       data,
@@ -488,32 +509,37 @@ export async function GET() {
       err,
     )
 
-    /*
-     * If AIB temporarily fails, show the
-     * last successful data instead of blank cards.
+    /**
+     * If AIB temporarily fails,
+     * return the last successful data.
      */
-    if (cache) {
+    if (lastSuccessfulData) {
+      console.warn(
+        '[aib-gold-rates] Returning last successful AIB data as fallback.',
+      )
+
       return respond(
-        cache.data,
+        lastSuccessfulData,
         true,
       )
     }
 
+    /**
+     * No previous successful data exists.
+     */
     return NextResponse.json(
       {
         success: false,
-
         error:
           'Live rates are temporarily unavailable.',
-
         source: SOURCE_URL,
       },
       {
         status: 502,
-
         headers: {
-          'Cache-Control':
-            'no-store',
+          'Cache-Control': 'no-store',
+          Pragma: 'no-cache',
+          Expires: '0',
         },
       },
     )

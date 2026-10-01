@@ -114,34 +114,7 @@ export const rings: Product[] = [
     isTrending: false,
   },
 
-  {
-    id: "ring-5",
-    name: "Traditional Gold Ring Set",
-    image: "/images/products/rings/gold-ring-5.png",
 
-    images: ["/images/products/rings/gold-ring-5.png"],
-
-    metal: "Gold",
-    category: "Rings",
-    purity: "18K",
-
-    currentPrice: 32500,
-
-    slug: "traditional-gold-ring-set",
-    sku: "RJ-RNG-005",
-
-    netWeight: 13.4,
-    goldRate: 6500,
-    makingCharges: 4500,
-    stoneCharges: 0,
-
-    avgRating: 4.8,
-    reviewCount: 24,
-
-    inStock: true,
-    isFeatured: false,
-    isTrending: false,
-  },
 
   {
     id: "ring-6",
