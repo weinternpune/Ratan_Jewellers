@@ -248,6 +248,10 @@ export default function LiveRatesBoard() {
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
   const hasDataRef = useRef(false);
 
+  const [goldUnit, setGoldUnit] = useState<
+    "1gram" | "10grams" | "tola" | "ounce"
+  >("10grams");
+
   /* =======================================================
      LOAD RATES
   ======================================================= */
@@ -322,6 +326,47 @@ export default function LiveRatesBoard() {
   const gold = data?.products?.gold;
 
   const silver = data?.products?.silver;
+
+  /* =======================================================
+     GOLD PURITY HELPERS
+  ======================================================= */
+
+  const goldPurities = [
+    { label: "24K", purity: 24 },
+    { label: "23K", purity: 23 },
+    { label: "22K", purity: 22 },
+    { label: "20K", purity: 20 },
+    { label: "18K", purity: 18 },
+    { label: "14K", purity: 14 },
+  ];
+
+  const goldUnitOptions = [
+    { key: "1gram" as const, label: "1 GRAM", grams: 1 },
+    { key: "10grams" as const, label: "10 GRAMS", grams: 10 },
+    { key: "tola" as const, label: "1 TOLA (11.66G)", grams: 11.6638 },
+    { key: "ounce" as const, label: "1 OUNCE (31.1035G)", grams: 31.1035 },
+  ];
+
+  const selectedGoldUnit =
+    goldUnitOptions.find((unit) => unit.key === goldUnit) ??
+    goldUnitOptions[1];
+
+  const getGoldPurityPrice = (purity: number) => {
+    const gold24kPer10g = data?.reference?.gold24kPer10g;
+
+    if (
+      gold24kPer10g === null ||
+      gold24kPer10g === undefined ||
+      !Number.isFinite(gold24kPer10g)
+    ) {
+      return null;
+    }
+
+    const pure24kPriceForUnit =
+      (gold24kPer10g / 10) * selectedGoldUnit.grams;
+
+    return pure24kPriceForUnit * (purity / 24);
+  };
 
   /* =======================================================
      UI
@@ -528,50 +573,91 @@ export default function LiveRatesBoard() {
           </section>
 
           {/* =================================================
-              REFERENCE RATES
+              GOLD PRICE BY PURITY
           ================================================= */}
 
-          <section className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {/* 24K */}
+          <section className="mt-5 overflow-hidden rounded-2xl border border-[#d6a84f]/30 bg-[#050505]">
+            {/* HEADER */}
+            <div className="flex flex-col gap-3 border-b border-white/10 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#d6a84f]">
+                  By Purity
+                </p>
 
-            <div className="rounded-xl border border-[#d6a84f]/20 bg-[#fdf8f0] p-5">
-              <p className="text-xs uppercase tracking-wider text-[#8a7a6a]">
-                24K Gold
-              </p>
+                <h3 className="mt-1 font-display text-2xl font-semibold text-[#e8d5a3]">
+                  Gold Price in Karat
+                </h3>
+              </div>
 
-              <p className="mt-2 font-mono-code text-2xl font-medium text-[#4A0404]">
-                {formatINR(data.reference?.gold24kPer10g)}
-              </p>
-
-              <p className="mt-1 text-xs text-gray-500">per 10 grams</p>
+              <span className="text-xs text-gray-500">
+                Derived from Gold 24K
+              </span>
             </div>
 
-            {/* 22K */}
+            {/* UNIT SELECTOR */}
+            <div className="flex flex-col gap-3 px-5 pt-5">
+              <div className="flex w-fit flex-wrap overflow-hidden rounded-lg border border-white/20 bg-[#090909]">
+                {goldUnitOptions.map((unit) => {
+                  const active = goldUnit === unit.key;
 
-            <div className="rounded-xl border border-[#d6a84f]/20 bg-[#fdf8f0] p-5">
-              <p className="text-xs uppercase tracking-wider text-[#8a7a6a]">
-                22K Gold
-              </p>
+                  return (
+                    <button
+                      key={unit.key}
+                      type="button"
+                      onClick={() => setGoldUnit(unit.key)}
+                      className={`px-3 py-2 text-[10px] font-semibold transition ${
+                        active
+                          ? "bg-[#e8d5a3] text-[#050505]"
+                          : "text-gray-400 hover:bg-white/5 hover:text-white"
+                      }`}
+                    >
+                      {unit.label}
+                    </button>
+                  );
+                })}
+              </div>
 
-              <p className="mt-2 font-mono-code text-2xl font-medium text-[#4A0404]">
-                {formatINR(data.reference?.gold22kPer10g)}
-              </p>
-
-              <p className="mt-1 text-xs text-gray-500">per 10 grams</p>
+              <div className="text-right text-xs text-gray-500">
+                {selectedGoldUnit.label} · karat prices
+              </div>
             </div>
 
-            {/* SILVER */}
+            {/* KARAT CARDS */}
+            <div className="grid grid-cols-2 gap-3 p-5 sm:grid-cols-3 lg:grid-cols-6">
+              {goldPurities.map((item) => {
+                const price = getGoldPurityPrice(item.purity);
 
-            <div className="rounded-xl border border-[#d6a84f]/20 bg-[#fdf8f0] p-5">
-              <p className="text-xs uppercase tracking-wider text-[#8a7a6a]">
-                Silver 999
+                return (
+                  <div
+                    key={item.label}
+                    className="rounded-xl border border-white/10 bg-[#090909] p-4 transition hover:border-[#d6a84f]/40"
+                  >
+                    <p className="text-sm font-semibold text-[#e8d5a3]">
+                      {item.label}
+                    </p>
+
+                    <div className="mt-3 w-fit rounded-md bg-[#151515] px-3 py-2">
+                      <span className="font-mono-code text-base font-medium text-white sm:text-lg">
+                        {formatINR(price)}
+                      </span>
+                    </div>
+
+                    <p className="mt-2 text-[10px] text-gray-500">
+                      per {selectedGoldUnit.grams === 1
+                        ? "gram"
+                        : `${selectedGoldUnit.grams} g`}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* NOTE */}
+            <div className="px-5 pb-5">
+              <p className="text-[10px] leading-5 text-gray-500">
+                AIB reference rate. Values are derived for display; final jewellery
+                prices may vary based on making charges, wastage and applicable GST.
               </p>
-
-              <p className="mt-2 font-mono-code text-2xl font-medium text-[#4A0404]">
-                {formatINR(data.reference?.silverPerKg)}
-              </p>
-
-              <p className="mt-1 text-xs text-gray-500">per kilogram</p>
             </div>
           </section>
         </>
