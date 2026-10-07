@@ -82,7 +82,8 @@ const emptyItem = (): LineItem => ({
 // Computes one line item's taxable subtotal the same way everywhere it's
 // needed: weight × rate, plus making charges as a % of that, plus any
 // flat additional/stone charges.
-// Keeps full floating-point precision and rounds only the final rupee amount.
+// Keeps full floating-point precision (no intermediate rounding) so that
+// amount + GST always equals total.
 const computeLineSubtotal = (item: {
   netWeight: string | number
   goldRate: string | number
@@ -96,7 +97,7 @@ const computeLineSubtotal = (item: {
 
   const base      = weight * rate
   const makingAmt = (base * making) / 100
-  return Math.round(base + makingAmt + price)
+  return base + makingAmt + price
 }
 
 const emptyInv = { 
@@ -170,8 +171,8 @@ export default function BillingPage() {
     // form — rather than trusting inv.amount/inv.gst/inv.total blindly.
     const computedLines = lineItems.map(item => ({ ...item, lineSubtotal: computeLineSubtotal(item) }))
     const subtotal = computedLines.reduce((sum, l) => sum + l.lineSubtotal, 0)
-    const gst = Math.round(subtotal * 0.03)
-    const cgst = Math.round(gst / 2)
+    const gst = subtotal * 0.03
+    const cgst = gst / 2
     const sgst = gst - cgst
     const discount = inv.discount || 0
     const total = Math.max(subtotal + gst - discount, 0)
@@ -214,9 +215,10 @@ export default function BillingPage() {
       </div>
       ${inv.hallmarkId ? `<div style="background:#eef2ff;border:1px solid #e0e7ff;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#4338ca;font-weight:700;">BIS Hallmark: ${inv.hallmarkId}</div>` : ''}
       <div style="font-size:10px;color:#555;line-height:1.5;margin-bottom:12px;"><strong>NOTE:</strong><br>916 EXCHANGE 100% 916 RETURNS 916<br>750 EXCHANGE 100% 750 RETURNS 750<br>833 EXCHANGE 100% 833 RETURNS 833</div>
-      <table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:16px;">
+            <table style="width:100%;font-size:11px;border-collapse:collapse;margin-bottom:16px;">
         <tr style="background:#fefce8;">
           <th style="border:1px solid #e5e7eb;padding:6px;text-align:left;">Particulars</th>
+          <th style="border:1px solid #e5e7eb;padding:6px;">HUID</th>
           <th style="border:1px solid #e5e7eb;padding:6px;">Purity</th>
           <th style="border:1px solid #e5e7eb;padding:6px;">Net Wt</th>
           <th style="border:1px solid #e5e7eb;padding:6px;">Rate/gm</th>
@@ -226,6 +228,7 @@ export default function BillingPage() {
         ${computedLines.map(l => `
         <tr>
           <td style="border:1px solid #e5e7eb;padding:6px;">${l.category || 'Jewellery Item'}${l.subCategory ? ` - ${l.subCategory}` : ''} (${l.metalType})</td>
+          <td style="border:1px solid #e5e7eb;padding:6px;text-align:center;font-weight:700;">${inv.hallmarkId || '—'}</td>
           <td style="border:1px solid #e5e7eb;padding:6px;text-align:center;">${l.purity || '—'}</td>
           <td style="border:1px solid #e5e7eb;padding:6px;text-align:right;">${parseFloat(String(l.netWeight||'0'))||'—'}g</td>
           <td style="border:1px solid #e5e7eb;padding:6px;text-align:right;">${l.goldRate ? `₹${Number(l.goldRate).toLocaleString('en-IN')}` : '—'}</td>
@@ -339,9 +342,9 @@ export default function BillingPage() {
     }
   }
 
-  // Splits GST into CGST/SGST as whole rupees that always add back up to the total GST
+  // Splits GST into CGST/SGST so they always add back up to the total GST
   const splitGST = (gst: number) => {
-    const cgst = Math.round(gst / 2)
+    const cgst = gst / 2
     const sgst = gst - cgst
     return { cgst, sgst }
   }
@@ -355,9 +358,9 @@ export default function BillingPage() {
   // subtotal.
   const computeDerived = (data: typeof emptyInv) => {
     const subtotal = data.items.reduce((sum, item) => sum + computeLineSubtotal(item), 0)
-    const gst = Math.round(subtotal * 0.03)
+    const gst = subtotal * 0.03
     const { cgst, sgst } = splitGST(gst)
-    const discount = Math.round(data.discount || 0)
+    const discount = data.discount || 0
     const total = Math.max(subtotal + gst - discount, 0)
     const amountPaid = data.amountPaid || 0
     const balanceDue = Math.max(total - amountPaid, 0)
@@ -397,7 +400,7 @@ export default function BillingPage() {
   }
 
   const handlePaidAmountChange = (val: number) => {
-    const amountPaid = Math.max(Math.round(val), 0)
+    const amountPaid = Math.max(val, 0)
     setForm(prev => ({ ...prev, amountPaid, balanceDue: Math.max((prev.total || 0) - amountPaid, 0) }))
   }
 
@@ -484,9 +487,12 @@ export default function BillingPage() {
                 const cfg=statusConfig[inv.status]
                 return (
                   <tr key={inv.id} className="hover:bg-gray-50/60 transition-colors group">
-                    <td className="px-5 py-4 font-mono text-sm font-semibold text-[#C9A84C]">{inv.id}</td>
+                    <td className="px-4 py-3 font-mono font-semibold text-[#C9A84C] whitespace-nowrap">{inv.id}</td>
                     <td className="px-5 py-4 font-mono text-xs text-gray-500">{inv.order||'—'}</td>
-                    <td className="px-5 py-4"><div className="font-medium text-gray-900">{inv.customer}</div></td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+  <div className="font-medium text-gray-900">{inv.customer}</div>
+  {inv.phone && <div className="text-xs text-gray-400">{inv.phone}</div>}
+</td>
                     <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.phone||'—'}</td>
                     <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.category||'—'}</td>
                     <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.metal||'—'}</td>
@@ -607,8 +613,8 @@ export default function BillingPage() {
               </div>
               <table className="w-full text-sm mb-6">
                 <tbody>
-                  <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">CGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.cgst ?? Math.round(previewInvoice.gst/2)).toLocaleString('en-IN')}</td></tr>
-                  <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">SGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.sgst ?? (previewInvoice.gst - Math.round(previewInvoice.gst/2))).toLocaleString('en-IN')}</td></tr>
+                  <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">CGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.cgst ?? previewInvoice.gst/2).toLocaleString('en-IN')}</td></tr>
+                  <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">SGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.sgst ?? (previewInvoice.gst - previewInvoice.gst/2)).toLocaleString('en-IN')}</td></tr>
                   <tr className="border-b border-gray-50"><td className={`py-3 text-xs font-medium ${(previewInvoice.discount && previewInvoice.discount > 0) ? 'text-red-600' : 'text-gray-500'}`}>Discount</td><td className={`py-3 text-right text-xs font-medium ${(previewInvoice.discount && previewInvoice.discount > 0) ? 'text-red-600' : 'text-gray-500'}`}>{(previewInvoice.discount && previewInvoice.discount > 0) ? `−₹${previewInvoice.discount.toLocaleString('en-IN')}` : '0'}</td></tr>
                   <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">Less URD</td><td className="py-3 text-right text-gray-600 text-xs"></td></tr>
                 </tbody>
