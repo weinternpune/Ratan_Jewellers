@@ -5,7 +5,6 @@ import { AuthRequest } from '../middleware/auth';
 import { generateInvoicePDF } from '../services/pdfService';
 import { sendWhatsAppMessage } from '../services/whatsappService';
 import { sendEmail } from '../services/emailService';
-import { calcItem, calcInvoiceTotals, isCalculable } from '../utils/invoiceCalc';
 
 const generateInvoiceNumber = async (): Promise<string> => {
   const year = new Date().getFullYear()
@@ -33,27 +32,24 @@ export const createInvoice = async (req: AuthRequest, res: Response, next: NextF
   try {
     const { customerId, customerName, customerPhone, customerEmail, customerAddress, customerGstin, items, paymentMode, discountAmount=0, oldGoldExchange=0, amountPaid=0, balanceDue, paymentHistory=[], notes, status } = req.body;
     const invoiceNumber = await generateInvoiceNumber();
-    // Every amount comes from the ONE shared calculation (utils/invoiceCalc.ts),
-    // which is identical to the frontend's — so what is stored here is exactly
-    // what the bill / dashboard show.
+    let subtotal=0, totalCgst=0, totalSgst=0;
     const processedItems = items.map((item: any) => {
-      const c = calcItem(item);
-      return {
-        ...item,
-        huid: (item.huid || '').toString().trim().toUpperCase(),
-        unitPrice: c.unitPrice,
-        makingAmount: c.makingAmount,
-        cgstAmount: c.cgstAmount,
-        sgstAmount: c.sgstAmount,
-        totalAmount: c.totalAmount,
-      };
+      const goldValue = item.netWeight * item.goldRate;
+      // makingCharges is a PERCENTAGE (e.g. 3 = 3%), not a flat rupee amount —
+      // this was being added directly as raw rupees before, silently
+      // undercharging every invoice by treating "3%" as "₹3".
+      const makingAmount = goldValue * (item.makingCharges || 0) / 100;
+      const unitPrice = goldValue + makingAmount + item.stoneCharges;
+      const base = unitPrice * item.quantity;
+      const cgstAmount = base * (item.cgstRate || 1.5) / 100;
+      const sgstAmount = base * (item.sgstRate || 1.5) / 100;
+      subtotal += base; totalCgst += cgstAmount; totalSgst += sgstAmount;
+      return { ...item, unitPrice, makingAmount, cgstAmount, sgstAmount, totalAmount: base+cgstAmount+sgstAmount };
     });
-    const t = calcInvoiceTotals(processedItems, discountAmount, oldGoldExchange);
-    const subtotal = t.subtotal, totalCgst = t.cgst, totalSgst = t.sgst, totalAmount = t.totalAmount;
-
+    const totalAmount = subtotal + totalCgst + totalSgst - discountAmount - oldGoldExchange;
+    
     // Calculate balance if not provided
-    // Always derived on the server from the real total — never trust a client-sent balance.
-    const finalBalanceDue = Math.max(totalAmount - (Number(amountPaid) || 0), 0);
+    const finalBalanceDue = balanceDue !== undefined ? balanceDue : (totalAmount - amountPaid);
     
     // Respect an explicitly chosen status (e.g. manually marking "Paid" or
     // "Draft" even with a balance outstanding). Only auto-derive from the
@@ -67,7 +63,7 @@ export const createInvoice = async (req: AuthRequest, res: Response, next: NextF
     const invoice = await Invoice.create({ 
       invoiceNumber, userId: req.user!.id, customerId: customerId||undefined, 
       customerName, customerPhone, customerEmail, customerAddress, customerGstin, 
-      paymentMode, subtotal, discountAmount: t.discount, cgst: totalCgst, sgst: totalSgst, 
+      paymentMode, subtotal, discountAmount, cgst: totalCgst, sgst: totalSgst, 
       totalAmount, oldGoldExchange, 
       amountPaid, balanceDue: finalBalanceDue, paymentHistory, // Partial payment fields
       status: invoiceStatus, // Respects manual override, falls back to balance-derived
@@ -92,40 +88,26 @@ export const getInvoices = async (req: AuthRequest, res: Response, next: NextFun
     if (startDate || endDate) { filter.createdAt = {}; if (startDate) filter.createdAt.$gte = new Date(startDate as string); if (endDate) filter.createdAt.$lte = new Date(endDate as string); }
     const [invoices, total] = await Promise.all([Invoice.find(filter).sort({ createdAt: -1 }).skip((pageNum-1)*limitNum).limit(limitNum), Invoice.countDocuments(filter)]);
     
-    // Self-healing read: invoices saved by older versions of this server stored
-    // WRONG totals (making charges were added as flat rupees instead of a %).
-    // Recalculate from the invoice's own items with the single shared rule and
-    // fix the database the first time such an invoice is read, so the
-    // dashboard / analytics / GST summary always agree with the printed bill.
+    // Ensure payment fields have default values and correct balance calculation for old invoices
     const invoicesWithDefaults = invoices.map(invoice => {
-      const invoiceObj: any = invoice.toObject();
+      const invoiceObj = invoice.toObject();
       if (invoiceObj.amountPaid === undefined) {
         invoiceObj.amountPaid = 0;
       }
-
-      if (isCalculable(invoiceObj.items)) {
-        const t = calcInvoiceTotals(invoiceObj.items, invoiceObj.discountAmount, invoiceObj.oldGoldExchange);
-        const balance = Math.max(t.totalAmount - (invoiceObj.amountPaid || 0), 0);
-        const stale =
-          invoiceObj.subtotal !== t.subtotal || invoiceObj.cgst !== t.cgst || invoiceObj.sgst !== t.sgst ||
-          invoiceObj.totalAmount !== t.totalAmount || invoiceObj.balanceDue !== balance;
-        if (stale) {
-          invoiceObj.subtotal = t.subtotal; invoiceObj.cgst = t.cgst; invoiceObj.sgst = t.sgst;
-          invoiceObj.totalAmount = t.totalAmount; invoiceObj.balanceDue = balance;
-          Invoice.findByIdAndUpdate(invoice._id, { $set: { subtotal: t.subtotal, cgst: t.cgst, sgst: t.sgst, totalAmount: t.totalAmount, balanceDue: balance } })
-            .catch(err => console.error('Failed to heal totals for invoice:', invoice.invoiceNumber, err));
-        }
-      } else {
-        // Legacy invoice without usable items: keep stored totals, only fix the balance.
-        const correctBalance = Math.max((invoiceObj.totalAmount || 0) - (invoiceObj.amountPaid || 0), 0);
-        if (invoiceObj.balanceDue === undefined || Math.abs(invoiceObj.balanceDue - correctBalance) > 0.01) {
-          invoiceObj.balanceDue = correctBalance;
-          Invoice.findByIdAndUpdate(invoice._id, { balanceDue: correctBalance }).catch(err =>
-            console.error('Failed to fix balance for invoice:', invoice.invoiceNumber, err)
-          );
-        }
+      
+      // Recalculate balance to ensure correctness
+      const correctBalance = invoiceObj.totalAmount - (invoiceObj.amountPaid || 0);
+      
+      // If balance is wrong in DB, fix it
+      if (invoiceObj.balanceDue === undefined || Math.abs(invoiceObj.balanceDue - correctBalance) > 0.01) {
+        invoiceObj.balanceDue = correctBalance;
+        
+        // Update in database asynchronously (don't wait for it)
+        Invoice.findByIdAndUpdate(invoice._id, { balanceDue: correctBalance }).catch(err => 
+          console.error('Failed to fix balance for invoice:', invoice.invoiceNumber, err)
+        );
       }
-
+      
       if (!invoiceObj.paymentHistory) {
         invoiceObj.paymentHistory = [];
       }
@@ -176,11 +158,6 @@ export const updateInvoice = async (req: AuthRequest, res: Response, next: NextF
       }
     }
     
-    // Balance is always derived from the stored total — never trusted from the client.
-    if (req.body.amountPaid !== undefined) {
-      updateData.balanceDue = Math.max((invoice.totalAmount || 0) - (Number(req.body.amountPaid) || 0), 0);
-    }
-
     // Auto-update status based on balance
     if (updateData.balanceDue !== undefined) {
       if (updateData.balanceDue <= 0) {

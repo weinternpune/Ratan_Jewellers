@@ -99,8 +99,8 @@ function exportDashboardPDF(data: {
     <tr>
       <td>${inv.id}</td><td>${inv.customer}</td>
       <td>Rs.${inv.amount.toLocaleString('en-IN')}</td>
-      <td>Rs.${(inv.cgst ?? Math.round(inv.gst/2)).toLocaleString('en-IN')}</td>
-      <td>Rs.${(inv.sgst ?? (inv.gst - Math.round(inv.gst/2))).toLocaleString('en-IN')}</td>
+      <td>Rs.${(inv.gst/2).toLocaleString('en-IN')}</td>
+      <td>Rs.${(inv.gst/2).toLocaleString('en-IN')}</td>
       <td>Rs.${inv.total.toLocaleString('en-IN')}</td>
       <td><span class="badge badge-${inv.status==='paid'?'green':inv.status==='overdue'?'red':'amber'}">${inv.status}</span></td>
     </tr>`).join('')
@@ -486,8 +486,8 @@ export default function AdminDashboardPage() {
                     <td className="px-5 py-3 font-mono text-xs text-[#C9A84C]">{inv.id}</td>
                     <td className="px-5 py-3 text-gray-700">{inv.customer}</td>
                     <td className="px-5 py-3 text-gray-700">₹{inv.amount.toLocaleString('en-IN')}</td>
-                    <td className="px-5 py-3 text-gray-600 text-xs">₹{(inv.cgst ?? Math.round(inv.gst/2)).toLocaleString('en-IN')}</td>
-                    <td className="px-5 py-3 text-gray-600 text-xs">₹{(inv.sgst ?? (inv.gst - Math.round(inv.gst/2))).toLocaleString('en-IN')}</td>
+                    <td className="px-5 py-3 text-gray-600 text-xs">₹{(inv.gst/2).toLocaleString('en-IN')}</td>
+                    <td className="px-5 py-3 text-gray-600 text-xs">₹{(inv.gst/2).toLocaleString('en-IN')}</td>
                     <td className="px-5 py-3 font-semibold text-green-700">₹{inv.gst.toLocaleString('en-IN')}</td>
                     <td className="px-5 py-3"><span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${inv.status==='paid'?'bg-green-50 text-green-600':inv.status==='overdue'?'bg-red-50 text-red-600':'bg-amber-50 text-amber-600'}`}>{inv.status}</span></td>
                   </tr>

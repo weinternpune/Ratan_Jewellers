@@ -46,7 +46,6 @@ const InvoiceItemSchema = new Schema({
   stoneCharges: { type: Number, default: 0 }, quantity: { type: Number, required: true },
   unitPrice: { type: Number, required: true }, cgstRate: { type: Number, default: 1.5 },
   sgstRate: { type: Number, default: 1.5 }, cgstAmount: { type: Number, required: true },
-  huid: { type: String, default: '' }, // BIS HUID of this specific piece — persisted permanently
   sgstAmount: { type: Number, required: true }, totalAmount: { type: Number, required: true },
 }, { _id: false });
 
@@ -54,7 +53,7 @@ export interface IInvoice extends Document {
   invoiceNumber: string; orderId?: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId; customerId?: mongoose.Types.ObjectId;
   customerName: string; customerPhone: string; customerEmail?: string;
-  customerAddress?: object; customerGstin?: string; paymentMode: string; status?: string;
+  customerAddress?: object; customerGstin?: string; paymentMode: string;
   subtotal: number; discountAmount: number; cgst: number; sgst: number; igst: number;
   totalAmount: number; oldGoldExchange: number; 
   amountPaid: number; balanceDue: number; // Partial payment fields
@@ -71,7 +70,6 @@ const InvoiceSchema = new Schema<IInvoice>({
   customerName:    { type: String, required: true }, customerPhone: { type: String, required: true },
   customerEmail:   { type: String }, customerAddress: { type: Object }, customerGstin: { type: String },
   paymentMode:     { type: String, required: true },
-  status:          { type: String, enum: ['paid','pending','overdue','draft'] }, // was never stored before — statuses used to live only in the browser
   subtotal:        { type: Number, required: true }, discountAmount: { type: Number, default: 0 },
   cgst:            { type: Number, default: 0 }, sgst: { type: Number, default: 0 }, igst: { type: Number, default: 0 },
   totalAmount:     { type: Number, required: true }, oldGoldExchange: { type: Number, default: 0 },
