@@ -42,7 +42,7 @@ function getApiUrl(): string {
  */
 function getBackendUrl(): string {
   const apiUrl = getApiUrl()
-  return apiUrl.replace('/api', '')
+  return apiUrl.replace(/\/api\/?$/, '')
 }
 
 // Export configured URLs

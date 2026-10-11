@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/store'
 import { api } from '@/lib/api'
 import toast from 'react-hot-toast'
 
-export default function GoogleCallbackPage() {
+function GoogleCallbackInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { setAuth } = useAuthStore()
@@ -80,5 +80,19 @@ export default function GoogleCallbackPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function GoogleCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-gray-300 border-t-black rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <GoogleCallbackInner />
+    </Suspense>
   )
 }

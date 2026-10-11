@@ -104,7 +104,16 @@ export default function LoginPage() {
         router.push('/account')
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Invalid email or password'
+      const status = err?.response?.status
+      const msg =
+        err?.response?.data?.message ||
+        (!err?.response
+          ? 'Cannot reach the server. Please check your connection and try again.'
+          : status === 429
+            ? 'Too many attempts. Please wait a few minutes and try again.'
+            : status >= 500
+              ? 'Server error. Please try again shortly.'
+              : 'Invalid email or password')
       toast.error(msg)
     } finally { setLoading(false) }
   }

@@ -32,6 +32,7 @@ import customJewelleryRoutes from './routes/customJewellery';
 import adminRoutes from './routes/admin';
 
 const app = express();
+app.set('trust proxy', 1); // running behind the host's reverse proxy: use the real visitor IP for rate limiting
 const PORT = process.env.PORT || 5000;
 
 connectDB();

@@ -133,8 +133,8 @@ export default function BillingPage() {
   })
 
   const totals = {
-    paid: invoices.filter(i=>i.status==='paid').reduce((a,i)=>a+i.total,0),
-    pending: invoices.filter(i=>i.status==='pending').reduce((a,i)=>a+i.total,0),
+    paid: invoices.reduce((a,i)=>a+(i.amountPaid||0),0),
+    pending: invoices.reduce((a,i)=>a+Math.max(i.total-(i.amountPaid||0),0),0),
     overdue: invoices.filter(i=>i.status==='overdue').reduce((a,i)=>a+i.total,0),
     totalGST: invoices.reduce((a,i)=>a+i.gst,0),
   }
@@ -384,6 +384,8 @@ export default function BillingPage() {
       if (!it.category) { toast.error(`${label}select a category`); return }
       if (!(num(it.netWeight) > 0)) { toast.error(`${label}enter the net weight`); return }
       if (!(num(it.goldRate) > 0)) { toast.error(`${label}enter the rate per gram`); return }
+      // No silent default: making charges must be typed (0 if there are none).
+      if (it.makingCharges.trim() === '') { toast.error(`${label}enter making charges % (type 0 if none)`); return }
     }
     if (calc.total <= 0) { toast.error('Invoice total must be greater than 0'); return }
     if (calc.amountPaid > calc.total) { toast.error('Paid amount cannot be more than the invoice total'); return }
@@ -443,8 +445,8 @@ export default function BillingPage() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><div className="flex items-center gap-2 mb-2"><CheckCircle2 size={14} className="text-green-500"/><span className="text-xs text-gray-500">Paid</span></div><div className="text-lg font-bold text-green-600">₹{(totals.paid/100000).toFixed(1)}L</div><div className="text-xs text-gray-400">{invoices.filter(i=>i.status==='paid').length} invoices</div></div>
-        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><div className="flex items-center gap-2 mb-2"><Clock size={14} className="text-amber-500"/><span className="text-xs text-gray-500">Pending</span></div><div className="text-lg font-bold text-amber-600">₹{(totals.pending/100000).toFixed(1)}L</div><div className="text-xs text-gray-400">{invoices.filter(i=>i.status==='pending').length} invoices</div></div>
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><div className="flex items-center gap-2 mb-2"><CheckCircle2 size={14} className="text-green-500"/><span className="text-xs text-gray-500">Paid</span></div><div className="text-lg font-bold text-green-600">₹{totals.paid.toLocaleString('en-IN')}</div><div className="text-xs text-gray-400">{invoices.filter(i=>(i.amountPaid||0)>0).length} invoices with payment received</div></div>
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><div className="flex items-center gap-2 mb-2"><Clock size={14} className="text-amber-500"/><span className="text-xs text-gray-500">Pending</span></div><div className="text-lg font-bold text-amber-600">₹{totals.pending.toLocaleString('en-IN')}</div><div className="text-xs text-gray-400">{invoices.filter(i=>i.total-(i.amountPaid||0)>0).length} invoices with balance due</div></div>
         <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><div className="flex items-center gap-2 mb-2"><AlertCircle size={14} className="text-red-500"/><span className="text-xs text-gray-500">Overdue</span></div><div className="text-lg font-bold text-red-600">₹{(totals.overdue/1000).toFixed(0)}K</div><div className="text-xs text-gray-400">{invoices.filter(i=>i.status==='overdue').length} invoices</div></div>
         <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm"><div className="flex items-center gap-2 mb-2"><Receipt size={14} className="text-blue-500"/><span className="text-xs text-gray-500">GST Collected</span></div><div className="text-lg font-bold text-blue-600">₹{(totals.totalGST/1000).toFixed(1)}K</div><div className="text-xs text-gray-400">All invoices</div></div>
       </div>
@@ -479,9 +481,9 @@ export default function BillingPage() {
                 const makingTxt = sm ? (sm.making === 'varies' ? 'Varies' : sm.making ? `${sm.making}%` : '—') : (inv.makingCharges ? `${inv.makingCharges}%` : '—')
                 return (
                   <tr key={inv.id} className="hover:bg-gray-50/60 transition-colors group">
-                    <td className="px-5 py-4 font-mono text-sm font-semibold text-[#C9A84C]">{inv.id}</td>
+                    <td className="px-5 py-4 font-mono text-sm font-semibold text-[#C9A84C] whitespace-nowrap">{inv.id}</td>
                     <td className="px-5 py-4 font-mono text-xs text-gray-500">{inv.order||'—'}</td>
-                    <td className="px-5 py-4"><div className="font-medium text-gray-900">{inv.customer}</div></td>
+                    <td className="px-5 py-4"><div className="font-medium text-gray-900 whitespace-nowrap">{inv.customer}</div></td>
                     <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.phone||'—'}</td>
                     <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.category||'—'}</td>
                     <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{metals||'—'}</td>
@@ -745,7 +747,7 @@ export default function BillingPage() {
                           </div>
 
                           <div>
-                            <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Making Charges (%)</label>
+                            <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Making Charges (%) *</label>
                             <input inputMode="decimal" value={item.makingCharges} onChange={e=>updateItem(idx,'makingCharges',cleanDecimal(e.target.value))} className={inputCls} placeholder="e.g. 3.5"/>
                           </div>
 
