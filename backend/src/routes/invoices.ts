@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { createInvoice, getInvoices, getInvoiceById, updateInvoice, deleteInvoice, resendWhatsApp, getGSTSummary } from '../controllers/invoiceController';
 import { authenticate, authorize } from '../middleware/auth';
+import { addInvoicePayment } from '../controllers/invoicePaymentController';
 const router = Router();
 router.use(authenticate);
 router.get('/', getInvoices);
@@ -10,4 +11,6 @@ router.get('/:id', getInvoiceById);
 router.put('/:id', authorize('ADMIN','SUPER_ADMIN','STORE_MANAGER'), updateInvoice);
 router.delete('/:id', authorize('ADMIN','SUPER_ADMIN','STORE_MANAGER'), deleteInvoice);
 router.post('/:id/resend-whatsapp', resendWhatsApp);
+// Record one payment (partial-payment workflow)
+router.post('/:id/payments', authorize('ADMIN','SUPER_ADMIN','STORE_MANAGER','SALES_STAFF'), addInvoicePayment);
 export default router;

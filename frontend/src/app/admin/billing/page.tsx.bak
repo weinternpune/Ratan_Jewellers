@@ -384,6 +384,8 @@ export default function BillingPage() {
       if (!it.category) { toast.error(`${label}select a category`); return }
       if (!(num(it.netWeight) > 0)) { toast.error(`${label}enter the net weight`); return }
       if (!(num(it.goldRate) > 0)) { toast.error(`${label}enter the rate per gram`); return }
+      // No silent default: making charges must be typed (0 if there are none).
+      if (it.makingCharges.trim() === '') { toast.error(`${label}enter making charges % (type 0 if none)`); return }
     }
     if (calc.total <= 0) { toast.error('Invoice total must be greater than 0'); return }
     if (calc.amountPaid > calc.total) { toast.error('Paid amount cannot be more than the invoice total'); return }
@@ -745,7 +747,7 @@ export default function BillingPage() {
                           </div>
 
                           <div>
-                            <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Making Charges (%)</label>
+                            <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Making Charges (%) *</label>
                             <input inputMode="decimal" value={item.makingCharges} onChange={e=>updateItem(idx,'makingCharges',cleanDecimal(e.target.value))} className={inputCls} placeholder="e.g. 3.5"/>
                           </div>
 

@@ -1,87 +1,62 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import toast from "react-hot-toast";
-import {
-  invoiceApi,
-  orderApi,
-  customerApi,
-  adminApi,
-  handleApiError,
-} from "@/lib/billingApi";
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import toast from 'react-hot-toast'
+import { invoiceApi, orderApi, customerApi, adminApi, handleApiError } from '@/lib/billingApi'
+import { calcInvoice, calcLine, isCalculable, summarizeItems, num } from '@/lib/invoiceCalc'
 
 // ── Types ─────────────────────────────────────────────────────────────────
-export type AdminRole =
-  | "customer"
-  | "sales_staff"
-  | "inventory_manager"
-  | "store_manager"
-  | "admin"
-  | "super_admin";
-export type OrderStatus =
-  | "placed"
-  | "confirmed"
-  | "processing"
-  | "shipped"
-  | "delivered"
-  | "cancelled"
-  | "returned";
-export type InvoiceStatus = "paid" | "pending" | "overdue" | "draft";
-export type CustomerTier = "bronze" | "silver" | "gold" | "platinum";
-export type ProductStatus = "active" | "out_of_stock" | "draft";
-export type LogType =
-  | "auth"
-  | "order"
-  | "product"
-  | "billing"
-  | "settings"
-  | "crm"
-  | "inventory";
+export type AdminRole = 'customer' | 'sales_staff' | 'inventory_manager' | 'store_manager' | 'admin' | 'super_admin'
+export type OrderStatus = 'placed' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'returned'
+export type InvoiceStatus = 'paid' | 'pending' | 'overdue' | 'draft'
+export type CustomerTier = 'bronze' | 'silver' | 'gold' | 'platinum'
+export type ProductStatus = 'active' | 'out_of_stock' | 'draft'
+export type LogType = 'auth' | 'order' | 'product' | 'billing' | 'settings' | 'crm' | 'inventory'
 
 export interface AdminUser {
-  id: number;
-  name: string;
-  email: string;
-  role: AdminRole;
-  status: "active" | "inactive";
-  joined: string;
-  lastLogin: string;
-  avatar: string;
-  phone?: string;
+  id: number
+  name: string
+  email: string
+  role: AdminRole
+  status: 'active' | 'inactive'
+  joined: string
+  lastLogin: string
+  avatar: string
+  phone?: string
 }
 
 export interface Product {
-  id: string;
-  name: string;
-  category: string;
-  metal: string;
-  weight: string;
-  price: number;
-  stock: number;
-  status: ProductStatus;
-  rating: number;
-  sales: number;
-  description?: string;
-  images?: string[];
+  id: string
+  name: string
+  category: string
+  metal: string
+  weight: string
+  price: number
+  stock: number
+  status: ProductStatus
+  rating: number
+  sales: number
+  description?: string
+  images?: string[]
 }
 
 export interface Order {
-  id: string;
-  customer: string;
-  email: string;
-  phone: string;
-  items: OrderItem[];
-  total: number;
-  status: OrderStatus;
-  date: string;
-  payment: string;
-  address?: string;
-  notes?: string;
+  id: string
+  customer: string
+  email: string
+  phone: string
+  items: OrderItem[]
+  total: number
+  status: OrderStatus
+  date: string
+  payment: string
+  address?: string
+  notes?: string
 }
 
 export interface OrderItem {
-  name: string;
-  qty: number;
-  price: number;
+  name: string
+  qty: number
+  price: number
 }
 
 // A single line item on an invoice. Multiple of these can exist per
@@ -89,335 +64,338 @@ export interface OrderItem {
 // Gold/Silver taxonomy in billing/page.tsx; `metalType` records which of
 // the two lists it was picked from.
 export interface InvoiceLineItem {
-  metalType: "Gold" | "Silver";
-  category: string;
-  subCategory?: string;
-  purity: string;
-  netWeight: string;
-  goldRate: number;
-  makingCharges: number;
-  price: number;
+  metalType: 'Gold' | 'Silver'
+  category: string
+  subCategory?: string
+  huid?: string // BIS HUID of this specific piece (saved permanently in the backend)
+  purity: string
+  netWeight: string
+  goldRate: number
+  makingCharges: number
+  price: number
 }
 
 export interface Invoice {
-  id: string;
-  order?: string;
-  customer: string;
-  email?: string;
-  phone?: string;
-  hallmarkId?: string;
+  id: string
+  order?: string
+  customer: string
+  email?: string
+  phone?: string
+  hallmarkId?: string
   // Full multi-item breakdown. When present, this is the source of truth
   // for what's shown on the invoice and how totals are calculated.
-  items?: InvoiceLineItem[];
+  items?: InvoiceLineItem[]
   // Legacy/convenience single-item fields, kept for the invoices table
   // and for invoices created before multi-item support existed. Always
   // mirror items[0] for invoices that have `items` set.
-  category?: string;
-  metal?: string;
-  purity?: string;
-  netWeight?: string;
-  price?: number;
-  goldRate?: number;
-  makingCharges?: number;
-  amount: number;
-  gst: number;
-  total: number;
-  amountPaid?: number;
-  balanceDue?: number;
-  discount?: number;
+  category?: string
+  metal?: string
+  purity?: string
+  netWeight?: string
+  price?: number
+  goldRate?: number
+  makingCharges?: number
+  amount: number
+  gst: number
+  cgst?: number
+  sgst?: number
+  total: number
+  amountPaid?: number
+  balanceDue?: number
+  discount?: number
   // Display-only field ("Less URD"). Shown on the invoice exactly like the
   // other amount lines, but intentionally never read by any amount/GST/
   // total calculation anywhere in this file — it is cosmetic only.
-  lessURD?: number;
+  lessURD?: number
   paymentHistory?: Array<{
-    amount: number;
-    date: string;
-    mode: string;
-    notes?: string;
-  }>;
-  status: InvoiceStatus;
-  date: string;
-  due: string;
+    amount: number
+    date: string
+    mode: string
+    notes?: string
+  }>
+  status: InvoiceStatus
+  date: string
+  due: string
 }
 
 export interface InventoryItem {
-  id: string;
-  name: string;
-  category: string;
-  metal: string;
-  stock: number;
-  minStock: number;
-  maxStock: number;
-  value: number;
-  location: string;
-  lastUpdated: string;
-  trend: string;
+  id: string
+  name: string
+  category: string
+  metal: string
+  stock: number
+  minStock: number
+  maxStock: number
+  value: number
+  location: string
+  lastUpdated: string
+  trend: string
 }
 
 export interface Customer {
-  id: string;
-  name: string;
-  phone: string;
-  email: string;
-  city: string;
-  totalSpend: number;
-  orders: number;
-  tier: CustomerTier;
-  lastVisit: string;
-  birthday: string;
-  tags: string[];
-  notes?: string;
+  id: string
+  name: string
+  phone: string
+  email: string
+  city: string
+  totalSpend: number
+  orders: number
+  tier: CustomerTier
+  lastVisit: string
+  birthday: string
+  tags: string[]
+  notes?: string
 }
 
 export interface AuditLog {
-  id: number;
-  type: LogType;
-  action: string;
-  user: string;
-  role: string;
-  ip: string;
-  time: string;
-  details: string;
+  id: number
+  type: LogType
+  action: string
+  user: string
+  role: string
+  ip: string
+  time: string
+  details: string
 }
 
 export interface GoldRates {
-  "24K": string;
-  "22K": string;
-  "18K": string;
-  "14K": string;
+  '24K': string
+  '22K': string
+  '18K': string
+  '14K': string
 }
 
 interface BackendOrder {
-  orderNumber?: string;
-  _id?: string;
-  id?: string;
-  customerName?: string;
-  customer?: string;
-  customerEmail?: string;
-  email?: string;
-  customerPhone?: string;
-  phone?: string;
-  items?: OrderItem[];
-  totalAmount?: number;
-  total?: number;
-  status?: string;
-  createdAt?: string;
-  paymentMode?: string;
-  payment?: string;
+  orderNumber?: string
+  _id?: string
+  id?: string
+  customerName?: string
+  customer?: string
+  customerEmail?: string
+  email?: string
+  customerPhone?: string
+  phone?: string
+  items?: OrderItem[]
+  totalAmount?: number
+  total?: number
+  status?: string
+  createdAt?: string
+  paymentMode?: string
+  payment?: string
 }
 
 interface BackendInvoice {
-  invoiceNumber?: string;
-  _id: string;
-  customerName?: string;
-  customerEmail?: string;
-  customerPhone?: string;
-  subtotal?: number;
-  cgst?: number;
-  sgst?: number;
-  totalAmount?: number;
-  status?: string;
-  createdAt?: string;
-  notes?: string;
+  invoiceNumber?: string
+  _id: string
+  customerName?: string
+  customerEmail?: string
+  customerPhone?: string
+  subtotal?: number
+  cgst?: number
+  sgst?: number
+  totalAmount?: number
+  status?: string
+  createdAt?: string
+  notes?: string
   items?: Array<{
-    purity?: string;
-    netWeight?: number;
-    goldRate?: number;
-    makingCharges?: number;
-  }>;
+    purity?: string
+    netWeight?: number
+    goldRate?: number
+    makingCharges?: number
+  }>
 }
 
 interface BackendCustomer {
-  _id?: string;
-  id?: string;
-  name?: string;
-  phone?: string;
-  email?: string;
-  city?: string;
-  totalPurchases?: number;
-  segment?: string;
-  updatedAt?: string;
-  dateOfBirth?: string;
-  tags?: string[];
+  _id?: string
+  id?: string
+  name?: string
+  phone?: string
+  email?: string
+  city?: string
+  totalPurchases?: number
+  segment?: string
+  updatedAt?: string
+  dateOfBirth?: string
+  tags?: string[]
 }
 
 // ── Initial Data ──────────────────────────────────────────────────────────
 const initialUsers: AdminUser[] = [
   {
     id: 1,
-    name: "Rajesh Sharma",
-    email: "rajesh@ratanjewellers.com",
-    role: "super_admin",
-    status: "active",
-    joined: "Jan 2022",
-    lastLogin: "2 hrs ago",
-    avatar: "RS",
-    phone: "+91 98765 43210",
+    name: 'Rajesh Sharma',
+    email: 'rajesh@ratanjewellers.com',
+    role: 'super_admin',
+    status: 'active',
+    joined: 'Jan 2022',
+    lastLogin: '2 hrs ago',
+    avatar: 'RS',
+    phone: '+91 98765 43210'
   },
   {
     id: 2,
-    name: "Priya Mehta",
-    email: "priya@ratanjewellers.com",
-    role: "admin",
-    status: "active",
-    joined: "Mar 2023",
-    lastLogin: "1 day ago",
-    avatar: "PM",
-    phone: "+91 87654 32109",
+    name: 'Priya Mehta',
+    email: 'priya@ratanjewellers.com',
+    role: 'admin',
+    status: 'active',
+    joined: 'Mar 2023',
+    lastLogin: '1 day ago',
+    avatar: 'PM',
+    phone: '+91 87654 32109'
   },
-];
+]
 
-const initialProducts: Product[] = [];
+const initialProducts: Product[] = []
 
 const SEED_PRODUCT_IDS = new Set([
-  "RJ001",
-  "RJ002",
-  "RJ003",
-  "RJ004",
-  "RJ005",
-  "RJ006",
-  "RJ007",
-  "RJ008",
-]);
+  'RJ001',
+  'RJ002',
+  'RJ003',
+  'RJ004',
+  'RJ005',
+  'RJ006',
+  'RJ007',
+  'RJ008'
+])
 
 const stripSeedProducts = (products: Product[] | undefined) =>
-  (products ?? []).filter((product) => !SEED_PRODUCT_IDS.has(product.id));
+  (products ?? []).filter(product => !SEED_PRODUCT_IDS.has(product.id))
 
 const initialOrders: Order[] = [
   {
-    id: "RJ-4821",
-    customer: "Demo Customer",
-    email: "demo@example.com",
-    phone: "+91 98765 43210",
+    id: 'RJ-4821',
+    customer: 'Demo Customer',
+    email: 'demo@example.com',
+    phone: '+91 98765 43210',
     items: [
       {
-        name: "Gold Chain",
+        name: 'Gold Chain',
         qty: 1,
-        price: 50000,
-      },
+        price: 50000
+      }
     ],
     total: 50000,
-    status: "delivered",
-    date: "13 Jun 2026",
-    payment: "UPI",
+    status: 'delivered',
+    date: '13 Jun 2026',
+    payment: 'UPI'
   },
-];
+]
 
 const initialInvoices: Invoice[] = [
   {
-    id: "INV-2049",
-    customer: "Demo Customer",
-    phone: "+91 98765 43210",
+    id: 'INV-2049',
+    customer: 'Demo Customer',
+    phone: '+91 98765 43210',
     amount: 50000,
     gst: 1500,
     total: 51500,
-    status: "paid",
-    date: "13 Jun 2026",
-    due: "—",
-    category: "Necklaces",
-    metal: "22K Gold",
-    purity: "916",
-    netWeight: "8.5",
+    status: 'paid',
+    date: '13 Jun 2026',
+    due: '—',
+    category: 'Necklaces',
+    metal: '22K Gold',
+    purity: '916',
+    netWeight: '8.5',
     goldRate: 14525,
     makingCharges: 10,
-    price: 5000,
+    price: 5000
   },
-];
+]
 
-const initialInventory: InventoryItem[] = [];
+const initialInventory: InventoryItem[] = []
 
 const initialCustomers: Customer[] = [
   {
-    id: "CRM-001",
-    name: "Demo Customer",
-    phone: "+91 98765 43210",
-    email: "demo@example.com",
-    city: "Pune",
+    id: 'CRM-001',
+    name: 'Demo Customer',
+    phone: '+91 98765 43210',
+    email: 'demo@example.com',
+    city: 'Pune',
     totalSpend: 50000,
     orders: 1,
-    tier: "gold",
-    lastVisit: "13 Jun 2026",
-    birthday: "15 May 1990",
-    tags: ["VIP"],
+    tier: 'gold',
+    lastVisit: '13 Jun 2026',
+    birthday: '15 May 1990',
+    tags: ['VIP']
   },
-];
+]
 
 const initialLogs: AuditLog[] = [
   {
     id: 1,
-    type: "auth",
-    action: "Admin login",
-    user: "Rajesh Sharma",
-    role: "Super Admin",
-    ip: "192.168.1.10",
-    time: "04 Jun 2026, 10:24 AM",
-    details: "Logged in from Chrome/Windows",
+    type: 'auth',
+    action: 'Admin login',
+    user: 'Rajesh Sharma',
+    role: 'Super Admin',
+    ip: '192.168.1.10',
+    time: '04 Jun 2026, 10:24 AM',
+    details: 'Logged in from Chrome/Windows'
   },
-];
+]
 
 // ── Store ─────────────────────────────────────────────────────────────────
 interface AdminStore {
-  users: AdminUser[];
-  products: Product[];
-  orders: Order[];
-  invoices: Invoice[];
-  inventory: InventoryItem[];
-  customers: Customer[];
-  auditLogs: AuditLog[];
-  goldRates: GoldRates;
-  currentRole: AdminRole;
+  users: AdminUser[]
+  products: Product[]
+  orders: Order[]
+  invoices: Invoice[]
+  inventory: InventoryItem[]
+  customers: Customer[]
+  auditLogs: AuditLog[]
+  goldRates: GoldRates
+  currentRole: AdminRole
 
   loading: {
-    invoices: boolean;
-    orders: boolean;
-    customers: boolean;
-  };
+    invoices: boolean
+    orders: boolean
+    customers: boolean
+  }
 
-  addUser: (u: Omit<AdminUser, "id">) => void;
-  updateUser: (id: number, data: Partial<AdminUser>) => void;
-  deleteUser: (id: number) => void;
-  toggleUserStatus: (id: number) => void;
+  addUser: (u: Omit<AdminUser, 'id'>) => void
+  updateUser: (id: number, data: Partial<AdminUser>) => void
+  deleteUser: (id: number) => void
+  toggleUserStatus: (id: number) => void
 
-  addProduct: (p: Omit<Product, "id" | "rating" | "sales">) => void;
-  updateProduct: (id: string, data: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
-  clearSeedProducts: () => void;
+  addProduct: (p: Omit<Product, 'id' | 'rating' | 'sales'>) => void
+  updateProduct: (id: string, data: Partial<Product>) => void
+  deleteProduct: (id: string) => void
+  clearSeedProducts: () => void
 
-  addOrder: (o: Omit<Order, "id" | "date">) => void;
-  updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
-  updateOrder: (id: string, data: Partial<Order>) => void;
-  deleteOrder: (id: string) => Promise<void>;
-  fetchOrders: () => Promise<void>;
+  addOrder: (o: Omit<Order, 'id' | 'date'>) => void
+  updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>
+  updateOrder: (id: string, data: Partial<Order>) => void
+  deleteOrder: (id: string) => Promise<void>
+  fetchOrders: () => Promise<void>
 
-  addInvoice: (inv: Omit<Invoice, "id">) => Promise<void>;
-  updateInvoice: (id: string, data: Partial<Invoice>) => Promise<void>;
-  updateInvoiceStatus: (id: string, status: InvoiceStatus) => Promise<void>;
-  deleteInvoice: (id: string) => Promise<void>;
-  fetchInvoices: () => Promise<void>;
-  generateInvoiceForOrder: (orderId: string) => void;
-  sendInvoiceEmail: (id: string) => Promise<void>;
-  exportInvoicePDF: (id: string) => void;
+  addInvoice: (inv: Omit<Invoice, 'id'>) => Promise<void>
+  updateInvoice: (id: string, data: Partial<Invoice>) => Promise<void>
+  updateInvoiceStatus: (id: string, status: InvoiceStatus) => Promise<void>
+  deleteInvoice: (id: string) => Promise<void>
+  fetchInvoices: () => Promise<void>
+  generateInvoiceForOrder: (orderId: string) => void
+  sendInvoiceEmail: (id: string) => Promise<void>
+  exportInvoicePDF: (id: string) => void
 
-  addInventoryItem: (item: Omit<InventoryItem, "id" | "lastUpdated">) => void;
-  updateInventoryItem: (id: string, data: Partial<InventoryItem>) => void;
-  deleteInventoryItem: (id: string) => void;
+  addInventoryItem: (item: Omit<InventoryItem, 'id' | 'lastUpdated'>) => void
+  updateInventoryItem: (id: string, data: Partial<InventoryItem>) => void
+  deleteInventoryItem: (id: string) => void
 
-  addCustomer: (c: Omit<Customer, "id">) => void;
-  updateCustomer: (id: string, data: Partial<Customer>) => void;
-  deleteCustomer: (id: string) => Promise<void>;
-  fetchCustomers: () => Promise<void>;
-  addCustomerTag: (id: string, tag: string) => void;
-  removeCustomerTag: (id: string, tag: string) => void;
+  addCustomer: (c: Omit<Customer, 'id'>) => void
+  updateCustomer: (id: string, data: Partial<Customer>) => void
+  deleteCustomer: (id: string) => Promise<void>
+  fetchCustomers: () => Promise<void>
+  addCustomerTag: (id: string, tag: string) => void
+  removeCustomerTag: (id: string, tag: string) => void
 
-  updateGoldRates: (rates: GoldRates) => void;
+  updateGoldRates: (rates: GoldRates) => void
 
-  setCurrentRole: (role: AdminRole) => void;
+  setCurrentRole: (role: AdminRole) => void
 
-  addLog: (log: Omit<AuditLog, "id" | "time">) => void;
+  addLog: (log: Omit<AuditLog, 'id' | 'time'>) => void
 
-  resetAll: () => void;
+  resetAll: () => void
 
-  clearAllBillingData: () => Promise<void>;
+  clearAllBillingData: () => Promise<void>
 }
 
 export const useAdminStore = create<AdminStore>()(
@@ -431,82 +409,87 @@ export const useAdminStore = create<AdminStore>()(
       customers: initialCustomers,
       auditLogs: initialLogs,
       goldRates: {
-        "24K": "14525",
-        "22K": "13314",
-        "18K": "10893",
-        "14K": "8349",
+        '24K': '14525',
+        '22K': '13314',
+        '18K': '10893',
+        '14K': '8349'
       },
-      currentRole: "super_admin",
+      currentRole: 'super_admin',
 
       loading: {
         invoices: false,
         orders: false,
-        customers: false,
+        customers: false
       },
 
       // ── Users ──────────────────────────────────────────────────────────
       addUser: (userData) => {
         const newUser: AdminUser = {
           ...userData,
-          id: Date.now(),
-        };
+          id: Date.now()
+        }
 
-        set((s) => ({
-          users: [...s.users, newUser],
-        }));
+        set(s => ({
+          users: [...s.users, newUser]
+        }))
 
         get().addLog({
-          type: "auth",
-          action: "New user created",
-          user: "Admin",
-          role: "Admin",
-          ip: "—",
-          details: `${newUser.name} (${newUser.role})`,
-        });
+          type: 'auth',
+          action: 'New user created',
+          user: 'Admin',
+          role: 'Admin',
+          ip: '—',
+          details: `${newUser.name} (${newUser.role})`
+        })
 
-        toast.success(`User "${newUser.name}" created`);
+        toast.success(`User "${newUser.name}" created`)
       },
 
       updateUser: (id, data) => {
-        set((s) => ({
-          users: s.users.map((u) => (u.id === id ? { ...u, ...data } : u)),
-        }));
+        set(s => ({
+          users: s.users.map(u =>
+            u.id === id ? { ...u, ...data } : u
+          )
+        }))
 
-        toast.success("User updated");
+        toast.success('User updated')
       },
 
       deleteUser: (id) => {
-        const user = get().users.find((u) => u.id === id);
+        const user = get().users.find(u => u.id === id)
 
-        set((s) => ({
-          users: s.users.filter((u) => u.id !== id),
-        }));
+        set(s => ({
+          users: s.users.filter(u => u.id !== id)
+        }))
 
         get().addLog({
-          type: "auth",
-          action: "User deleted",
-          user: "Admin",
-          role: "Admin",
-          ip: "—",
-          details: `Deleted: ${user?.name}`,
-        });
+          type: 'auth',
+          action: 'User deleted',
+          user: 'Admin',
+          role: 'Admin',
+          ip: '—',
+          details: `Deleted: ${user?.name}`
+        })
 
-        toast.success("User deleted");
+        toast.success('User deleted')
       },
 
       toggleUserStatus: (id) => {
-        set((s) => ({
-          users: s.users.map((u) =>
+        set(s => ({
+          users: s.users.map(u =>
             u.id === id
               ? {
                   ...u,
-                  status: u.status === "active" ? "inactive" : "active",
+                  status:
+                    u.status === 'active'
+                      ? 'inactive'
+                      : 'active'
                 }
-              : u,
-          ),
-        }));
+              : u
+          )
+        }))
 
-        toast.success("User status updated");
+        toast.success('User status updated')
       },
 
       // ── Products ───────────────────────────────────────────────────────
@@ -515,114 +498,139 @@ export const useAdminStore = create<AdminStore>()(
           ...productData,
           id: `RJ${String(Date.now()).slice(-3)}`,
           rating: 0,
-          sales: 0,
-        };
+          sales: 0
+        }
 
-        set((s) => ({
-          products: [newProduct, ...s.products],
-        }));
+        set(s => ({
+          products: [newProduct, ...s.products]
+        }))
 
         get().addLog({
-          type: "product",
-          action: "Product added",
-          user: "Admin",
-          role: "Admin",
-          ip: "—",
-          details: `Added: ${newProduct.name}`,
-        });
+          type: 'product',
+          action: 'Product added',
+          user: 'Admin',
+          role: 'Admin',
+          ip: '—',
+          details: `Added: ${newProduct.name}`
+        })
 
-        toast.success(`"${newProduct.name}" added`);
+        toast.success(`"${newProduct.name}" added`)
       },
 
       updateProduct: (id, data) => {
-        set((s) => ({
-          products: s.products.map((p) =>
-            p.id === id ? { ...p, ...data } : p,
-          ),
-        }));
+        set(s => ({
+          products: s.products.map(p =>
+            p.id === id ? { ...p, ...data } : p
+          )
+        }))
 
-        toast.success("Product updated");
+        toast.success('Product updated')
       },
 
       deleteProduct: (id) => {
-        set((s) => ({
-          products: s.products.filter((p) => p.id !== id),
-        }));
+        set(s => ({
+          products: s.products.filter(p => p.id !== id)
+        }))
 
-        toast.success("Product deleted");
+        toast.success('Product deleted')
       },
 
       clearSeedProducts: () => {
-        const cleaned = stripSeedProducts(get().products);
+        const cleaned = stripSeedProducts(get().products)
 
         if (cleaned.length !== get().products.length) {
           set({
-            products: cleaned,
-          });
+            products: cleaned
+          })
         }
       },
 
       // ── Orders ─────────────────────────────────────────────────────────
       fetchOrders: async () => {
         try {
-          set((s) => ({
+          set(s => ({
             loading: {
               ...s.loading,
-              orders: true,
-            },
-          }));
+              orders: true
+            }
+          }))
 
-          const result = await orderApi.getAll();
+          const result = await orderApi.getAll()
 
           const frontendOrders: Order[] = (result.orders || []).map(
             (order: BackendOrder) => ({
-              id: order.orderNumber || order._id || order.id || "",
+              id:
+                order.orderNumber ||
+                order._id ||
+                order.id ||
+                '',
 
               customer:
-                order.customerName || order.customer || "Unknown Customer",
+                order.customerName ||
+                order.customer ||
+                'Unknown Customer',
 
-              email: order.customerEmail || order.email || "",
+              email:
+                order.customerEmail ||
+                order.email ||
+                '',
 
-              phone: order.customerPhone || order.phone || "",
+              phone:
+                order.customerPhone ||
+                order.phone ||
+                '',
 
               items: order.items || [],
 
-              total: order.totalAmount || order.total || 0,
+              total:
+                order.totalAmount ||
+                order.total ||
+                0,
 
-              status: (order.status || "pending").toLowerCase() as OrderStatus,
+              status:
+                (order.status || 'pending').toLowerCase() as OrderStatus,
 
               date: order.createdAt
-                ? new Date(order.createdAt).toLocaleDateString("en-IN", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })
-                : new Date().toLocaleDateString("en-IN", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  }),
+                ? new Date(order.createdAt).toLocaleDateString(
+                    'en-IN',
+                    {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric'
+                    }
+                  )
+                : new Date().toLocaleDateString(
+                    'en-IN',
+                    {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric'
+                    }
+                  ),
 
-              payment: order.paymentMode || order.payment || "Unknown",
-            }),
-          );
+              payment:
+                order.paymentMode ||
+                order.payment ||
+                'Unknown'
+            })
+          )
 
-          set((s) => ({
+          set(s => ({
             orders: frontendOrders,
             loading: {
               ...s.loading,
-              orders: false,
-            },
-          }));
+              orders: false
+            }
+          }))
         } catch (error) {
-          handleApiError(error);
+          handleApiError(error)
 
-          set((s) => ({
+          set(s => ({
             loading: {
               ...s.loading,
-              orders: false,
-            },
-          }));
+              orders: false
+            }
+          }))
         }
       },
 
@@ -630,279 +638,290 @@ export const useAdminStore = create<AdminStore>()(
         const newOrder: Order = {
           ...orderData,
           id: `RJ-${4822 + get().orders.length}`,
-          date: new Date().toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          }),
-        };
+          date: new Date().toLocaleDateString(
+            'en-IN',
+            {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric'
+            }
+          )
+        }
 
-        set((s) => ({
-          orders: [newOrder, ...s.orders],
-        }));
+        set(s => ({
+          orders: [newOrder, ...s.orders]
+        }))
 
         get().addLog({
-          type: "order",
-          action: "New order created",
-          user: "Admin",
-          role: "Admin",
-          ip: "—",
-          details: `${newOrder.id} for ${newOrder.customer}`,
-        });
+          type: 'order',
+          action: 'New order created',
+          user: 'Admin',
+          role: 'Admin',
+          ip: '—',
+          details: `${newOrder.id} for ${newOrder.customer}`
+        })
 
-        toast.success(`Order ${newOrder.id} created`);
+        toast.success(`Order ${newOrder.id} created`)
       },
 
       updateOrderStatus: async (id, status) => {
         try {
-          await orderApi.updateStatus(id, status.toUpperCase());
+          await orderApi.updateStatus(
+            id,
+            status.toUpperCase()
+          )
 
-          set((s) => ({
-            orders: s.orders.map((o) =>
+          set(s => ({
+            orders: s.orders.map(o =>
               o.id === id
                 ? {
                     ...o,
-                    status,
+                    status
                   }
-                : o,
-            ),
-          }));
+                : o
+            )
+          }))
 
           get().addLog({
-            type: "order",
-            action: "Order status updated",
-            user: "Admin",
-            role: "Admin",
-            ip: "—",
-            details: `${id} → ${status}`,
-          });
+            type: 'order',
+            action: 'Order status updated',
+            user: 'Admin',
+            role: 'Admin',
+            ip: '—',
+            details: `${id} → ${status}`
+          })
 
-          toast.success(`Order ${id} → ${status}`);
+          toast.success(`Order ${id} → ${status}`)
         } catch (error) {
-          handleApiError(error);
+          handleApiError(error)
         }
       },
 
       updateOrder: (id, data) => {
-        set((s) => ({
-          orders: s.orders.map((o) =>
+        set(s => ({
+          orders: s.orders.map(o =>
             o.id === id
               ? {
                   ...o,
-                  ...data,
+                  ...data
                 }
-              : o,
-          ),
-        }));
+              : o
+          )
+        }))
 
-        toast.success("Order updated");
+        toast.success('Order updated')
       },
 
       deleteOrder: async (id) => {
         try {
-          await orderApi.delete(id);
+          await orderApi.delete(id)
 
-          set((s) => ({
-            orders: s.orders.filter((o) => o.id !== id),
-          }));
+          set(s => ({
+            orders: s.orders.filter(o => o.id !== id)
+          }))
 
           get().addLog({
-            type: "order",
-            action: "Order deleted",
-            user: "Admin",
-            role: "Admin",
-            ip: "—",
-            details: `Deleted order ${id}`,
-          });
+            type: 'order',
+            action: 'Order deleted',
+            user: 'Admin',
+            role: 'Admin',
+            ip: '—',
+            details: `Deleted order ${id}`
+          })
 
-          toast.success(`Order ${id} deleted`);
+          toast.success(`Order ${id} deleted`)
         } catch (error) {
-          handleApiError(error);
+          handleApiError(error)
         }
       },
 
       // ── Invoices ───────────────────────────────────────────────────────
       fetchInvoices: async () => {
-        try {
-          set((s) => ({
-            loading: { ...s.loading, invoices: true },
-          }));
+  try {
+    set(s => ({
+      loading: { ...s.loading, invoices: true }
+    }))
 
-          const result = await invoiceApi.getAll();
+    const result = await invoiceApi.getAll()
 
-          console.log("=== FETCH INVOICES DEBUG ===");
-          console.log("Raw backend response:", result.invoices?.[0]);
-          console.log("Total invoices:", result.invoices?.length);
+    console.log('=== FETCH INVOICES DEBUG ===')
+    console.log('Raw backend response:', result.invoices?.[0])
+    console.log('Total invoices:', result.invoices?.length)
 
-          const frontendInvoices: Invoice[] = (result.invoices || []).map(
-            (invoice: any) => {
-              const total = invoice.totalAmount || 0;
-              const paid = invoice.amountPaid || 0;
-              const correctBalance = Math.max(total - paid, 0);
+    // Ids whose status is explicitly stored on the server (older invoices
+    // never had one saved, so for those the locally remembered status wins).
+    const explicitStatusIds = new Set<string>()
 
-              const validStatuses = ["paid", "pending", "overdue", "draft"];
+    const frontendInvoices: Invoice[] = (result.invoices || []).map((invoice: any) => {
+      const paid = invoice.amountPaid || 0
 
-              const backendStatus: InvoiceStatus | null =
-                validStatuses.includes(invoice.status)
-                  ? (invoice.status as InvoiceStatus)
-                  : null;
-
-              const mapped: Invoice = {
-                id: invoice.invoiceNumber || invoice._id,
-                customer: invoice.customerName || "Unknown Customer",
-                email: invoice.customerEmail || "",
-                phone: invoice.customerPhone || "",
-                hallmarkId: invoice.hallmarkId || "",
-                amount: invoice.subtotal || 0,
-                gst: (invoice.cgst || 0) + (invoice.sgst || 0),
-                total: total,
-                amountPaid: paid,
-                balanceDue: correctBalance,
-                discount: invoice.discountAmount || 0,
-                paymentHistory: invoice.paymentHistory || [],
-
-                // IMPORTANT:
-                // Keep backend status when it is valid.
-                // Do not recalculate/automatically change it from balance.
-                status:
-                  backendStatus || (correctBalance <= 0 ? "paid" : "pending"),
-
-                date: invoice.createdAt
-                  ? new Date(invoice.createdAt).toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })
-                  : new Date().toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    }),
-
-                due: "—",
-
-                // Display-only value, stashed inside `notes` (the schema has no
-                // dedicated column for it). Never fed back into any total/GST
-                // calculation.
-                lessURD: invoice.notes?.includes("Less URD:")
-                  ? parseFloat(
-                      invoice.notes.split("Less URD: ")[1]?.split(",")[0],
-                    ) || undefined
-                  : undefined,
-
-                // Full multi-item breakdown, reconstructed from the backend's
-                // generic items array. `name` was composed on creation as
-                // "Category - SubCategory (Gold/Silver)" — split it back apart
-                // for display. Older, pre-multi-item invoices simply won't match
-                // this pattern and fall back to the raw name as the category.
-                items: (invoice.items || []).map((it: any) => {
-                  const nameMatch = (it.name || "").match(
-                    /^(.*?)(?:\s*\(([^)]+)\))?$/,
-                  );
-                  const namePart = (nameMatch?.[1] || it.name || "").trim();
-                  const metalPart = (nameMatch?.[2] || "").trim();
-                  const [category, subCategory] = namePart.includes(" - ")
-                    ? [
-                        namePart.split(" - ")[0].trim(),
-                        namePart.split(" - ").slice(1).join(" - ").trim(),
-                      ]
-                    : [namePart, undefined];
-                  return {
-                    metalType: (metalPart === "Silver" ? "Silver" : "Gold") as
-                      | "Gold"
-                      | "Silver",
-                    category,
-                    subCategory,
-                    purity: it.purity || "",
-                    netWeight: (it.netWeight ?? 0).toString(),
-                    goldRate: it.goldRate || 0,
-                    makingCharges: it.makingCharges || 0,
-                    price: it.stoneCharges || 0,
-                  };
-                }),
-
-                // Legacy/table-view convenience fields — mirror the first item so
-                // the invoices table (which only has room for one row per
-                // invoice) still shows something sensible. A "+N more" suffix on
-                // category hints that there's more than one item.
-                category: invoice.items?.[0]?.name
-                  ? invoice.items[0].name +
-                    (invoice.items.length > 1
-                      ? ` (+${invoice.items.length - 1} more)`
-                      : "")
-                  : undefined,
-                metal: undefined,
-                purity: invoice.items?.[0]?.purity,
-                netWeight: invoice.items?.[0]?.netWeight?.toString(),
-                goldRate: invoice.items?.[0]?.goldRate,
-                makingCharges: invoice.items?.[0]?.makingCharges,
-                price: invoice.items?.[0]?.stoneCharges || 0,
-              };
-
-              return mapped;
-            },
-          );
-
-          /*
-           * IMPORTANT:
-           * Do NOT blindly replace the current Zustand invoices.
-           *
-           * Existing local invoice values are preserved when the backend
-           * response does not contain the latest value.
-           */
-          set((s) => {
-            const currentInvoices = s.invoices;
-
-            const mergedInvoices = frontendInvoices.map((serverInvoice) => {
-              const localInvoice = currentInvoices.find(
-                (local) => local.id === serverInvoice.id,
-              );
-
-              if (!localInvoice) {
-                return serverInvoice;
-              }
-
-              return {
-                ...serverInvoice,
-
-                // Preserve the current UI/state values.
-                // Backend values are still used for the rest of the invoice.
-                status: localInvoice.status,
-                amountPaid: localInvoice.amountPaid,
-                balanceDue: localInvoice.balanceDue,
-                paymentHistory: localInvoice.paymentHistory,
-              };
-            });
-
-            return {
-              invoices: mergedInvoices,
-              loading: {
-                ...s.loading,
-                invoices: false,
-              },
-            };
-          });
-        } catch (error) {
-          console.error("Failed to fetch invoices:", error);
-          handleApiError(error);
-
-          set((s) => ({
-            loading: {
-              ...s.loading,
-              invoices: false,
-            },
-          }));
+      // Line items, rebuilt from the backend's generic items array. `name`
+      // was composed on creation as "Category - SubCategory (Gold/Silver)".
+      const parsedItems: InvoiceLineItem[] = (invoice.items || []).map((it: any) => {
+        const nameMatch = (it.name || '').match(/^(.*?)(?:\s*\(([^)]+)\))?$/)
+        const namePart = (nameMatch?.[1] || it.name || '').trim()
+        const metalPart = (nameMatch?.[2] || '').trim()
+        const [category, subCategory] = namePart.includes(' - ')
+          ? [namePart.split(' - ')[0].trim(), namePart.split(' - ').slice(1).join(' - ').trim()]
+          : [namePart, undefined]
+        return {
+          metalType: (metalPart === 'Silver' ? 'Silver' : 'Gold') as 'Gold' | 'Silver',
+          category,
+          subCategory,
+          huid: it.huid || '',
+          purity: it.purity || '',
+          netWeight: (it.netWeight ?? 0).toString(),
+          goldRate: it.goldRate || 0,
+          makingCharges: it.makingCharges || 0,
+          price: it.stoneCharges || 0,
         }
-      },
+      })
+
+      // ONE calculation for every screen. Totals are always recomputed from
+      // the invoice's own items (never trusted from the stored numbers, which
+      // older server versions calculated wrongly). Only legacy invoices with
+      // no usable items fall back to what is stored.
+      const calc = isCalculable(parsedItems)
+        ? calcInvoice(parsedItems, invoice.discountAmount, paid)
+        : null
+      const total = calc ? calc.total : (invoice.totalAmount || 0)
+      const correctBalance = Math.max(total - paid, 0)
+
+      const validStatuses = ['paid', 'pending', 'overdue', 'draft']
+
+      const backendStatus: InvoiceStatus | null =
+        validStatuses.includes(invoice.status)
+          ? invoice.status as InvoiceStatus
+          : null
+
+      if (backendStatus) explicitStatusIds.add(invoice.invoiceNumber || invoice._id)
+
+      const mapped: Invoice = {
+        id: invoice.invoiceNumber || invoice._id,
+        customer: invoice.customerName || 'Unknown Customer',
+        email: invoice.customerEmail || '',
+        phone: invoice.customerPhone || '',
+        // Legacy single field = every item's HUID, so search still works.
+        hallmarkId: summarizeItems(parsedItems).huids.join(', '),
+        amount: calc ? calc.subtotal : (invoice.subtotal || 0),
+        gst: calc ? calc.gst : ((invoice.cgst || 0) + (invoice.sgst || 0)),
+        cgst: calc ? calc.cgst : (invoice.cgst || 0),
+        sgst: calc ? calc.sgst : (invoice.sgst || 0),
+        total: total,
+        amountPaid: paid,
+        balanceDue: correctBalance,
+        discount: calc ? calc.discount : (invoice.discountAmount || 0),
+        paymentHistory: invoice.paymentHistory || [],
+
+        // IMPORTANT:
+        // Keep backend status when it is valid.
+        // Do not recalculate/automatically change it from balance.
+        status: backendStatus || (correctBalance <= 0 ? 'paid' : 'pending'),
+
+        date: invoice.createdAt
+          ? new Date(invoice.createdAt).toLocaleDateString('en-IN', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric'
+            })
+          : new Date().toLocaleDateString('en-IN', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric'
+            }),
+
+        due: '—',
+
+        // Display-only value, stashed inside `notes` (the schema has no
+        // dedicated column for it). Never fed back into any total/GST
+        // calculation.
+        lessURD: invoice.notes?.includes('Less URD:')
+          ? parseFloat(invoice.notes.split('Less URD: ')[1]?.split(',')[0]) || undefined
+          : undefined,
+
+        // Full multi-item breakdown (single source of truth for every screen).
+        items: parsedItems,
+
+        // Legacy/table-view convenience fields — mirror the first item so
+        // the invoices table (which only has room for one row per
+        // invoice) still shows something sensible. A "+N more" suffix on
+        // category hints that there's more than one item.
+        category: invoice.items?.[0]?.name
+          ? invoice.items[0].name + (invoice.items.length > 1 ? ` (+${invoice.items.length - 1} more)` : '')
+          : undefined,
+        metal: undefined,
+        purity: invoice.items?.[0]?.purity,
+        netWeight: invoice.items?.[0]?.netWeight?.toString(),
+        goldRate: invoice.items?.[0]?.goldRate,
+        makingCharges: invoice.items?.[0]?.makingCharges,
+        price: invoice.items?.[0]?.stoneCharges || 0
+      }
+
+      return mapped
+    })
+
+    /*
+     * IMPORTANT:
+     * Do NOT blindly replace the current Zustand invoices.
+     *
+     * Existing local invoice values are preserved when the backend
+     * response does not contain the latest value.
+     */
+    set(s => {
+      const currentInvoices = s.invoices
+
+      const mergedInvoices = frontendInvoices.map(serverInvoice => {
+        const localInvoice = currentInvoices.find(
+          local => local.id === serverInvoice.id
+        )
+
+        if (!localInvoice) {
+          return serverInvoice
+        }
+
+        return {
+          ...serverInvoice,
+
+          // Status is now stored on the server; only for old invoices that
+          // never had one saved do we keep the locally remembered status.
+          status: explicitStatusIds.has(serverInvoice.id) ? serverInvoice.status : localInvoice.status,
+          amountPaid: localInvoice.amountPaid ?? serverInvoice.amountPaid,
+          // Balance is NEVER copied from old state — always total − paid, so
+          // it can never disagree with the (recalculated) total.
+          balanceDue: Math.max(serverInvoice.total - (localInvoice.amountPaid ?? serverInvoice.amountPaid ?? 0), 0),
+          paymentHistory: localInvoice.paymentHistory
+        }
+      })
+
+      return {
+        invoices: mergedInvoices,
+        loading: {
+          ...s.loading,
+          invoices: false
+        }
+      }
+    })
+
+  } catch (error) {
+    console.error('Failed to fetch invoices:', error)
+    handleApiError(error)
+
+    set(s => ({
+      loading: {
+        ...s.loading,
+        invoices: false
+      }
+    }))
+  }
+},
 
       addInvoice: async (invData) => {
         try {
           const backendData = {
             customerName: invData.customer,
-            customerPhone: invData.phone || "",
-            customerEmail: invData.email || "",
-            hallmarkId: invData.hallmarkId || "",
-            paymentMode: "CASH",
+            customerPhone: invData.phone || '',
+            customerEmail: invData.email || '',
+            paymentMode: 'CASH',
 
             status: invData.status,
 
@@ -912,291 +931,393 @@ export const useAdminStore = create<AdminStore>()(
             // fetchInvoices splits this string back apart on reload.
             items: (invData.items && invData.items.length > 0
               ? invData.items
-              : [
-                  {
-                    metalType: "Gold" as const,
-                    category: "Jewellery Item",
-                    subCategory: "",
-                    purity: "22KT(916)",
-                    netWeight: "0",
-                    goldRate: 7069,
-                    makingCharges: 0,
-                    price: 0,
-                  },
-                ]
-            ).map((item) => ({
-              name: `${item.category || "Jewellery Item"}${item.subCategory ? " - " + item.subCategory : ""} (${item.metalType})`,
-              purity: item.purity || "—",
-              netWeight: parseFloat(item.netWeight || "0") || 0,
+              : [{ metalType: 'Gold' as const, category: 'Jewellery Item', subCategory: '', purity: '22KT(916)', netWeight: '0', goldRate: 7069, makingCharges: 0, price: 0 }]
+            ).map(item => ({
+              name: `${item.category || 'Jewellery Item'}${item.subCategory ? ' - ' + item.subCategory : ''} (${item.metalType})`,
+              huid: (item.huid || '').trim().toUpperCase(),
+              purity: item.purity || '—',
+              netWeight: parseFloat(item.netWeight || '0') || 0,
               goldRate: item.goldRate || 0,
               makingCharges: item.makingCharges || 0,
               stoneCharges: item.price || 0,
               cgstRate: 1.5,
               sgstRate: 1.5,
-              quantity: 1,
+              quantity: 1
             })),
 
             discountAmount: invData.discount || 0,
             oldGoldExchange: 0,
 
-            amountPaid: invData.amountPaid || 0,
+            amountPaid:
+              invData.amountPaid || 0,
 
             balanceDue:
               invData.balanceDue !== undefined
                 ? invData.balanceDue
                 : invData.total,
 
-            paymentHistory: invData.paymentHistory || [],
+            paymentHistory:
+              invData.paymentHistory || [],
 
             // "Less URD" has no dedicated backend column — it's a display-only
             // value, so it's stashed in `notes` purely so it survives a
             // page refresh. It is never read into subtotal/GST/discount/
             // total math anywhere.
-            notes: invData.lessURD ? `Less URD: ${invData.lessURD}` : "",
-          };
+            notes: invData.lessURD ? `Less URD: ${invData.lessURD}` : ''
+          }
 
-          const result = await invoiceApi.create(backendData);
+          const result =
+            await invoiceApi.create(
+              backendData
+            )
 
-          const newInvoice = result.data;
+          const newInvoice = result.data
+
+          // Same single calculation as everywhere else — independent of what
+          // an (older) server build may have stored.
+          const createdCalc = calcInvoice(
+            invData.items || [],
+            invData.discount,
+            newInvoice.amountPaid ?? invData.amountPaid ?? 0
+          )
 
           const frontendInvoice: Invoice = {
             id: newInvoice.invoiceNumber,
 
-            customer: newInvoice.customerName,
+            customer:
+              newInvoice.customerName,
 
-            email: newInvoice.customerEmail || "",
+            email:
+              newInvoice.customerEmail || '',
 
-            phone: newInvoice.customerPhone,
+            phone:
+              newInvoice.customerPhone,
 
-            hallmarkId: newInvoice.hallmarkId || invData.hallmarkId || '',
+            amount:
+              createdCalc.subtotal,
 
-            amount: newInvoice.subtotal,
+            gst:
+              createdCalc.gst,
 
-            gst: (newInvoice.cgst || 0) + (newInvoice.sgst || 0),
+            cgst:
+              createdCalc.cgst,
 
-            total: newInvoice.totalAmount,
+            sgst:
+              createdCalc.sgst,
 
-            amountPaid: newInvoice.amountPaid || invData.amountPaid || 0,
+            total:
+              createdCalc.total,
+
+            amountPaid:
+              createdCalc.amountPaid,
 
             balanceDue:
-              newInvoice.balanceDue !== undefined
-                ? newInvoice.balanceDue
-                : invData.balanceDue !== undefined
-                  ? invData.balanceDue
-                  : invData.total,
+              createdCalc.balanceDue,
 
             discount:
-              newInvoice.discountAmount !== undefined
-                ? newInvoice.discountAmount
-                : invData.discount || 0,
+              createdCalc.discount,
 
             paymentHistory:
-              newInvoice.paymentHistory || invData.paymentHistory || [],
+              newInvoice.paymentHistory ||
+              invData.paymentHistory ||
+              [],
 
-            status: invData.status || "paid",
+            status:
+              invData.status ||
+              'paid',
 
-            date: new Date().toLocaleDateString("en-IN", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            }),
+            date:
+              new Date().toLocaleDateString(
+                'en-IN',
+                {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric'
+                }
+              ),
 
-            due: "—",
+            due: '—',
 
             // Store the full itemized breakdown exactly as entered — no
             // need to wait for a refetch, we already have it.
             items: invData.items,
 
+            // Legacy single field = every item's HUID (kept for search).
+            hallmarkId: summarizeItems(invData.items || []).huids.join(', '),
+
             // Legacy/table-view convenience fields, mirroring item 1.
             category: invData.items?.[0]
-              ? `${invData.items[0].category}${invData.items[0].subCategory ? " - " + invData.items[0].subCategory : ""}${invData.items.length > 1 ? ` (+${invData.items.length - 1} more)` : ""}`
+              ? `${invData.items[0].category}${invData.items[0].subCategory ? ' - ' + invData.items[0].subCategory : ''}${invData.items.length > 1 ? ` (+${invData.items.length - 1} more)` : ''}`
               : undefined,
 
-            metal: invData.items?.[0]?.metalType,
+            metal:
+              invData.items?.[0]?.metalType,
 
-            purity: invData.items?.[0]?.purity,
+            purity:
+              invData.items?.[0]?.purity,
 
-            netWeight: invData.items?.[0]?.netWeight,
+            netWeight:
+              invData.items?.[0]?.netWeight,
 
-            goldRate: invData.items?.[0]?.goldRate,
+            goldRate:
+              invData.items?.[0]?.goldRate,
 
-            makingCharges: invData.items?.[0]?.makingCharges,
+            makingCharges:
+              invData.items?.[0]?.makingCharges,
 
-            price: invData.items?.[0]?.price,
+            price:
+              invData.items?.[0]?.price,
 
-            lessURD: invData.lessURD,
-          };
+            lessURD:
+              invData.lessURD
+          }
 
-          set((s) => ({
-            invoices: [frontendInvoice, ...s.invoices],
-          }));
+          set(s => ({
+            invoices: [
+              frontendInvoice,
+              ...s.invoices
+            ]
+          }))
 
           get().addLog({
-            type: "billing",
-            action: "Invoice created",
-            user: "Admin",
-            role: "Admin",
-            ip: "—",
-            details: `${frontendInvoice.id} — ₹${frontendInvoice.total.toLocaleString("en-IN")} (Paid: ₹${frontendInvoice.amountPaid?.toLocaleString("en-IN") || 0})`,
-          });
+            type: 'billing',
+            action: 'Invoice created',
+            user: 'Admin',
+            role: 'Admin',
+            ip: '—',
+            details:
+              `${frontendInvoice.id} — ₹${frontendInvoice.total.toLocaleString('en-IN')} (Paid: ₹${frontendInvoice.amountPaid?.toLocaleString('en-IN') || 0})`
+          })
 
-          toast.success(`Invoice ${frontendInvoice.id} created`);
+          toast.success(
+            `Invoice ${frontendInvoice.id} created`
+          )
         } catch (error) {
-          handleApiError(error);
+          handleApiError(error)
         }
       },
 
       updateInvoice: async (id, data) => {
         try {
-          console.log("=== UPDATE INVOICE DEBUG ===");
+          console.log(
+            '=== UPDATE INVOICE DEBUG ==='
+          )
 
-          console.log("Invoice ID:", id);
+          console.log(
+            'Invoice ID:',
+            id
+          )
 
-          console.log("Update data being sent:", data);
+          console.log(
+            'Update data being sent:',
+            data
+          )
 
-          const response = await invoiceApi.update(id, data);
+          const response =
+            await invoiceApi.update(
+              id,
+              data
+            )
 
-          console.log("Update response received:", response);
+          console.log(
+            'Update response received:',
+            response
+          )
 
-          if (response && response.data) {
-            const updatedInvoice = response.data;
+          if (
+            response &&
+            response.data
+          ) {
+            const updatedInvoice =
+              response.data
 
-            console.log("Updated invoice from backend:", {
-              amountPaid: updatedInvoice.amountPaid,
+            console.log(
+              'Updated invoice from backend:',
+              {
+                amountPaid:
+                  updatedInvoice.amountPaid,
 
-              balanceDue: updatedInvoice.balanceDue,
+                balanceDue:
+                  updatedInvoice.balanceDue,
 
-              status: updatedInvoice.status,
-            });
+                status:
+                  updatedInvoice.status
+              }
+            )
 
-            set((s) => ({
-              invoices: s.invoices.map((i) => {
-                if (i.id === id) {
-                  const updated = {
-                    ...i,
-
-                    amountPaid:
-                      updatedInvoice.amountPaid !== undefined
-                        ? updatedInvoice.amountPaid
-                        : data.amountPaid,
-
-                    balanceDue:
-                      updatedInvoice.balanceDue !== undefined
-                        ? updatedInvoice.balanceDue
-                        : data.balanceDue,
-
-                    status: updatedInvoice.status || data.status,
-
-                    paymentHistory:
-                      updatedInvoice.paymentHistory || i.paymentHistory,
-                  };
-
-                  console.log("Updated invoice in state:", {
-                    id: updated.id,
-
-                    amountPaid: updated.amountPaid,
-
-                    balanceDue: updated.balanceDue,
-
-                    status: updated.status,
-                  });
-
-                  return updated;
-                }
-
-                return i;
-              }),
-            }));
-          } else {
-            console.log("No response.data, using fallback update");
-
-            set((s) => ({
-              invoices: s.invoices.map((i) =>
-                i.id === id
-                  ? {
+            set(s => ({
+              invoices:
+                s.invoices.map(i => {
+                  if (i.id === id) {
+                    const updated = {
                       ...i,
-                      ...data,
+
+                      amountPaid:
+                        updatedInvoice.amountPaid !== undefined
+                          ? updatedInvoice.amountPaid
+                          : data.amountPaid,
+
+                      balanceDue:
+                        updatedInvoice.balanceDue !== undefined
+                          ? updatedInvoice.balanceDue
+                          : data.balanceDue,
+
+                      status:
+                        updatedInvoice.status ||
+                        data.status,
+
+                      paymentHistory:
+                        updatedInvoice.paymentHistory ||
+                        i.paymentHistory
                     }
-                  : i,
-              ),
-            }));
+
+                    console.log(
+                      'Updated invoice in state:',
+                      {
+                        id:
+                          updated.id,
+
+                        amountPaid:
+                          updated.amountPaid,
+
+                        balanceDue:
+                          updated.balanceDue,
+
+                        status:
+                          updated.status
+                      }
+                    )
+
+                    return updated
+                  }
+
+                  return i
+                })
+            }))
+          } else {
+            console.log(
+              'No response.data, using fallback update'
+            )
+
+            set(s => ({
+              invoices:
+                s.invoices.map(i =>
+                  i.id === id
+                    ? {
+                        ...i,
+                        ...data
+                      }
+                    : i
+                )
+            }))
           }
 
           get().addLog({
-            type: "billing",
-            action: "Invoice updated",
-            user: "Admin",
-            role: "Admin",
-            ip: "—",
-            details: `${id} - Payment updated`,
-          });
+            type: 'billing',
+            action: 'Invoice updated',
+            user: 'Admin',
+            role: 'Admin',
+            ip: '—',
+            details:
+              `${id} - Payment updated`
+          })
         } catch (error) {
-          console.error("Update invoice error:", error);
+          console.error(
+            'Update invoice error:',
+            error
+          )
 
-          handleApiError(error);
+          handleApiError(error)
 
-          throw error;
+          throw error
         }
       },
 
-      updateInvoiceStatus: async (id, status) => {
+      updateInvoiceStatus: async (
+        id,
+        status
+      ) => {
         try {
-          await invoiceApi.update(id, {
-            status,
-          });
+          await invoiceApi.update(
+            id,
+            {
+              status
+            }
+          )
 
-          set((s) => ({
-            invoices: s.invoices.map((i) =>
-              i.id === id
-                ? {
-                    ...i,
-                    status,
-                  }
-                : i,
-            ),
-          }));
+          set(s => ({
+            invoices:
+              s.invoices.map(i =>
+                i.id === id
+                  ? {
+                      ...i,
+                      status
+                    }
+                  : i
+              )
+          }))
 
-          toast.success(`Invoice marked as ${status}`);
+          toast.success(
+            `Invoice marked as ${status}`
+          )
         } catch (error) {
-          handleApiError(error);
+          handleApiError(error)
         }
       },
 
       deleteInvoice: async (id) => {
         try {
-          await invoiceApi.delete(id);
+          await invoiceApi.delete(id)
 
-          set((s) => ({
-            invoices: s.invoices.filter((i) => i.id !== id),
-          }));
+          set(s => ({
+            invoices:
+              s.invoices.filter(
+                i => i.id !== id
+              )
+          }))
 
           get().addLog({
-            type: "billing",
-            action: "Invoice deleted",
-            user: "Admin",
-            role: "Admin",
-            ip: "—",
-            details: `Deleted invoice ${id}`,
-          });
+            type: 'billing',
+            action: 'Invoice deleted',
+            user: 'Admin',
+            role: 'Admin',
+            ip: '—',
+            details:
+              `Deleted invoice ${id}`
+          })
+
         } catch (error) {
-          handleApiError(error);
-          throw error;
+          handleApiError(error)
+          throw error
         }
       },
 
-      generateInvoiceForOrder: (orderId) => {
-        const order = get().orders.find((o) => o.id === orderId);
+      generateInvoiceForOrder: (
+        orderId
+      ) => {
+        const order =
+          get().orders.find(
+            o => o.id === orderId
+          )
 
-        if (!order) return;
+        if (!order) return
 
-        const existing = get().invoices.find((i) => i.order === orderId);
+        const existing =
+          get().invoices.find(
+            i => i.order === orderId
+          )
 
         if (existing) {
-          toast.error("Invoice already exists for this order");
-          return;
+          toast.error(
+            'Invoice already exists for this order'
+          )
+          return
         }
 
-        const gst = Math.round(order.total * 0.03);
+        const gst =
+          Math.round(
+            order.total * 0.03
+          )
 
         get().addInvoice({
           order: orderId,
@@ -1204,169 +1325,130 @@ export const useAdminStore = create<AdminStore>()(
           phone: order.phone,
           amount: order.total,
           gst,
-          total: order.total + gst,
-          status: "pending",
-          date: new Date().toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          }),
-          due: new Date(Date.now() + 10 * 86400000).toLocaleDateString(
-            "en-IN",
-            {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            },
-          ),
-        });
+          total:
+            order.total + gst,
+          status: 'pending',
+          date:
+            new Date().toLocaleDateString(
+              'en-IN',
+              {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+              }
+            ),
+          due:
+            new Date(
+              Date.now() +
+              10 * 86400000
+            ).toLocaleDateString(
+              'en-IN',
+              {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+              }
+            )
+        })
       },
 
       sendInvoiceEmail: async (id) => {
         try {
-          await invoiceApi.resendWhatsApp(id);
+          await invoiceApi.resendWhatsApp(
+            id
+          )
 
           get().addLog({
-            type: "billing",
-            action: "Invoice emailed",
-            user: "Admin",
-            role: "Admin",
-            ip: "—",
-            details: `${id} sent to customer`,
-          });
+            type: 'billing',
+            action: 'Invoice emailed',
+            user: 'Admin',
+            role: 'Admin',
+            ip: '—',
+            details:
+              `${id} sent to customer`
+          })
 
-          toast.success(`Invoice emailed to customer`);
+          toast.success(
+            `Invoice emailed to customer`
+          )
         } catch (error) {
-          handleApiError(error);
+          handleApiError(error)
         }
       },
 
-      exportInvoicePDF: (id) => {
-        const inv = get().invoices.find((i) => i.id === id);
-        if (!inv) return;
+     exportInvoicePDF: (id) => {
+        const inv = get().invoices.find(i => i.id === id)
+        if (!inv) return
 
         // Multi-item breakdown. Falls back to a single synthesized line
         // from the legacy flat fields for invoices created before
         // multi-item support existed.
-        const lineItems =
-          inv.items && inv.items.length > 0
-            ? inv.items
-            : [
-                {
-                  metalType: (inv.metal as "Gold" | "Silver") || "Gold",
-                  category: inv.category || "Jewellery Item",
-                  subCategory: "",
-                  purity: inv.purity || "",
-                  netWeight: inv.netWeight || "0",
-                  goldRate: inv.goldRate || 0,
-                  makingCharges: inv.makingCharges || 0,
-                  price: inv.price || 0,
-                },
-              ];
+        const lineItems = (inv.items && inv.items.length > 0) ? inv.items : [{
+          metalType: (inv.metal as 'Gold' | 'Silver') || 'Gold',
+          category: inv.category || 'Jewellery Item',
+          subCategory: '',
+          huid: inv.hallmarkId || '',
+          purity: inv.purity || '',
+          netWeight: inv.netWeight || '0',
+          goldRate: inv.goldRate || 0,
+          makingCharges: inv.makingCharges || 0,
+          price: inv.price || 0,
+        }]
 
-        // Recompute every line from scratch — same fix as the
-        // create-invoice form — so making charges are folded into each
-        // item's subtotal BEFORE GST, then all items are summed for the
-        // invoice-level subtotal/GST/total.
-        const computedLines = lineItems.map((item) => {
-          const netWeight = parseFloat(item.netWeight || "0") || 0;
-          const goldRate = item.goldRate || 0;
-          const makingChargesPct = item.makingCharges || 0;
-          const lineBase = Math.round(netWeight * goldRate);
-          const makingAmt = Math.round((lineBase * makingChargesPct) / 100);
-          const additional = item.price || 0;
-          const lineSubtotal = lineBase + makingAmt + additional;
+        // Same single calculation used by the billing table, preview,
+        // dashboard and the create form — the bill can never disagree with them.
+        const calc = isCalculable(lineItems)
+          ? calcInvoice(lineItems, inv.discount, inv.amountPaid)
+          : null
+        const computedLines = lineItems.map((item, i) => {
+          const l = calcLine(item)
           return {
             ...item,
-            netWeight,
-            goldRate,
-            makingChargesPct,
-            additional,
-            lineSubtotal,
-          };
-        });
-
-        const subtotal = computedLines.reduce(
-          (sum, l) => sum + l.lineSubtotal,
-          0,
-        );
-        const totalNetWeight = computedLines.reduce(
-          (sum, l) => sum + l.netWeight,
-          0,
-        );
-        const gst = Math.round(subtotal * 0.03);
-        const cgst = Math.round(gst / 2);
-        const sgst = gst - cgst;
-        const discount = inv.discount || 0;
-        const total = Math.max(subtotal + gst - discount, 0);
-        const amountPaid = inv.amountPaid || 0;
-        const balanceDue = Math.max(total - amountPaid, 0);
+            netWeight: num(item.netWeight),
+            goldRate: num(item.goldRate),
+            makingChargesPct: num(item.makingCharges),
+            additional: l.extra,
+            lineSubtotal: l.subtotal,
+          }
+        })
+        // Legacy invoices without weight/rate keep their stored totals.
+        const subtotal = calc ? calc.subtotal : inv.amount
+        const totalNetWeight = computedLines.reduce((sum, l) => sum + l.netWeight, 0)
+        const gst = calc ? calc.gst : inv.gst
+        const cgst = calc ? calc.cgst : (inv.cgst ?? Math.round(inv.gst / 2))
+        const sgst = calc ? calc.sgst : (inv.sgst ?? (inv.gst - Math.round(inv.gst / 2)))
+        const discount = calc ? calc.discount : (inv.discount || 0)
+        const total = calc ? calc.total : inv.total
+        const amountPaid = inv.amountPaid || 0
+        const balanceDue = Math.max(total - amountPaid, 0)
 
         // Converts a rupee amount to words, Indian numbering (lakh/crore),
         // matching the "Rs: ... Rupees Only" line on a traditional invoice.
         const numberToWords = (num: number): string => {
-          const a = [
-            "",
-            "One",
-            "Two",
-            "Three",
-            "Four",
-            "Five",
-            "Six",
-            "Seven",
-            "Eight",
-            "Nine",
-            "Ten",
-            "Eleven",
-            "Twelve",
-            "Thirteen",
-            "Fourteen",
-            "Fifteen",
-            "Sixteen",
-            "Seventeen",
-            "Eighteen",
-            "Nineteen",
-          ];
-          const b = [
-            "",
-            "",
-            "Twenty",
-            "Thirty",
-            "Forty",
-            "Fifty",
-            "Sixty",
-            "Seventy",
-            "Eighty",
-            "Ninety",
-          ];
+          const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+            'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
+          const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
           const twoDigits = (n: number): string => {
-            if (n < 20) return a[n];
-            return b[Math.floor(n / 10)] + (n % 10 ? " " + a[n % 10] : "");
-          };
+            if (n < 20) return a[n]
+            return b[Math.floor(n / 10)] + (n % 10 ? ' ' + a[n % 10] : '')
+          }
           const threeDigits = (n: number): string => {
-            if (n < 100) return twoDigits(n);
-            return (
-              a[Math.floor(n / 100)] +
-              " Hundred" +
-              (n % 100 ? " " + twoDigits(n % 100) : "")
-            );
-          };
-          if (num === 0) return "Zero";
-          let n = Math.round(num);
-          const crore = Math.floor(n / 10000000);
-          n %= 10000000;
-          const lakh = Math.floor(n / 100000);
-          n %= 100000;
-          const thousand = Math.floor(n / 1000);
-          n %= 1000;
-          const hundred = n;
-          let words = "";
-          if (crore) words += threeDigits(crore) + " Crore ";
-          if (lakh) words += threeDigits(lakh) + " Lakh ";
-          if (thousand) words += threeDigits(thousand) + " Thousand ";
-          if (hundred) words += threeDigits(hundred);
-          return words.trim();
-        };
+            if (n < 100) return twoDigits(n)
+            return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + twoDigits(n % 100) : '')
+          }
+          if (num === 0) return 'Zero'
+          let n = Math.round(num)
+          const crore = Math.floor(n / 10000000); n %= 10000000
+          const lakh = Math.floor(n / 100000); n %= 100000
+          const thousand = Math.floor(n / 1000); n %= 1000
+          const hundred = n
+          let words = ''
+          if (crore) words += threeDigits(crore) + ' Crore '
+          if (lakh) words += threeDigits(lakh) + ' Lakh '
+          if (thousand) words += threeDigits(thousand) + ' Thousand '
+          if (hundred) words += threeDigits(hundred)
+          return words.trim()
+        }
 
         const html = `<!DOCTYPE html>
 <html>
@@ -1431,8 +1513,8 @@ export const useAdminStore = create<AdminStore>()(
     <div class="meta-row">
       <div class="meta-col">
         <div><span class="meta-label">Name</span>${inv.customer}</div>
-        <div><span class="meta-label">Mobile No</span>${inv.phone || "—"}</div>
-        <div><span class="meta-label">Email</span>${inv.email || "—"}</div>
+        <div><span class="meta-label">Mobile No</span>${inv.phone || '—'}</div>
+        <div><span class="meta-label">Email</span>${inv.email || '—'}</div>
       </div>
       <div class="meta-col right">
         <div><span class="meta-label">GSTIN No.</span>27AESPU9905N1ZA</div>
@@ -1459,31 +1541,27 @@ export const useAdminStore = create<AdminStore>()(
         </tr>
       </thead>
       <tbody>
-        ${computedLines
-          .map(
-            (l) => `
+        ${computedLines.map(l => `
         <tr>
           <td>71131900</td>
-          <td class="particulars">${l.category}${l.subCategory ? ` - ${l.subCategory}` : ""} (${l.metalType})</td>
-          <td>${inv.hallmarkId || "—"}</td>
-          <td>${l.purity || "—"}</td>
+          <td class="particulars">${l.category}${l.subCategory ? ` - ${l.subCategory}` : ''} (${l.metalType})</td>
+          <td>${l.huid || '—'}</td>
+          <td>${l.purity || '—'}</td>
           <td>1</td>
-          <td>${l.netWeight || "—"}</td>
-          <td>${l.netWeight || "—"}</td>
-          <td>${l.goldRate ? l.goldRate.toLocaleString("en-IN") : "—"}</td>
-          <td>${l.makingChargesPct ? `${l.makingChargesPct}%` : "—"}</td>
-          <td>${l.additional ? l.additional.toLocaleString("en-IN") : "0.00"}</td>
-          <td>${l.lineSubtotal.toLocaleString("en-IN")}.00</td>
-        </tr>`,
-          )
-          .join("")}
+          <td>${l.netWeight || '—'}</td>
+          <td>${l.netWeight || '—'}</td>
+          <td>${l.goldRate ? l.goldRate.toLocaleString('en-IN') : '—'}</td>
+          <td>${l.makingChargesPct ? `${l.makingChargesPct}%` : '—'}</td>
+          <td>${l.additional ? l.additional.toLocaleString('en-IN') : '0.00'}</td>
+          <td>${l.lineSubtotal.toLocaleString('en-IN')}.00</td>
+        </tr>`).join('')}
       </tbody>
       <tfoot>
         <tr>
           <td colspan="5"></td>
-          <td>${totalNetWeight || "—"}</td>
-          <td>${totalNetWeight || "—"}</td>
-          <td colspan="4">Subtotal: ${subtotal.toLocaleString("en-IN")}.00</td>
+          <td>${totalNetWeight || '—'}</td>
+          <td>${totalNetWeight || '—'}</td>
+          <td colspan="4">Subtotal: ${subtotal.toLocaleString('en-IN')}.00</td>
         </tr>
       </tfoot>
     </table>
@@ -1491,8 +1569,8 @@ export const useAdminStore = create<AdminStore>()(
     <div class="bottom-section">
       <div class="words-col">
         <div style="margin-bottom:8px;"><strong>Rs:</strong> ${numberToWords(total)} Rupees Only</div>
-        <div style="color:#555;">Narration: By ${amountPaid > 0 ? "Cash/UPI" : "Pending"}</div>
-        ${inv.hallmarkId ? `<div style="margin-top:8px;color:#4338CA;font-weight:700;">BIS Hallmark: ${inv.hallmarkId}</div>` : ""}
+        <div style="color:#555;">Narration: By ${amountPaid > 0 ? 'Cash/UPI' : 'Pending'}</div>
+        ${computedLines.some(l => l.huid) ? `<div style="margin-top:8px;color:#4338CA;font-weight:700;">HUID: ${computedLines.filter(l => l.huid).map(l => l.huid).join(', ')}</div>` : ''}
         <div style="margin-top:10px;font-size:10.5px;color:#444;line-height:1.6;">
           <strong>NOTE:</strong><br>
           916 EXCHANGE 100% 916 RETURNS 916<br>
@@ -1502,13 +1580,13 @@ export const useAdminStore = create<AdminStore>()(
       </div>
       <div class="totals-col">
         <table>
-          <tr><td class="label">ADD CGST 1.5%</td><td class="val">${cgst.toLocaleString("en-IN")}.00</td></tr>
-          <tr><td class="label">ADD SGST 1.5%</td><td class="val">${sgst.toLocaleString("en-IN")}.00</td></tr>
-          <tr><td class="label">Less Discount</td><td class="val" style="color:${discount > 0 ? "#DC2626" : "#333"};">${discount > 0 ? "-" + discount.toLocaleString("en-IN") + ".00" : "0.00"}</td></tr>
+          <tr><td class="label">ADD CGST 1.5%</td><td class="val">${cgst.toLocaleString('en-IN')}.00</td></tr>
+          <tr><td class="label">ADD SGST 1.5%</td><td class="val">${sgst.toLocaleString('en-IN')}.00</td></tr>
+          <tr><td class="label">Less Discount</td><td class="val" style="color:${discount > 0 ? '#DC2626' : '#333'};">${discount > 0 ? '-' + discount.toLocaleString('en-IN') + '.00' : '0.00'}</td></tr>
           <tr><td class="label">Less URD</td><td class="val"></td></tr>
-          <tr><td class="label">Amount Paid</td><td class="val" style="color:#059669;">${amountPaid.toLocaleString("en-IN")}.00</td></tr>
-          <tr><td class="label">Balance Due</td><td class="val" style="color:${balanceDue > 0 ? "#DC2626" : "#059669"};">${balanceDue.toLocaleString("en-IN")}.00</td></tr>
-          <tr class="net-payable"><td>Net Payable</td><td class="val">₹${total.toLocaleString("en-IN")}.00</td></tr>
+          <tr><td class="label">Amount Paid</td><td class="val" style="color:#059669;">${amountPaid.toLocaleString('en-IN')}.00</td></tr>
+          <tr><td class="label">Balance Due</td><td class="val" style="color:${balanceDue > 0 ? '#DC2626' : '#059669'};">${balanceDue.toLocaleString('en-IN')}.00</td></tr>
+          <tr class="net-payable"><td>Net Payable</td><td class="val">₹${total.toLocaleString('en-IN')}.00</td></tr>
         </table>
       </div>
     </div>
@@ -1525,224 +1603,344 @@ export const useAdminStore = create<AdminStore>()(
     };
   </script>
 </body>
-</html>`;
+</html>`
 
-        const w = window.open("", "_blank");
+        const w = window.open('', '_blank')
         if (w) {
-          w.document.write(html);
-          w.document.close();
+          w.document.write(html)
+          w.document.close()
         }
 
-        toast.success(`Invoice ${inv.id} ready for print`);
+        toast.success(`Invoice ${inv.id} ready for print`)
       },
 
       // ── Inventory ──────────────────────────────────────────────────────
       addInventoryItem: (itemData) => {
         const newItem: InventoryItem = {
           ...itemData,
-          id: `INV-${String(Date.now()).slice(-3)}`,
-          lastUpdated: "just now",
-        };
+          id: `INV-${String(
+            Date.now()
+          ).slice(-3)}`,
+          lastUpdated: 'just now'
+        }
 
-        set((s) => ({
-          inventory: [newItem, ...s.inventory],
-        }));
+        set(s => ({
+          inventory: [
+            newItem,
+            ...s.inventory
+          ]
+        }))
 
-        toast.success(`"${newItem.name}" added to inventory`);
+        toast.success(
+          `"${newItem.name}" added to inventory`
+        )
       },
 
-      updateInventoryItem: (id, data) => {
-        set((s) => ({
-          inventory: s.inventory.map((i) =>
-            i.id === id
-              ? {
-                  ...i,
-                  ...data,
-                  lastUpdated: "just now",
-                }
-              : i,
-          ),
-        }));
+      updateInventoryItem: (
+        id,
+        data
+      ) => {
+        set(s => ({
+          inventory:
+            s.inventory.map(i =>
+              i.id === id
+                ? {
+                    ...i,
+                    ...data,
+                    lastUpdated: 'just now'
+                  }
+                : i
+            )
+        }))
 
-        toast.success("Inventory updated");
+        toast.success(
+          'Inventory updated'
+        )
       },
 
-      deleteInventoryItem: (id) => {
-        const item = get().inventory.find((i) => i.id === id);
+      deleteInventoryItem: (
+        id
+      ) => {
+        const item =
+          get().inventory.find(
+            i => i.id === id
+          )
 
-        set((s) => ({
-          inventory: s.inventory.filter((i) => i.id !== id),
-        }));
+        set(s => ({
+          inventory:
+            s.inventory.filter(
+              i => i.id !== id
+            )
+        }))
 
-        toast.success(`"${item?.name}" removed`);
+        toast.success(
+          `"${item?.name}" removed`
+        )
       },
 
       // ── Customers ──────────────────────────────────────────────────────
       fetchCustomers: async () => {
         try {
-          set((s) => ({
+          set(s => ({
             loading: {
               ...s.loading,
-              customers: true,
-            },
-          }));
+              customers: true
+            }
+          }))
 
-          const customersResponse = await customerApi.getAll();
+          const customersResponse =
+            await customerApi.getAll()
 
-          const frontendCustomers: Customer[] = (
-            customersResponse?.customers || []
-          ).map((customer: any) => ({
-            id: customer.id || customer._id || "",
+          const frontendCustomers:
+            Customer[] =
+            (
+              customersResponse?.customers ||
+              []
+            ).map(
+              (customer: any) => ({
+                id:
+                  customer.id ||
+                  customer._id ||
+                  '',
 
-            name: customer.name || "Unknown Customer",
+                name:
+                  customer.name ||
+                  'Unknown Customer',
 
-            phone: customer.phone || "",
+                phone:
+                  customer.phone ||
+                  '',
 
-            email: customer.email || "",
+                email:
+                  customer.email ||
+                  '',
 
-            city: customer.city || "",
+                city:
+                  customer.city ||
+                  '',
 
-            totalSpend: customer.totalSpend || 0,
+                totalSpend:
+                  customer.totalSpend ||
+                  0,
 
-            orders: customer.orders || 0,
+                orders:
+                  customer.orders ||
+                  0,
 
-            tier: (customer.segment?.toLowerCase() || "bronze") as CustomerTier,
+                tier: (
+                  customer.segment?.toLowerCase() ||
+                  'bronze'
+                ) as CustomerTier,
 
-            lastVisit: customer.updatedAt
-              ? new Date(customer.updatedAt).toLocaleDateString("en-IN")
-              : "Not Available",
+                lastVisit:
+                  customer.updatedAt
+                    ? new Date(
+                        customer.updatedAt
+                      ).toLocaleDateString(
+                        'en-IN'
+                      )
+                    : 'Not Available',
 
-            birthday: customer.birthday
-              ? new Date(customer.birthday).toLocaleDateString("en-IN")
-              : "Not Available",
+                birthday:
+                  customer.birthday
+                    ? new Date(
+                        customer.birthday
+                      ).toLocaleDateString(
+                        'en-IN'
+                      )
+                    : 'Not Available',
 
-            tags: customer.tags || [],
-          }));
+                tags:
+                  customer.tags ||
+                  []
+              })
+            )
 
-          set((s) => ({
-            customers: frontendCustomers,
+          set(s => ({
+            customers:
+              frontendCustomers,
 
             loading: {
               ...s.loading,
-              customers: false,
-            },
-          }));
+              customers: false
+            }
+          }))
         } catch (error) {
-          console.error(error);
+          console.error(error)
 
-          set((s) => ({
+          set(s => ({
             loading: {
               ...s.loading,
-              customers: false,
-            },
-          }));
+              customers: false
+            }
+          }))
         }
       },
 
-      addCustomer: (customerData) => {
-        const newCustomer: Customer = {
-          ...customerData,
-          id: `CRM-${String(Date.now()).slice(-3)}`,
-        };
+      addCustomer: (
+        customerData
+      ) => {
+        const newCustomer:
+          Customer = {
+            ...customerData,
+            id: `CRM-${String(
+              Date.now()
+            ).slice(-3)}`
+          }
 
-        set((s) => ({
-          customers: [newCustomer, ...s.customers],
-        }));
+        set(s => ({
+          customers: [
+            newCustomer,
+            ...s.customers
+          ]
+        }))
 
-        toast.success(`Customer "${newCustomer.name}" added`);
+        toast.success(
+          `Customer "${newCustomer.name}" added`
+        )
       },
 
-      updateCustomer: (id, data) => {
-        set((s) => ({
-          customers: s.customers.map((c) =>
-            c.id === id
-              ? {
-                  ...c,
-                  ...data,
-                }
-              : c,
-          ),
-        }));
+      updateCustomer: (
+        id,
+        data
+      ) => {
+        set(s => ({
+          customers:
+            s.customers.map(c =>
+              c.id === id
+                ? {
+                    ...c,
+                    ...data
+                  }
+                : c
+            )
+        }))
 
-        toast.success("Customer updated");
+        toast.success(
+          'Customer updated'
+        )
       },
 
-      deleteCustomer: async (id) => {
+      deleteCustomer: async (
+        id
+      ) => {
         try {
-          await customerApi.delete(id);
+          await customerApi.delete(id)
 
-          const c = get().customers.find((c) => c.id === id);
+          const c =
+            get().customers.find(
+              c => c.id === id
+            )
 
-          set((s) => ({
-            customers: s.customers.filter((c) => c.id !== id),
-          }));
+          set(s => ({
+            customers:
+              s.customers.filter(
+                c => c.id !== id
+              )
+          }))
 
-          toast.success(`Customer "${c?.name}" deleted`);
+          toast.success(
+            `Customer "${c?.name}" deleted`
+          )
         } catch (error) {
-          handleApiError(error);
+          handleApiError(error)
         }
       },
 
-      addCustomerTag: (id, tag) => {
-        set((s) => ({
-          customers: s.customers.map((c) =>
-            c.id === id
-              ? {
-                  ...c,
-                  tags: [...new Set([...c.tags, tag])],
-                }
-              : c,
-          ),
-        }));
+      addCustomerTag: (
+        id,
+        tag
+      ) => {
+        set(s => ({
+          customers:
+            s.customers.map(c =>
+              c.id === id
+                ? {
+                    ...c,
+                    tags: [
+                      ...new Set([
+                        ...c.tags,
+                        tag
+                      ])
+                    ]
+                  }
+                : c
+            )
+        }))
 
-        toast.success(`Tag "${tag}" added`);
+        toast.success(
+          `Tag "${tag}" added`
+        )
       },
 
-      removeCustomerTag: (id, tag) => {
-        set((s) => ({
-          customers: s.customers.map((c) =>
-            c.id === id
-              ? {
-                  ...c,
-                  tags: c.tags.filter((t) => t !== tag),
-                }
-              : c,
-          ),
-        }));
+      removeCustomerTag: (
+        id,
+        tag
+      ) => {
+        set(s => ({
+          customers:
+            s.customers.map(c =>
+              c.id === id
+                ? {
+                    ...c,
+                    tags:
+                      c.tags.filter(
+                        t => t !== tag
+                      )
+                  }
+                : c
+            )
+        }))
       },
 
       // ── Gold Rates ─────────────────────────────────────────────────────
-      updateGoldRates: (rates) => {
+      updateGoldRates: (
+        rates
+      ) => {
         set({
-          goldRates: rates,
-        });
+          goldRates: rates
+        })
 
-        toast.success("Gold rates updated");
+        toast.success(
+          'Gold rates updated'
+        )
       },
 
       // ── Settings ──────────────────────────────────────────────────────
-      setCurrentRole: (role) =>
+      setCurrentRole: (
+        role
+      ) =>
         set({
-          currentRole: role,
+          currentRole: role
         }),
 
       // ── Audit Log ─────────────────────────────────────────────────────
-      addLog: (logData) => {
-        const newLog: AuditLog = {
-          ...logData,
-          id: Date.now(),
-          time: new Date().toLocaleString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        };
+      addLog: (
+        logData
+      ) => {
+        const newLog:
+          AuditLog = {
+            ...logData,
+            id: Date.now(),
+            time:
+              new Date().toLocaleString(
+                'en-IN',
+                {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }
+              )
+          }
 
-        set((s) => ({
-          auditLogs: [newLog, ...s.auditLogs],
-        }));
+        set(s => ({
+          auditLogs: [
+            newLog,
+            ...s.auditLogs
+          ]
+        }))
       },
 
       // ── Reset Store ───────────────────────────────────────────────────
@@ -1755,85 +1953,106 @@ export const useAdminStore = create<AdminStore>()(
           customers: [],
           auditLogs: [],
           goldRates: {
-            "24K": "14525",
-            "22K": "13314",
-            "18K": "10893",
-            "14K": "8349",
+            '24K': '14525',
+            '22K': '13314',
+            '18K': '10893',
+            '14K': '8349'
           },
-          currentRole: "super_admin",
+          currentRole:
+            'super_admin',
 
           loading: {
             invoices: false,
             orders: false,
-            customers: false,
-          },
-        });
+            customers: false
+          }
+        })
 
-        toast.success("Dashboard reset successfully");
+        toast.success(
+          'Dashboard reset successfully'
+        )
       },
 
       // ── Clear Data ─────────────────────────────────────────────────────
       clearAllBillingData: async () => {
         try {
-          await adminApi.clearBillingData();
+          await adminApi.clearBillingData()
 
           set({
             orders: [],
             invoices: [],
             customers: [],
-            auditLogs: initialLogs.slice(0, 3),
-          });
+            auditLogs:
+              initialLogs.slice(0, 3)
+          })
 
           get().addLog({
-            type: "settings",
-            action: "Billing data cleared",
-            user: "Admin",
-            role: "Admin",
-            ip: "—",
-            details: "All orders, invoices, and customers cleared globally",
-          });
+            type: 'settings',
+            action:
+              'Billing data cleared',
+            user: 'Admin',
+            role: 'Admin',
+            ip: '—',
+            details:
+              'All orders, invoices, and customers cleared globally'
+          })
 
-          toast.success("All billing data cleared globally");
+          toast.success(
+            'All billing data cleared globally'
+          )
         } catch (error) {
-          handleApiError(error);
+          handleApiError(error)
         }
-      },
+      }
     }),
 
     {
-      name: "ratan-admin-store",
+      name: 'ratan-admin-store',
 
       version: 2,
 
-      migrate: (persistedState, version) => {
-        const state = persistedState as
-          | {
-              products?: Product[];
-            }
-          | undefined;
+      migrate: (
+        persistedState,
+        version
+      ) => {
+        const state =
+          persistedState as {
+            products?: Product[]
+          } | undefined
 
-        if (!state) return persistedState;
+        if (!state)
+          return persistedState
 
         if (version < 2) {
-          state.products = [];
+          state.products = []
         }
 
-        return state;
+        return state
       },
 
-      onRehydrateStorage: () => (state) => {
-        if (!state?.products?.length) return;
+      onRehydrateStorage:
+        () => state => {
+          if (
+            !state?.products?.length
+          )
+            return
 
-        const cleaned = stripSeedProducts(state.products);
+          const cleaned =
+            stripSeedProducts(
+              state.products
+            )
 
-        if (cleaned.length !== state.products.length) {
-          useAdminStore.setState({
-            products: cleaned,
-          });
-        }
-      },
+          if (
+            cleaned.length !==
+            state.products.length
+          ) {
+            useAdminStore.setState({
+              products: cleaned
+            })
+          }
+        },
 
-      partialize: (s) => ({
+      partialize: s => ({
         users: s.users,
         products: s.products,
         orders: s.orders,
@@ -1842,8 +2061,9 @@ export const useAdminStore = create<AdminStore>()(
         customers: s.customers,
         auditLogs: s.auditLogs,
         goldRates: s.goldRates,
-        currentRole: s.currentRole,
-      }),
-    },
-  ),
-);
+        currentRole:
+          s.currentRole
+      })
+    }
+  )
+)

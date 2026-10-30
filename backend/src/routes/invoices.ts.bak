@@ -1,0 +1,13 @@
+import { Router } from 'express';
+import { createInvoice, getInvoices, getInvoiceById, updateInvoice, deleteInvoice, resendWhatsApp, getGSTSummary } from '../controllers/invoiceController';
+import { authenticate, authorize } from '../middleware/auth';
+const router = Router();
+router.use(authenticate);
+router.get('/', getInvoices);
+router.post('/', authorize('ADMIN','SUPER_ADMIN','STORE_MANAGER','SALES_STAFF'), createInvoice);
+router.get('/gst-summary', authorize('ADMIN','SUPER_ADMIN','STORE_MANAGER'), getGSTSummary);
+router.get('/:id', getInvoiceById);
+router.put('/:id', authorize('ADMIN','SUPER_ADMIN','STORE_MANAGER'), updateInvoice);
+router.delete('/:id', authorize('ADMIN','SUPER_ADMIN','STORE_MANAGER'), deleteInvoice);
+router.post('/:id/resend-whatsapp', resendWhatsApp);
+export default router;

@@ -5,6 +5,7 @@ import { useAdminStore, Invoice, InvoiceStatus, InvoiceLineItem } from '@/store/
 import { calcInvoice, calcLine, isCalculable, summarizeItems, num, cleanDecimal, cleanHuid } from '@/lib/invoiceCalc'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
+import RecordPaymentModal, { PaymentHistory } from '@/components/billing/RecordPaymentModal'
 
 const statusConfig: Record<InvoiceStatus,{label:string;color:string}> = {
   paid:{label:'Paid',color:'bg-green-50 text-green-600'},
@@ -106,6 +107,7 @@ export default function BillingPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus|'all'>('all')
   const [previewInvoice, setPreviewInvoice] = useState<Invoice|null>(null)
+  const [paymentInvoice, setPaymentInvoice] = useState<Invoice|null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [deleteInvoiceId, setDeleteInvoiceId] = useState<string|null>(null)
@@ -509,7 +511,7 @@ export default function BillingPage() {
                     <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{inv.due}</td>
                     <td className="px-5 py-4">
                       {canFull ? (
-                        <select value={inv.status} onChange={e=>updateInvoiceStatus(inv.id,e.target.value as InvoiceStatus)} className={`text-xs font-semibold px-2.5 py-1 rounded-full border-0 outline-none cursor-pointer ${cfg.color}`}>
+                        <select value={inv.status} onChange={e=>{ const v=e.target.value as InvoiceStatus; if(v==='paid' && Math.max(inv.total-(inv.amountPaid||0),0)>0){ if(canShare) setPaymentInvoice(inv); else toast.error('Balance is still due - record the payment first') } else { updateInvoiceStatus(inv.id,v) } }} className={`text-xs font-semibold px-2.5 py-1 rounded-full border-0 outline-none cursor-pointer ${cfg.color}`}>
                           {(Object.keys(statusConfig) as InvoiceStatus[]).map(s=><option key={s} value={s}>{statusConfig[s].label}</option>)}
                         </select>
                       ) : (
@@ -518,6 +520,7 @@ export default function BillingPage() {
                     </td>
                     <td className="px-5 py-4"><div className="flex gap-1">
                       <button onClick={()=>setPreviewInvoice(inv)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-800" title="Preview"><Eye size={13}/></button>
+                      {canShare && Math.max(inv.total-(inv.amountPaid||0),0)>0 && <button onClick={()=>setPaymentInvoice(inv)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-teal-600" title="Record Payment"><Wallet size={13}/></button>}
                       {canShare && <button onClick={()=>openEmailModal(inv)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-blue-600" title="Send Email"><Send size={13}/></button>}
                       {canShare && <button onClick={()=>shareInvoiceWhatsApp(inv)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-green-600" title="Share via WhatsApp"><MessageCircle size={13}/></button>}
                       {canFull && <button onClick={()=>exportInvoicePDF(inv.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-800" title="Download PDF"><Download size={13}/></button>}
@@ -632,6 +635,8 @@ export default function BillingPage() {
                   </div>
                 )
               })()}
+              <PaymentHistory invoice={previewInvoice} />
+              {canShare && Math.max(previewInvoice.total-(previewInvoice.amountPaid||0),0)>0 && <button onClick={()=>setPaymentInvoice(previewInvoice)} className="w-full mb-2 flex items-center justify-center gap-1.5 bg-teal-600 text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-teal-700"><Wallet size={14}/>Record Payment</button>}
               <div className="flex flex-col gap-2">
                 <div className="flex gap-2">
                   {canShare && <button onClick={()=>openEmailModal(previewInvoice)} className="flex-1 flex items-center justify-center gap-1.5 border border-gray-200 rounded-xl py-2.5 text-xs text-gray-600 hover:bg-gray-50"><Send size={13}/>Send Email</button>}
@@ -865,6 +870,8 @@ export default function BillingPage() {
           </div>
         </div>
       )}
+
+      {paymentInvoice && <RecordPaymentModal invoice={paymentInvoice} onClose={()=>setPaymentInvoice(null)} onPaid={(u)=>setPreviewInvoice(p=>p && p.id===u.id ? u : p)} />}
 
       {/* Delete Invoice Confirmation Modal */}
       {deleteInvoiceId && (
