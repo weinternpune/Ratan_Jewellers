@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { api } from '@/lib/api'
 import { handleApiError } from '@/lib/billingApi'
 import { useAdminStore, Invoice, InvoiceStatus } from '@/store/adminStore'
+import { isPaymentRouteMissing, buildLegacyPaymentBody } from '@/lib/paymentFallback'
 
 const MODES = ['Cash', 'UPI', 'Card', 'Bank Transfer', 'Cheque']
 const rs = (n: number) => `₹${n.toLocaleString('en-IN')}`
@@ -66,10 +67,22 @@ export default function RecordPaymentModal({
     if (!valid || saving) return
     setSaving(true)
     try {
-      const res = await api.post<any>(`/invoices/${encodeURIComponent(invoice.id)}/payments`, { amount: n, mode, date, notes: notes.trim() })
-      const u = res.data
       // always build on the newest copy in the store, not the (possibly older) one this window was opened with
       const latest = useAdminStore.getState().invoices.find(i => i.id === invoice.id) || invoice
+      let u: any
+      try {
+        const res = await api.post<any>(`/invoices/${encodeURIComponent(invoice.id)}/payments`, { amount: n, mode, date, notes: notes.trim() })
+        u = res.data
+      } catch (err: any) {
+        // The live server does not have the new payment route yet -> save through the older update route instead.
+        if (!isPaymentRouteMissing(err)) throw err
+        u = await api.put<any>(
+          `/invoices/${encodeURIComponent(invoice.id)}`,
+          buildLegacyPaymentBody({
+            total: latest.total, paidBefore: latest.amountPaid || 0, amount: n, mode, notes, date, today: todayISO(), status: latest.status,
+          })
+        )
+      }
       const newPaid = typeof u?.amountPaid === 'number' ? u.amountPaid : paid + n
       const updated: Invoice = {
         ...latest,

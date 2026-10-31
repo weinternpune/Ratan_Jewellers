@@ -166,6 +166,9 @@ export default function BillingPage() {
     const sgst = calc ? calc.sgst : (inv.sgst ?? (inv.gst - Math.round(inv.gst / 2)))
     const discount = calc ? calc.discount : (inv.discount || 0)
     const total = calc ? calc.total : inv.total
+    // Total BEFORE discount (subtotal + GST). Discount is deducted from this,
+    // and the Grand Total is shown last.
+    const totalBeforeDiscount = total + discount
 
     const paid = inv.amountPaid || 0
     const balance = Math.max(total - paid, 0)
@@ -225,11 +228,13 @@ export default function BillingPage() {
         </tr>`).join('')}
       </table>
       <table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px;">
-        <tr style="border-top:1px solid #f3f4f6;"><td style="padding-top:8px;font-size:11px;color:#6b7280;">CGST @ 1.5%</td><td style="padding-top:8px;text-align:right;font-size:11px;color:#6b7280;">₹${cgst.toLocaleString('en-IN')}</td></tr>
-        <tr><td style="font-size:11px;color:#6b7280;">SGST @ 1.5%</td><td style="text-align:right;font-size:11px;color:#6b7280;">₹${sgst.toLocaleString('en-IN')}</td></tr>
-        <tr><td style="font-size:11px;color:${discount > 0 ? '#dc2626' : '#374151'};">Discount</td><td style="text-align:right;font-size:11px;color:${discount > 0 ? '#dc2626' : '#374151'};">${discount > 0 ? '−₹' + discount.toLocaleString('en-IN') : '0'}</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td style="padding-top:8px;font-size:11px;font-weight:700;color:#374151;">Subtotal (Taxable Amount)</td><td style="padding-top:8px;text-align:right;font-size:11px;font-weight:700;color:#374151;">₹${subtotal.toLocaleString('en-IN')}</td></tr>
+        <tr><td style="padding-top:4px;font-size:11px;color:#6b7280;">CGST @ 1.5%</td><td style="padding-top:4px;text-align:right;font-size:11px;color:#6b7280;">+ ₹${cgst.toLocaleString('en-IN')}</td></tr>
+        <tr><td style="padding-top:4px;font-size:11px;color:#6b7280;">SGST @ 1.5%</td><td style="padding-top:4px;text-align:right;font-size:11px;color:#6b7280;">+ ₹${sgst.toLocaleString('en-IN')}</td></tr>
+        <tr style="border-top:1px solid #e5e7eb;"><td style="padding-top:6px;font-size:12px;font-weight:700;">Total (Subtotal + GST)</td><td style="padding-top:6px;text-align:right;font-size:12px;font-weight:700;">₹${totalBeforeDiscount.toLocaleString('en-IN')}</td></tr>
+        <tr><td style="padding-top:4px;font-size:11px;color:${discount > 0 ? '#dc2626' : '#374151'};">Less: Discount</td><td style="padding-top:4px;text-align:right;font-size:11px;color:${discount > 0 ? '#dc2626' : '#374151'};">${discount > 0 ? '−₹' + discount.toLocaleString('en-IN') : '0'}</td></tr>
         <tr><td style="font-size:11px;color:#6b7280;">Less URD</td><td style="text-align:right;font-size:11px;color:#6b7280;"></td></tr>
-        <tr style="border-top:1px solid #e5e7eb;"><td style="padding-top:8px;font-weight:800;font-size:15px;">Grand Total</td><td style="padding-top:8px;text-align:right;font-weight:800;font-size:15px;">₹${total.toLocaleString('en-IN')}</td></tr>
+        <tr style="border-top:2px solid #111827;"><td style="padding-top:8px;font-weight:800;font-size:15px;">Grand Total</td><td style="padding-top:8px;text-align:right;font-weight:800;font-size:15px;">₹${total.toLocaleString('en-IN')}</td></tr>
       </table>
       <div style="display:flex;gap:10px;">
         <div style="flex:1;background:#ecfdf5;border:1px solid #d1fae5;border-radius:10px;padding:10px 12px;">
@@ -335,6 +340,8 @@ export default function BillingPage() {
   // Nothing is copied into state, so a figure can never be stale or disagree
   // with the bill that is generated from the same function.
   const calc = calcInvoice(form.items, form.discount, form.amountPaid)
+  // Total after adding GST but BEFORE the discount is deducted.
+  const totalBeforeDiscount = calc.total + calc.discount
 
   // Updates one field of one item. Changing `metalType` resets
   // category/subCategory/purity (Gold and Silver lists are unrelated) and
@@ -611,14 +618,17 @@ export default function BillingPage() {
                   </tbody>
                 </table>
               </div>
+              {/* Order: Subtotal → CGST → SGST → Total (before discount) → Discount → Less URD → Grand Total */}
               <table className="w-full text-sm mb-6">
                 <tbody>
-                  <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">CGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.cgst ?? Math.round(previewInvoice.gst/2)).toLocaleString('en-IN')}</td></tr>
-                  <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">SGST @ 1.5%</td><td className="py-3 text-right text-gray-600 text-xs">₹{(previewInvoice.sgst ?? (previewInvoice.gst - Math.round(previewInvoice.gst/2))).toLocaleString('en-IN')}</td></tr>
-                  <tr className="border-b border-gray-50"><td className={`py-3 text-xs font-medium ${(previewInvoice.discount && previewInvoice.discount > 0) ? 'text-red-600' : 'text-gray-500'}`}>Discount</td><td className={`py-3 text-right text-xs font-medium ${(previewInvoice.discount && previewInvoice.discount > 0) ? 'text-red-600' : 'text-gray-500'}`}>{(previewInvoice.discount && previewInvoice.discount > 0) ? `−₹${previewInvoice.discount.toLocaleString('en-IN')}` : '0'}</td></tr>
-                  <tr className="border-b border-gray-50"><td className="py-3 text-gray-500 text-xs">Less URD</td><td className="py-3 text-right text-gray-600 text-xs"></td></tr>
+                  <tr className="border-b border-gray-50"><td className="py-2.5 text-gray-700 text-xs font-semibold">Subtotal (Taxable Amount)</td><td className="py-2.5 text-right text-gray-700 text-xs font-semibold">₹{previewInvoice.amount.toLocaleString('en-IN')}</td></tr>
+                  <tr className="border-b border-gray-50"><td className="py-2.5 text-gray-500 text-xs">CGST @ 1.5%</td><td className="py-2.5 text-right text-gray-600 text-xs">+ ₹{(previewInvoice.cgst ?? Math.round(previewInvoice.gst/2)).toLocaleString('en-IN')}</td></tr>
+                  <tr className="border-b border-gray-50"><td className="py-2.5 text-gray-500 text-xs">SGST @ 1.5%</td><td className="py-2.5 text-right text-gray-600 text-xs">+ ₹{(previewInvoice.sgst ?? (previewInvoice.gst - Math.round(previewInvoice.gst/2))).toLocaleString('en-IN')}</td></tr>
+                  <tr className="border-b border-gray-200 bg-gray-50"><td className="py-2.5 px-1 text-gray-800 text-xs font-bold">Total (Subtotal + GST)</td><td className="py-2.5 px-1 text-right text-gray-800 text-xs font-bold">₹{(previewInvoice.total + (previewInvoice.discount || 0)).toLocaleString('en-IN')}</td></tr>
+                  <tr className="border-b border-gray-50"><td className={`py-2.5 text-xs font-medium ${(previewInvoice.discount && previewInvoice.discount > 0) ? 'text-red-600' : 'text-gray-500'}`}>Less: Discount</td><td className={`py-2.5 text-right text-xs font-medium ${(previewInvoice.discount && previewInvoice.discount > 0) ? 'text-red-600' : 'text-gray-500'}`}>{(previewInvoice.discount && previewInvoice.discount > 0) ? `−₹${previewInvoice.discount.toLocaleString('en-IN')}` : '0'}</td></tr>
+                  <tr className="border-b border-gray-50"><td className="py-2.5 text-gray-500 text-xs">Less URD</td><td className="py-2.5 text-right text-gray-600 text-xs"></td></tr>
                 </tbody>
-                <tfoot><tr><td className="pt-3 font-bold text-gray-900">Grand Total</td><td className="pt-3 text-right font-bold text-gray-900 text-base">₹{previewInvoice.total.toLocaleString('en-IN')}</td></tr></tfoot>
+                <tfoot><tr className="border-t-2 border-gray-900"><td className="pt-3 font-bold text-gray-900">Grand Total</td><td className="pt-3 text-right font-bold text-gray-900 text-base">₹{previewInvoice.total.toLocaleString('en-IN')}</td></tr></tfoot>
               </table>
               {(() => {
                 const paid = previewInvoice.amountPaid || 0
@@ -775,19 +785,17 @@ export default function BillingPage() {
                 </div>
               </div>
 
+              {/* Pricing: discount is no longer here — it is entered inside the
+                  bill summary below, AFTER the total (subtotal + GST) is shown. */}
               <div className="border border-emerald-100 bg-emerald-50/60 rounded-xl p-4">
                 <h3 className="text-sm font-semibold text-emerald-700 mb-3 flex items-center gap-1.5"><Wallet size={14}/>Pricing</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Discount (₹)</label>
-                    <input inputMode="decimal" value={form.discount} onChange={e=>setForm(p=>({...p,discount:cleanDecimal(e.target.value)}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-emerald-400 bg-white" placeholder="Deducted from grand total"/>
-                  </div>
                   <div>
                     <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Less URD (₹)</label>
                     <input inputMode="decimal" value={form.lessURD} onChange={e=>setForm(p=>({...p,lessURD:cleanDecimal(e.target.value)}))} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-emerald-400 bg-white" placeholder="For display only"/>
                     <div className="text-xs text-gray-400 mt-1">Shown on the invoice only — not added to or deducted from any total</div>
                   </div>
-                  <div className="md:col-span-2">
+                  <div>
                     <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Amount (₹) — sum of all items</label>
                     <div className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-gray-50 font-semibold">₹{calc.subtotal.toLocaleString('en-IN')}</div>
                     <div className="text-xs text-gray-500 mt-1">Auto-calculated from every item's weight, rate, making charges & additional price</div>
@@ -795,11 +803,14 @@ export default function BillingPage() {
                 </div>
               </div>
 
+              {/* Bill summary — strict order:
+                  Subtotal → CGST → SGST → Total GST → Total (Subtotal + GST)
+                  → Discount (minus) → Less URD → Grand Total */}
               <div className="bg-amber-50 rounded-xl p-4 space-y-3 border border-amber-100">
-                <div className="text-xs font-semibold text-amber-700 uppercase mb-3">GST Breakdown</div>
+                <div className="text-xs font-semibold text-amber-700 uppercase mb-1">Bill Summary</div>
 
-                <div className="bg-white rounded-lg p-3 mb-3 text-xs space-y-1">
-                  <div className="font-semibold text-gray-700 mb-2">Calculation:</div>
+                <div className="bg-white rounded-lg p-3 text-xs space-y-1">
+                  <div className="font-semibold text-gray-700 mb-2">Step 1 — Items:</div>
                   {form.items.map((item, idx) => (
                     <div key={idx} className="flex justify-between">
                       <span>{item.category || `Item ${idx+1}`}{item.subCategory ? ` - ${item.subCategory}` : ''}:</span>
@@ -807,25 +818,45 @@ export default function BillingPage() {
                     </div>
                   ))}
                   <div className="border-t pt-1 mt-2 flex justify-between font-semibold">
-                    <span>Subtotal:</span>
+                    <span>Subtotal (Taxable Amount):</span>
                     <span>₹{calc.subtotal.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="flex justify-between items-center"><span className="text-gray-600">CGST (1.5%)</span><span className="font-semibold">₹{calc.cgst.toLocaleString('en-IN')}</span></div>
-                  <div className="flex justify-between items-center"><span className="text-gray-600">SGST (1.5%)</span><span className="font-semibold">₹{calc.sgst.toLocaleString('en-IN')}</span></div>
-                  <div className="flex justify-between items-center font-bold border-l border-amber-200 pl-4"><span>Total GST (3%)</span><span>₹{calc.gst.toLocaleString('en-IN')}</span></div>
+                <div className="bg-white rounded-lg p-3 text-sm space-y-2">
+                  <div className="text-xs font-semibold text-gray-700">Step 2 — Add GST:</div>
+                  <div className="flex justify-between items-center"><span className="text-gray-600">CGST (1.5%)</span><span className="font-semibold">+ ₹{calc.cgst.toLocaleString('en-IN')}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-gray-600">SGST (1.5%)</span><span className="font-semibold">+ ₹{calc.sgst.toLocaleString('en-IN')}</span></div>
+                  <div className="flex justify-between items-center border-t border-gray-100 pt-2 text-gray-500 text-xs"><span>Total GST (3%)</span><span>₹{calc.gst.toLocaleString('en-IN')}</span></div>
+                  <div className="flex justify-between items-center border-t border-amber-200 pt-2 font-bold">
+                    <span>Total (Subtotal + GST)</span>
+                    <span>₹{totalBeforeDiscount.toLocaleString('en-IN')}</span>
+                  </div>
                 </div>
-                <div className={`flex justify-between items-center text-sm font-medium border-t border-amber-200 pt-2 ${calc.discount > 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                  <span>Discount</span>
-                  <span>{calc.discount > 0 ? `−₹${calc.discount.toLocaleString('en-IN')}` : '0'}</span>
+
+                <div className="bg-white rounded-lg p-3 text-sm space-y-2">
+                  <div className="text-xs font-semibold text-gray-700">Step 3 — Deduct Discount (from the total above):</div>
+                  <div className="flex justify-between items-center gap-3">
+                    <label className={`font-medium ${calc.discount > 0 ? 'text-red-600' : 'text-gray-600'}`}>Less: Discount (₹)</label>
+                    <input
+                      inputMode="decimal"
+                      value={form.discount}
+                      onChange={e=>setForm(p=>({...p,discount:cleanDecimal(e.target.value)}))}
+                      className="w-40 border border-gray-200 rounded-xl px-3 py-2 text-sm text-right outline-none focus:border-red-400 bg-white"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className={`flex justify-between items-center text-sm font-medium ${calc.discount > 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                    <span>Discount applied</span>
+                    <span>{calc.discount > 0 ? `−₹${calc.discount.toLocaleString('en-IN')}` : '0'}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm text-gray-500 border-t border-gray-100 pt-2">
+                    <span>Less URD <span className="text-gray-400">(display only)</span></span>
+                    <span></span>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center text-sm text-gray-500 border-t border-amber-200 pt-2">
-                  <span>Less URD <span className="text-gray-400">(display only)</span></span>
-                  <span></span>
-                </div>
-                <div className="border-t border-amber-200 pt-3">
+
+                <div className="border-t-2 border-amber-300 pt-3">
                   <div className="flex justify-between items-center font-bold text-base">
                     <span>Grand Total</span>
                     <span className="text-lg text-amber-700">₹{calc.total.toLocaleString('en-IN')}</span>
