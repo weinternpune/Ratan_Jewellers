@@ -471,7 +471,7 @@ export default function BillingPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100"><tr>{['Invoice #','Order','Customer','Phone','Category','Metal','Purity','Hallmark','Net Weight','Price','Gold Rate','Making Charges','Amount','GST (3%)','Total','Paid','Balance','Date','Due','Status','Actions'].map(h=><th key={h} className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>)}</tr></thead>
+              <thead className="bg-gray-50 border-b border-gray-100"><tr>{['Invoice #','Order','Customer','Phone','Category','Metal','Purity','Hallmark','Net Weight','Price','Gold Rate','Making Charges','Amount','GST (3%)','Discount','Total','Paid','Balance','Date','Due','Status','Actions'].map(h=><th key={h} className="text-left px-5 py-3.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>)}</tr></thead>
               <tbody className="divide-y divide-gray-50">
               {filtered.map(inv=>{
                 const cfg=statusConfig[inv.status]
@@ -497,6 +497,7 @@ export default function BillingPage() {
                     <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{makingTxt}</td>
                     <td className="px-5 py-4 text-gray-700 whitespace-nowrap">₹{inv.amount.toLocaleString('en-IN')}</td>
                     <td className="px-5 py-4 text-gray-500 text-xs whitespace-nowrap">₹{inv.gst.toLocaleString('en-IN')}</td>
+                    <td className={`px-5 py-4 text-xs whitespace-nowrap ${(inv.discount||0)>0?'text-red-600 font-medium':'text-gray-400'}`}>{(inv.discount||0)>0?`−₹${(inv.discount||0).toLocaleString('en-IN')}`:'₹0'}</td>
                     <td className="px-5 py-4 font-bold text-gray-900 whitespace-nowrap">₹{inv.total.toLocaleString('en-IN')}</td>
                     <td className="px-5 py-4 text-xs text-emerald-600 font-medium whitespace-nowrap">₹{(inv.amountPaid||0).toLocaleString('en-IN')}</td>
                     <td className="px-5 py-4 text-xs whitespace-nowrap">

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import toast from 'react-hot-toast'
 import { invoiceApi, orderApi, customerApi, adminApi, handleApiError } from '@/lib/billingApi'
+import { buildInvoiceNotes, parseHuidsFromNotes } from '@/lib/invoiceNotes'
 import { calcInvoice, calcLine, isCalculable, summarizeItems, num } from '@/lib/invoiceCalc'
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -757,7 +758,8 @@ export const useAdminStore = create<AdminStore>()(
 
       // Line items, rebuilt from the backend's generic items array. `name`
       // was composed on creation as "Category - SubCategory (Gold/Silver)".
-      const parsedItems: InvoiceLineItem[] = (invoice.items || []).map((it: any) => {
+      const huidsFromNotes = parseHuidsFromNotes(invoice.notes)
+      const parsedItems: InvoiceLineItem[] = (invoice.items || []).map((it: any, idx: number) => {
         const nameMatch = (it.name || '').match(/^(.*?)(?:\s*\(([^)]+)\))?$/)
         const namePart = (nameMatch?.[1] || it.name || '').trim()
         const metalPart = (nameMatch?.[2] || '').trim()
@@ -768,7 +770,7 @@ export const useAdminStore = create<AdminStore>()(
           metalType: (metalPart === 'Silver' ? 'Silver' : 'Gold') as 'Gold' | 'Silver',
           category,
           subCategory,
-          huid: it.huid || '',
+          huid: it.huid || huidsFromNotes[idx] || '',
           purity: it.purity || '',
           netWeight: (it.netWeight ?? 0).toString(),
           goldRate: it.goldRate || 0,
@@ -963,7 +965,7 @@ export const useAdminStore = create<AdminStore>()(
             // value, so it's stashed in `notes` purely so it survives a
             // page refresh. It is never read into subtotal/GST/discount/
             // total math anywhere.
-            notes: invData.lessURD ? `Less URD: ${invData.lessURD}` : ''
+            notes: buildInvoiceNotes((invData.items || []).map((i: any) => i.huid || ''), invData.lessURD)
           }
 
           const result =

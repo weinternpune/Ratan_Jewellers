@@ -885,11 +885,11 @@ export const useAdminStore = create<AdminStore>()(
           // Status is now stored on the server; only for old invoices that
           // never had one saved do we keep the locally remembered status.
           status: explicitStatusIds.has(serverInvoice.id) ? serverInvoice.status : localInvoice.status,
-          amountPaid: localInvoice.amountPaid ?? serverInvoice.amountPaid,
+          amountPaid: serverInvoice.amountPaid,
           // Balance is NEVER copied from old state — always total − paid, so
           // it can never disagree with the (recalculated) total.
-          balanceDue: Math.max(serverInvoice.total - (localInvoice.amountPaid ?? serverInvoice.amountPaid ?? 0), 0),
-          paymentHistory: localInvoice.paymentHistory
+          balanceDue: serverInvoice.balanceDue,
+          paymentHistory: serverInvoice.paymentHistory
         }
       })
 
@@ -1569,7 +1569,9 @@ export const useAdminStore = create<AdminStore>()(
     <div class="bottom-section">
       <div class="words-col">
         <div style="margin-bottom:8px;"><strong>Rs:</strong> ${numberToWords(total)} Rupees Only</div>
-        <div style="color:#555;">Narration: By ${amountPaid > 0 ? 'Cash/UPI' : 'Pending'}</div>
+        ${(inv.paymentHistory && inv.paymentHistory.length > 0)
+          ? `<div style="color:#333;"><strong>Payments received:</strong>${(amountPaid - inv.paymentHistory.reduce((t: number, p: any) => t + (p.amount || 0), 0)) > 0 ? `<div style="font-size:10.5px;color:#444;">At billing &nbsp;-&nbsp; Rs ${(amountPaid - inv.paymentHistory.reduce((t: number, p: any) => t + (p.amount || 0), 0)).toLocaleString('en-IN')}.00</div>` : ''}${inv.paymentHistory.map((p: any) => `<div style="font-size:10.5px;color:#444;">${new Date(p.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} &nbsp;-&nbsp; ${p.mode || 'Cash'} &nbsp;-&nbsp; Rs ${Number(p.amount).toLocaleString('en-IN')}.00</div>`).join('')}</div>`
+          : `<div style="color:#555;">Narration: By ${amountPaid > 0 ? 'Cash/UPI' : 'Pending'}</div>`}
         ${computedLines.some(l => l.huid) ? `<div style="margin-top:8px;color:#4338CA;font-weight:700;">HUID: ${computedLines.filter(l => l.huid).map(l => l.huid).join(', ')}</div>` : ''}
         <div style="margin-top:10px;font-size:10.5px;color:#444;line-height:1.6;">
           <strong>NOTE:</strong><br>
